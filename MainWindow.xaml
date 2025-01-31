@@ -32,9 +32,12 @@
             Grid.RowSpan="3" 
             Width="300" 
             Background="LightGray">
+            <controls:TECController Margin="2"/>
+            <controls:VacBaseControl Margin="2"/>
         </StackPanel>
         <StackPanel x:Name="SensorPanel" Grid.Column="1" Grid.Row="1">
             <controls:AlignSensorControl  Margin="5"/>
+
         </StackPanel>
         
 

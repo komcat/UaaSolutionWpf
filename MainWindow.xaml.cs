@@ -24,7 +24,7 @@ namespace UaaSolutionWpf
         public MainWindow()
         {
             InitializeComponent();
-            InitializeControls();
+            
         }
 
 

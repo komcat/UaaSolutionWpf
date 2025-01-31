@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="UaaSolutionWpf.Controls.VacBaseControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="200" FontSize="20">
+    <StackPanel>
+        <Button x:Name="VacBaseOnButton" 
+                Height="40" 
+                Margin="2"
+                Background="#007ACC"
+                Foreground="White"
+                Content="Vac Base ON"/>
+
+        <Button x:Name="VacBaseOffButton" 
+                Height="40" 
+                Margin="2"
+                Background="LightGray"
+                Content="Vac Base Off"/>
+    </StackPanel>
+</UserControl>

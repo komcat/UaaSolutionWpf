@@ -24,7 +24,15 @@ namespace UaaSolutionWpf
         public MainWindow()
         {
             InitializeComponent();
-            
+            // Set names for each Hexapod
+            if (LeftHexapodControl != null)
+                ((HexapodControl)LeftHexapodControl).RobotName = "Left Hexapod";
+
+            if (BottomHexapodControl != null)
+                ((HexapodControl)BottomHexapodControl).RobotName = "Bottom Hexapod";
+
+            if (RightHexapodControl != null)
+                ((HexapodControl)RightHexapodControl).RobotName = "Right Hexapod";
         }
 
 

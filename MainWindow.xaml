@@ -45,17 +45,51 @@
 
         </StackPanel>
 
+        <StackPanel x:Name="BottomRowPanel" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" >
+            <controls:SimpleJogControl  Margin="5"/>
+        </StackPanel>
+
 
         <!--Main tab controls-->
-        <StackPanel x:Name="TabControllerPanel" Grid.Column="3" Grid.Row="1" Grid.RowSpan="3">
+        <StackPanel x:Name="TabControllerPanel" Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="1" Grid.RowSpan="3">
             <!-- Add controls for tab management here -->
             <TabControl Height="600"  FontSize="18">
-                <TabItem Header="Tab 1">
+                <TabItem Header="Run">
                     <Grid>
                         <!-- Content for Tab 1 -->
                     </Grid>
                 </TabItem>
-                <TabItem Header="Tab 2">
+                <TabItem Header="Manual">
+                    <Grid>
+                        <!-- Content for Tab 2 -->
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Robots">
+                    <Grid>
+                        <!-- Content for Tab 3 -->
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel x:Name="LeftHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
+                            <controls:HexapodControl x:Name="LeftHexapodControl" Margin="2"/>
+                        </StackPanel>
+                        <StackPanel x:Name="BottomHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
+                            <controls:HexapodControl x:Name="BottomHexapodControl" Margin="2"/>
+                        </StackPanel>
+                        <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="2">
+                            <controls:HexapodControl x:Name="RightHexapodControl" Margin="2"/>
+                        </StackPanel>
+                        <controls:GantryControl x:Name="GantryControl" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="23" />
+                    </Grid>
+                </TabItem>
+                <TabItem Header="I/O">
                     <Grid>
                         <!-- Content for Tab 2 -->
                     </Grid>

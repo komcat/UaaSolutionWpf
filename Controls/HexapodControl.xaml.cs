@@ -34,7 +34,7 @@ namespace UaaSolutionWpf.Controls
         private double wPosition = 0.0000;
         private double selectedMicronStep = 0.1;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler ? PropertyChanged;
 
         public string RobotName
         {

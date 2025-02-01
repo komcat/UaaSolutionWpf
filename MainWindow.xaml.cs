@@ -14,6 +14,7 @@ using Path = System.IO.Path;
 using Serilog;
 using Serilog.Core;
 using UaaSolutionWpf.Gantry;
+using UaaSolutionWpf.Motion;
 
 namespace UaaSolutionWpf
 {
@@ -28,15 +29,18 @@ namespace UaaSolutionWpf
         private HexapodPositionsManager leftHexapodPositionsManager;
         private HexapodPositionsManager bottomHexapodPositionsManager;
         private HexapodPositionsManager rightHexapodPositionsManager;
-        private ILogger _logger;
-        private HexapodConnectionManager _hexapodConnectionManager;
+        private ILogger logger;
+        private HexapodConnectionManager hexapodConnectionManager;
+        private AcsGantryConnectionManager gantryConnectionManager;
+        private bool noMotorMode;
 
+        private MotionGraphManager motionManager;
         public MainWindow()
         {
             InitializeComponent();
 
 
-            _logger = new LoggerConfiguration()
+            logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}")
@@ -45,7 +49,7 @@ namespace UaaSolutionWpf
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] [{Operation}] {Message:lj}{NewLine}{Properties:j}{NewLine}{Exception}")
                 .Enrich.FromLogContext()  // This line is important for context properties
                 .CreateLogger();
-            Log.Logger = _logger;
+            Log.Logger = logger;
 
 
             // Set names for each Hexapod
@@ -59,8 +63,9 @@ namespace UaaSolutionWpf
                 ((HexapodControl)RightHexapodControl).RobotName = "Right Hexapod";
 
             InitializePositionManagers();
-            InitializeHexapod();
-            IntiailizeAcsGantry();
+
+
+
         }
 
 
@@ -122,15 +127,15 @@ namespace UaaSolutionWpf
                     { HexapodConnectionManager.HexapodType.Right, RightHexapodControl }
                 };
 
-                _hexapodConnectionManager = new HexapodConnectionManager(controls);
-                _logger.Information("Created HexapodConnectionManager instance");
+                hexapodConnectionManager = new HexapodConnectionManager(controls);
+                logger.Information("Created HexapodConnectionManager instance");
 
-                _hexapodConnectionManager.InitializeConnections();
-                _logger.Information("Initialized hexapod connections");
+                //hexapodConnectionManager.InitializeConnections();
+                logger.Information("Initialized hexapod connections");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to initialize hexapod connections");
+                logger.Error(ex, "Failed to initialize hexapod connections");
                 MessageBox.Show(
                     $"Failed to initialize hexapod connections: {ex.Message}",
                     "Initialization Error",
@@ -144,19 +149,57 @@ namespace UaaSolutionWpf
         private async void IntiailizeAcsGantry()
         {
             // Create the manager with just a logger
-            var gantryManager = new AcsGantryConnectionManager(GantryControl,_logger);
+            gantryConnectionManager = new AcsGantryConnectionManager(GantryControl,logger);
+
+
 
             // Initialize with a name
-            await gantryManager.InitializeControllerAsync("MainGantry");
-            _logger.Information("Initialized ACS Gantry connections");
+            await gantryConnectionManager.InitializeControllerAsync("MainGantry");
+            logger.Information("Initialized ACS Gantry connections");
         }
 
         // Add cleanup in the Window class
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
-            _hexapodConnectionManager?.Dispose();
+            hexapodConnectionManager?.Dispose();
            
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            noMotorMode = false;
+            if (noMotorModeCheckBox.IsChecked == true)
+            {
+                noMotorMode=true;
+                logger.Warning("Running with motors OFF");
+            }
+            logger.Warning("Running with motors ON");
+
+
+            if (noMotorModeCheckBox.IsChecked==false)
+            {
+                InitializeHexapod();
+                IntiailizeAcsGantry();
+            }
+        }
+
+        private async void InitializeMotionGraphManagers()
+        {
+            // In your main window or controller:
+            motionManager = new MotionGraphManager(
+                hexapodConnectionManager,
+                gantryConnectionManager,
+                "Config/motionSystem.json",
+                logger
+            );
+
+            // Move a specific device
+            await motionManager.MoveDeviceToPosition("hex-left", "Home");
+            await motionManager.MoveDeviceToPosition("gantry-main", "PreDispense");
+
+            // Get all configured devices
+            var devices = motionManager.GetConfiguredDevices();
         }
     }
 }

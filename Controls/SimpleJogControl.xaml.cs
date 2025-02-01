@@ -9,7 +9,7 @@ namespace UaaSolutionWpf.Controls
         private double stepSize = 0.1;
         private string selectedDevice;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler ?PropertyChanged;
 
         public double StepSize
         {

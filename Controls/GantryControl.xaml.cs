@@ -50,7 +50,7 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler ? PropertyChanged;
 
         public GantryControl()
         {

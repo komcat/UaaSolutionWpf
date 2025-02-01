@@ -1,0 +1,28 @@
+{
+  "Devices": [
+    {
+      "Id": "hex-left",
+      "Type": "Hexapod",
+      "Name": "Left",
+      "GraphId": "HexapodLeft"
+    },
+    {
+      "Id": "hex-right",
+      "Type": "Hexapod",
+      "Name": "Right",
+      "GraphId": "HexapodRight"
+    },
+    {
+      "Id": "hex-bottom",
+      "Type": "Hexapod",
+      "Name": "Bottom",
+      "GraphId": "HexapodBottom"
+    },
+    {
+      "Id": "gantry-main",
+      "Type": "Gantry",
+      "Name": "MainGantry",
+      "GraphId": "Gantry"
+    }
+  ]
+}

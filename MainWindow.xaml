@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:UaaSolutionWpf"
         xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1024" Width="2200">
+        Title="MainWindow" Height="1024" Width="2200" Loaded="Window_Loaded">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -159,6 +159,8 @@
                 <!-- Canvas content will go here -->
             </Canvas>
         </StackPanel>
+        
+        <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" IsChecked="True"/>
 
 
     </Grid>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 
@@ -116,7 +117,7 @@ namespace UaaSolutionWpf.Config
             }
             catch (Exception ex)
             {
-                // Log the error appropriately
+                Debug.WriteLine(ex);
                 _settings = new AppSettings();
             }
         }
@@ -134,7 +135,7 @@ namespace UaaSolutionWpf.Config
             }
             catch (Exception ex)
             {
-                // Log the error appropriately
+               Debug.WriteLine(ex);
             }
         }
 

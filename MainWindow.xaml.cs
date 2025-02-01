@@ -113,12 +113,14 @@ namespace UaaSolutionWpf
         {
             try
             {
-                _hexapodConnectionManager = new HexapodConnectionManager(
-                    LeftHexapodControl,
-                    BottomHexapodControl,
-                    RightHexapodControl
-                );
+                var controls = new Dictionary<HexapodConnectionManager.HexapodType, HexapodControl>
+                {
+                    { HexapodConnectionManager.HexapodType.Left, LeftHexapodControl },
+                    { HexapodConnectionManager.HexapodType.Bottom, BottomHexapodControl },
+                    { HexapodConnectionManager.HexapodType.Right, RightHexapodControl }
+                };
 
+                _hexapodConnectionManager = new HexapodConnectionManager(controls);
                 _logger.Information("Created HexapodConnectionManager instance");
 
                 _hexapodConnectionManager.InitializeConnections();
@@ -135,7 +137,6 @@ namespace UaaSolutionWpf
                 );
             }
         }
-
         // Add cleanup in the Window class
         protected override void OnClosed(EventArgs e)
         {

@@ -119,7 +119,7 @@
                         </StackPanel>
                     </Grid>
                 </TabItem>
-                <TabItem Header="Robots" FontSize="14">
+                <TabItem Header="Robots" >
                     <Grid>
                         <!-- Content for Tab 3 -->
                         <Grid.ColumnDefinitions>

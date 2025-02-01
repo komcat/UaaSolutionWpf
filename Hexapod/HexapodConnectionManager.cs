@@ -22,7 +22,6 @@ public class HexapodConnectionManager : IDisposable
 
         try
         {
-            // Use the existing ConfigurationManager with the path in the Config folder
             _configManager = new ConfigurationManager(Path.Combine("Config", "appsettings.json"));
             InitializeConnectionSettings();
         }
@@ -34,41 +33,48 @@ public class HexapodConnectionManager : IDisposable
     }
 
 
+
+
     private void InitializeConnectionSettings()
     {
         try
         {
             var hexapodSettings = _configManager.Settings.ConnectionSettings.Hexapods;
 
+            // Add debug logging to verify settings are loaded
+            _logger.Information("Loaded Hexapod Settings - Left: {LeftIP}:{LeftPort}, Bottom: {BottomIP}:{BottomPort}, Right: {RightIP}:{RightPort}",
+                hexapodSettings.Left.IpAddress,
+                hexapodSettings.Left.Port,
+                hexapodSettings.Bottom.IpAddress,
+                hexapodSettings.Bottom.Port,
+                hexapodSettings.Right.IpAddress,
+                hexapodSettings.Right.Port);
+
             // Load Left Hexapod settings
             _piConnections[0] = new PIConnection
             {
-                IPAddress = hexapodSettings.Left.IpAddress,
-                Port = hexapodSettings.Left.Port
+                IPAddress = hexapodSettings.Left.IpAddress ?? "192.168.0.10",  // Fallback value
+                Port = hexapodSettings.Left.Port != 0 ? hexapodSettings.Left.Port : 50000
             };
 
             // Load Bottom Hexapod settings
             _piConnections[1] = new PIConnection
             {
-                IPAddress = hexapodSettings.Bottom.IpAddress,
-                Port = hexapodSettings.Bottom.Port
+                IPAddress = hexapodSettings.Bottom.IpAddress ?? "192.168.0.20",
+                Port = hexapodSettings.Bottom.Port != 0 ? hexapodSettings.Bottom.Port : 50000
             };
 
             // Load Right Hexapod settings
             _piConnections[2] = new PIConnection
             {
-                IPAddress = hexapodSettings.Right.IpAddress,
-                Port = hexapodSettings.Right.Port
+                IPAddress = hexapodSettings.Right.IpAddress ?? "192.168.0.30",
+                Port = hexapodSettings.Right.Port != 0 ? hexapodSettings.Right.Port : 50000
             };
 
-            // Update UI controls with the configuration values
-            for (int i = 0; i < _hexapodControls.Length; i++)
+            // Verify the loaded connections
+            foreach (var conn in _piConnections)
             {
-                if (_hexapodControls[i] != null)
-                {
-                    _hexapodControls[i].IpAddress = _piConnections[i].IPAddress;
-                    _hexapodControls[i].PortNumber = _piConnections[i].Port;
-                }
+                _logger.Debug("Loaded connection settings: {IP}:{Port}", conn.IPAddress, conn.Port);
             }
         }
         catch (Exception ex)

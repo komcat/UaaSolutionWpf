@@ -12,6 +12,7 @@ using System.Windows.Shapes;
 using UaaSolutionWpf.Controls;
 using Path = System.IO.Path;
 using Serilog;
+using Serilog.Core;
 
 namespace UaaSolutionWpf
 {
@@ -26,7 +27,7 @@ namespace UaaSolutionWpf
         private HexapodPositionsManager leftHexapodPositionsManager;
         private HexapodPositionsManager bottomHexapodPositionsManager;
         private HexapodPositionsManager rightHexapodPositionsManager;
-        private ILogger _deviceControlLogger;
+        private ILogger _logger;
         private HexapodConnectionManager _hexapodConnectionManager;
 
         public MainWindow()
@@ -34,12 +35,17 @@ namespace UaaSolutionWpf
             InitializeComponent();
 
 
-            _deviceControlLogger = new LoggerConfiguration()
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Application", "AARTForm")
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-                .WriteTo.File("logs/device_control.log", rollingInterval: RollingInterval.Day)
+            _logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console(
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}")
+                .WriteTo.File("logs/log-.txt",
+                    rollingInterval: RollingInterval.Day,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] [{Operation}] {Message:lj}{NewLine}{Properties:j}{NewLine}{Exception}")
+                .Enrich.FromLogContext()  // This line is important for context properties
                 .CreateLogger();
+            Log.Logger = _logger;
+
 
             // Set names for each Hexapod
             if (LeftHexapodControl != null)
@@ -113,14 +119,14 @@ namespace UaaSolutionWpf
                     RightHexapodControl
                 );
 
-                _deviceControlLogger.Information("Created HexapodConnectionManager instance");
+                _logger.Information("Created HexapodConnectionManager instance");
 
                 _hexapodConnectionManager.InitializeConnections();
-                _deviceControlLogger.Information("Initialized hexapod connections");
+                _logger.Information("Initialized hexapod connections");
             }
             catch (Exception ex)
             {
-                _deviceControlLogger.Error(ex, "Failed to initialize hexapod connections");
+                _logger.Error(ex, "Failed to initialize hexapod connections");
                 MessageBox.Show(
                     $"Failed to initialize hexapod connections: {ex.Message}",
                     "Initialization Error",

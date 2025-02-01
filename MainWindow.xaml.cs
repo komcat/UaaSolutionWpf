@@ -13,6 +13,7 @@ using UaaSolutionWpf.Controls;
 using Path = System.IO.Path;
 using Serilog;
 using Serilog.Core;
+using UaaSolutionWpf.Gantry;
 
 namespace UaaSolutionWpf
 {
@@ -59,6 +60,7 @@ namespace UaaSolutionWpf
 
             InitializePositionManagers();
             InitializeHexapod();
+            IntiailizeAcsGantry();
         }
 
 
@@ -137,6 +139,18 @@ namespace UaaSolutionWpf
                 );
             }
         }
+
+
+        private async void IntiailizeAcsGantry()
+        {
+            // Create the manager with just a logger
+            var gantryManager = new AcsGantryConnectionManager(GantryControl,_logger);
+
+            // Initialize with a name
+            await gantryManager.InitializeControllerAsync("MainGantry");
+            _logger.Information("Initialized ACS Gantry connections");
+        }
+
         // Add cleanup in the Window class
         protected override void OnClosed(EventArgs e)
         {

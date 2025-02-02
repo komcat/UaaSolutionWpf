@@ -1,0 +1,157 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-02-02T12:00:00Z"
+  },
+  "Eziio": [
+    {
+      "deviceId": 0,
+      "name": "IOBottom",
+      "IP": "192.168.0.3",
+      "IOConfig": {
+        "Outputs": [
+          {
+            "Pin": 0,
+            "Name": "L_Gripper"
+          },
+          {
+            "Pin": 1,
+            "Name": "P1"
+          },
+          {
+            "Pin": 2,
+            "Name": "R_Gripper"
+          },
+          {
+            "Pin": 3,
+            "Name": "R_Safety"
+          },
+          {
+            "Pin": 4,
+            "Name": "UV_Head"
+          },
+          {
+            "Pin": 5,
+            "Name": "Dispenser_Head"
+          },
+          {
+            "Pin": 6,
+            "Name": "Pick_Up_Tool"
+          },
+          {
+            "Pin": 7,
+            "Name": "P7"
+          },
+          {
+            "Pin": 8,
+            "Name": "P8"
+          },
+          {
+            "Pin": 9,
+            "Name": "P9"
+          },
+          {
+            "Pin": 10,
+            "Name": "Vacuum_Base"
+          },
+          {
+            "Pin": 11,
+            "Name": "P11"
+          },
+          {
+            "Pin": 12,
+            "Name": "Reserve_UV_PLC3"
+          },
+          {
+            "Pin": 13,
+            "Name": "UV_PLC2"
+          },
+          {
+            "Pin": 14,
+            "Name": "UV_PLC1"
+          },
+          {
+            "Pin": 15,
+            "Name": "Dispenser_Shot"
+          }
+        ],
+        "Inputs": []
+      }
+    },
+    {
+      "deviceId": 1,
+      "name": "IOTop",
+      "IP": "192.168.0.5",
+      "IOConfig": {
+        "Outputs": [
+          {
+            "Pin": 0,
+            "Name": "Output0"
+          },
+          {
+            "Pin": 1,
+            "Name": "Output1"
+          },
+          {
+            "Pin": 2,
+            "Name": "Output2"
+          },
+          {
+            "Pin": 3,
+            "Name": "Output3"
+          },
+          {
+            "Pin": 4,
+            "Name": "Output4"
+          },
+          {
+            "Pin": 5,
+            "Name": "Output5"
+          },
+          {
+            "Pin": 6,
+            "Name": "Output6"
+          },
+          {
+            "Pin": 7,
+            "Name": "Output7"
+          }
+        ],
+        "Inputs": [
+          {
+            "Pin": 0,
+            "Name": "Input0"
+          },
+          {
+            "Pin": 1,
+            "Name": "UV_Head_Up"
+          },
+          {
+            "Pin": 2,
+            "Name": "UV_Head_Down"
+          },
+          {
+            "Pin": 3,
+            "Name": "Dispenser_Head_Up"
+          },
+          {
+            "Pin": 4,
+            "Name": "Dispenser_Head_Down"
+          },
+          {
+            "Pin": 5,
+            "Name": "Pick_Up_Tool_Up"
+          },
+          {
+            "Pin": 6,
+            "Name": "Pick_Up_Tool_Down"
+          },
+          {
+            "Pin": 7,
+            "Name": "Input7"
+          }
+        ]
+      }
+    }
+  ]
+}

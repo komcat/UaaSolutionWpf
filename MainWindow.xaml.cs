@@ -43,7 +43,7 @@ namespace UaaSolutionWpf
         private MotionGraphManager motionGraphManager;
         private DevicePositionMonitor devicePositionMonitor;
         private PositionRegistry positionRegistry;
-
+        private IOService _ioService;
 
         private ILogger logger;
 
@@ -216,7 +216,7 @@ namespace UaaSolutionWpf
         }
 
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // Show dialog to ask user about motor connection
             var result = MessageBox.Show(
@@ -228,12 +228,16 @@ namespace UaaSolutionWpf
             simulationMode = (result == MessageBoxResult.No);
             noMotorModeCheckBox.IsChecked = simulationMode;
 
+
+
             if (simulationMode)
             {
+                //THis is simulation mode
                 logger.Warning("Running with motors OFF (Simulation Mode)");
             }
             else
             {
+                //This is real hardware mode.
                 logger.Warning("Running with motors ON");
                 try
                 {
@@ -262,13 +266,13 @@ namespace UaaSolutionWpf
             string configPath = Path.Combine("Config", "motionSystem.json");
 
             motionGraphManager = new MotionGraphManager(devicePositionMonitor,positionRegistry, configPath, logger);
-            InitializePositionManagers();
-        }
 
-        private async void InitializeMotionGraphManagers()
-        {
+
+            await InitializeIODevicesAsync();
 
         }
+
+
 
 
         //test graph manager
@@ -326,6 +330,40 @@ namespace UaaSolutionWpf
             else
             {
                 logger.Error($"Error: {analysis.Error}");
+            }
+        }
+
+        // Add this to your existing field declarations
+        public async Task InitializeIODevicesAsync()
+        {
+            try
+            {
+                string configPath = Path.Combine("Config", "IOConfig.json");
+                _ioService = new IOService(logger, configPath);
+                await _ioService.InitializeAsync();
+
+                // Test the connections by trying to set some outputs
+                bool bottomResult = _ioService.SetOutput("IOBottom", "L_Gripper", false);
+                bool topResult = _ioService.SetOutput("IOTop", "Output0", false);
+
+                if (bottomResult && topResult)
+                {
+                    logger.Information("IO devices initialized successfully");
+                }
+                else
+                {
+                    logger.Warning("Some IO devices failed to initialize properly");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to initialize IO devices");
+                MessageBox.Show(
+                    "Failed to initialize IO devices. Check the logs for details.",
+                    "IO Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
             }
         }
     }

@@ -37,6 +37,7 @@ namespace UaaSolutionWpf.Controls
             {
                 selectedDevice = value;
                 OnPropertyChanged();
+                UpdateUVWButtonsState();
             }
         }
 
@@ -46,29 +47,62 @@ namespace UaaSolutionWpf.Controls
             DataContext = this;
             _logger = Log.ForContext<SimpleJogControl>();
 
-            // Set default selection
-            DeviceListBox.SelectedIndex = 0;
-            StepListBox.SelectedIndex = 0;
-
             InitializeMicronStepItems();
             SetupEventHandlers();
 
-            _logger.Information("Construct SimpleJogControl");
+            // Set initial device selection
+            DeviceListBox.SelectedIndex = 0;
+            SelectedDevice = (DeviceListBox.SelectedItem as ListBoxItem)?.Content.ToString();
+
+            // Set initial step size selection
+            StepListBox.SelectedIndex = 0;
+
+            // Update UVW button states based on initial selection
+            UpdateUVWButtonsState();
+        }
+
+        private void UpdateUVWButtonsState()
+        {
+            bool isHexapod = SelectedDevice?.ToLower().Contains("hexapod") ?? false;
+
+            // Update button states
+            bool enableRotation = isHexapod;
+            if (BtnUPlus != null)
+            {
+                BtnUPlus.IsEnabled = enableRotation;
+                BtnUMinus.IsEnabled = enableRotation;
+                BtnVPlus.IsEnabled = enableRotation;
+                BtnVMinus.IsEnabled = enableRotation;
+                BtnWPlus.IsEnabled = enableRotation;
+                BtnWMinus.IsEnabled = enableRotation;
+
+                // Update visual appearance
+                double opacity = enableRotation ? 1.0 : 0.5;
+                BtnUPlus.Opacity = opacity;
+                BtnUMinus.Opacity = opacity;
+                BtnVPlus.Opacity = opacity;
+                BtnVMinus.Opacity = opacity;
+                BtnWPlus.Opacity = opacity;
+                BtnWMinus.Opacity = opacity;
+            }
+
+            _logger.Debug("Updated UVW button states for device: {Device}, Rotation enabled: {EnableRotation}",
+                SelectedDevice, enableRotation);
         }
 
         private void SetupEventHandlers()
         {
-            // Device selection handler
+            // Device selection
             DeviceListBox.SelectionChanged += (s, e) =>
             {
-                if (e.AddedItems.Count > 0)
+                if (e.AddedItems.Count > 0 && e.AddedItems[0] is ListBoxItem item)
                 {
-                    var item = e.AddedItems[0] as ListBoxItem;
-                    SelectedDevice = item?.Content.ToString();
+                    SelectedDevice = item.Content.ToString();
+                    _logger.Information("Device selection changed to: {Device}", SelectedDevice);
                 }
             };
 
-            // XYZ Translation buttons
+            // Translation movements (XYZ)
             BtnLeft.Click += async (s, e) => await Move(new Vector3(-(float)selectedMicronStep, 0, 0));
             BtnRight.Click += async (s, e) => await Move(new Vector3((float)selectedMicronStep, 0, 0));
             BtnIn.Click += async (s, e) => await Move(new Vector3(0, (float)selectedMicronStep, 0));
@@ -76,47 +110,48 @@ namespace UaaSolutionWpf.Controls
             BtnUp.Click += async (s, e) => await Move(new Vector3(0, 0, (float)selectedMicronStep));
             BtnDown.Click += async (s, e) => await Move(new Vector3(0, 0, -(float)selectedMicronStep));
 
-            // Step buttons for changing step size selection
-            BtnStepPlus.Click += (s, e) => {
-                var currentIndex = StepListBox.SelectedIndex;
-                if (currentIndex < StepListBox.Items.Count - 1)
-                {
-                    StepListBox.SelectedIndex = currentIndex + 1;
-                    var selectedItem = StepListBox.Items[currentIndex + 1] as MicronStepItem;
-                    _logger.Information("Step size increased to: {StepSize} ({DisplayText})",
-                        selectedItem.Value,
-                        selectedItem.DisplayText);
-                }
-            };
-
-            BtnStepMinus.Click += (s, e) => {
-                var currentIndex = StepListBox.SelectedIndex;
-                if (currentIndex > 0)
-                {
-                    StepListBox.SelectedIndex = currentIndex - 1;
-                    var selectedItem = StepListBox.Items[currentIndex - 1] as MicronStepItem;
-                    _logger.Information("Step size decreased to: {StepSize} ({DisplayText})",
-                        selectedItem.Value,
-                        selectedItem.DisplayText);
-                }
-            };
-
-            // Rotation buttons
+            // Rotation movements (UVW)
             BtnUPlus.Click += async (s, e) => await MoveRotation(new Vector3((float)selectedMicronStep, 0, 0));
             BtnUMinus.Click += async (s, e) => await MoveRotation(new Vector3(-(float)selectedMicronStep, 0, 0));
             BtnVPlus.Click += async (s, e) => await MoveRotation(new Vector3(0, (float)selectedMicronStep, 0));
             BtnVMinus.Click += async (s, e) => await MoveRotation(new Vector3(0, -(float)selectedMicronStep, 0));
             BtnWPlus.Click += async (s, e) => await MoveRotation(new Vector3(0, 0, (float)selectedMicronStep));
             BtnWMinus.Click += async (s, e) => await MoveRotation(new Vector3(0, 0, -(float)selectedMicronStep));
+
+            // Step size controls
+            BtnStepPlus.Click += (s, e) =>
+            {
+                var currentIndex = StepListBox.SelectedIndex;
+                if (currentIndex < StepListBox.Items.Count - 1)
+                {
+                    StepListBox.SelectedIndex = currentIndex + 1;
+                    var selectedItem = StepListBox.SelectedItem as MicronStepItem;
+                    _logger.Information("Step size increased to: {StepSize} ({DisplayText})",
+                        selectedItem?.Value, selectedItem?.DisplayText);
+                }
+            };
+
+            BtnStepMinus.Click += (s, e) =>
+            {
+                var currentIndex = StepListBox.SelectedIndex;
+                if (currentIndex > 0)
+                {
+                    StepListBox.SelectedIndex = currentIndex - 1;
+                    var selectedItem = StepListBox.SelectedItem as MicronStepItem;
+                    _logger.Information("Step size decreased to: {StepSize} ({DisplayText})",
+                        selectedItem?.Value, selectedItem?.DisplayText);
+                }
+            };
         }
+
         public void Initialize(
-    HexapodMovementService leftHexapod,
-    HexapodMovementService rightHexapod,
-    HexapodMovementService bottomHexapod,
-    GantryMovementService gantry,
-    ILogger logger)
+            HexapodMovementService leftHexapod,
+            HexapodMovementService rightHexapod,
+            HexapodMovementService bottomHexapod,
+            GantryMovementService gantry,
+            ILogger logger)
         {
-            _logger = logger.ForContext<SimpleJogControl>();  // Add this line
+            _logger = logger.ForContext<SimpleJogControl>();
             _jogController = new GlobalJogController(
                 leftHexapod,
                 rightHexapod,
@@ -124,6 +159,9 @@ namespace UaaSolutionWpf.Controls
                 gantry,
                 logger
             );
+
+            UpdateUVWButtonsState();
+            _logger.Information("SimpleJogControl initialized with all movement services");
         }
 
         private async Task Move(Vector3 movement)
@@ -136,25 +174,23 @@ namespace UaaSolutionWpf.Controls
                     return;
                 }
 
-                // Determine which devices to move based on selection
                 bool moveLeft = false, moveRight = false, moveBottom = false, moveGantry = false;
 
                 switch (SelectedDevice?.ToLower())
                 {
-                    case "left hexapod":
+                    case var device when device?.Contains("left hexapod") == true:
                         moveLeft = true;
                         break;
-                    case "right hexapod":
+                    case var device when device?.Contains("right hexapod") == true:
                         moveRight = true;
                         break;
-                    case "bottom hexapod":
+                    case var device when device?.Contains("bottom hexapod") == true:
                         moveBottom = true;
                         break;
-                    case "gantry":
+                    case var device when device?.Contains("gantry") == true:
                         moveGantry = true;
                         break;
                     default:
-                        // If no specific device is selected, move all
                         moveLeft = moveRight = moveBottom = moveGantry = true;
                         break;
                 }
@@ -164,7 +200,7 @@ namespace UaaSolutionWpf.Controls
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error during jog movement");
+                _logger.Error(ex, "Error during movement");
                 MessageBox.Show($"Error during movement: {ex.Message}", "Movement Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -173,40 +209,37 @@ namespace UaaSolutionWpf.Controls
         {
             try
             {
-                // Only apply rotational movements to hexapods
-                if (SelectedDevice?.ToLower().Contains("hexapod") == true)
+                if (_jogController == null)
                 {
-                    _logger.Information("Rotation requested for {Device}: {Rotation}", SelectedDevice, rotation);
-
-                    // Determine which hexapod to rotate
-                    bool moveLeft = SelectedDevice.ToLower().Contains("left");
-                    bool moveRight = SelectedDevice.ToLower().Contains("right");
-                    bool moveBottom = SelectedDevice.ToLower().Contains("bottom");
-
-                    // For rotation movements, we pass Vector3.Zero for translation
-                    await _jogController.JogGlobal(Vector3.Zero, moveLeft, moveRight, moveBottom, false);
-
-                    // Note: Currently the GlobalJogController needs to be updated to handle rotations
-                    // This is just a placeholder for the rotation implementation
+                    MessageBox.Show("Jog controller not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-                else
+
+                if (!SelectedDevice?.ToLower().Contains("hexapod") ?? true)
                 {
                     _logger.Warning("Rotation attempted on non-hexapod device: {Device}", SelectedDevice);
+                    return;
                 }
+
+                bool moveLeft = SelectedDevice.ToLower().Contains("left");
+                bool moveRight = SelectedDevice.ToLower().Contains("right");
+                bool moveBottom = SelectedDevice.ToLower().Contains("bottom");
+
+                _logger.Information("Rotating {Device} by {Rotation}", SelectedDevice, rotation);
+                await _jogController.JogRotation(rotation, moveLeft, moveRight, moveBottom);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error during rotation movement");
+                _logger.Error(ex, "Error during rotation");
                 MessageBox.Show($"Error during rotation: {ex.Message}", "Rotation Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void InitializeMicronStepItems()
         {
-            // First, clear any existing items
             StepListBox.Items.Clear();
             var micronSteps = new List<MicronStepItem>
             {
-
                 new MicronStepItem { DisplayText = "1 micron", Value = 0.001 },
                 new MicronStepItem { DisplayText = "5 micron", Value = 0.005 },
                 new MicronStepItem { DisplayText = "10 micron", Value = 0.010 },
@@ -217,8 +250,9 @@ namespace UaaSolutionWpf.Controls
             };
 
             StepListBox.ItemsSource = micronSteps;
-            StepListBox.SelectedIndex = 0; // Select the first item by default
+            StepListBox.SelectedIndex = 0;
         }
+
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -229,6 +263,7 @@ namespace UaaSolutionWpf.Controls
             if (StepListBox.SelectedItem is MicronStepItem selectedItem)
             {
                 selectedMicronStep = selectedItem.Value;
+                _logger.Debug("Step size changed to: {StepSize}", selectedMicronStep);
             }
         }
     }

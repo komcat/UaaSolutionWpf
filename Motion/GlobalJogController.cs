@@ -82,19 +82,19 @@ namespace UaaSolutionWpf.Motion
                 if (applyToLeftHexapod)
                 {
                     Vector3 leftLocal = TransformVector(globalMovement, _leftHexapodTransform);
-                    tasks.Add(MoveHexapod(_leftHexapodService, leftLocal, "Left Hexapod"));
+                    tasks.Add(MoveHexapod(_leftHexapodService, leftLocal, Vector3.Zero, "Left Hexapod"));
                 }
 
                 if (applyToRightHexapod)
                 {
                     Vector3 rightLocal = TransformVector(globalMovement, _rightHexapodTransform);
-                    tasks.Add(MoveHexapod(_rightHexapodService, rightLocal, "Right Hexapod"));
+                    tasks.Add(MoveHexapod(_rightHexapodService, rightLocal, Vector3.Zero, "Right Hexapod"));
                 }
 
                 if (applyToBottomHexapod)
                 {
                     Vector3 bottomLocal = TransformVector(globalMovement, _bottomHexapodTransform);
-                    tasks.Add(MoveHexapod(_bottomHexapodService, bottomLocal, "Bottom Hexapod"));
+                    tasks.Add(MoveHexapod(_bottomHexapodService, bottomLocal, Vector3.Zero, "Bottom Hexapod"));
                 }
 
                 if (applyToGantry)
@@ -103,13 +103,49 @@ namespace UaaSolutionWpf.Motion
                     tasks.Add(MoveGantry(gantryLocal));
                 }
 
-                // Wait for all movements to complete
                 await Task.WhenAll(tasks);
                 _logger.Information("Completed global jog movement");
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error during global jog movement");
+                throw;
+            }
+        }
+
+        public async Task JogRotation(Vector3 rotation, bool applyToLeftHexapod = false, bool applyToRightHexapod = false,
+            bool applyToBottomHexapod = false)
+        {
+            try
+            {
+                _logger.Information("Starting rotation movement: {Rotation}", rotation);
+
+                var tasks = new List<Task>();
+
+                if (applyToLeftHexapod)
+                {
+                    Vector3 leftRotation = TransformVector(rotation, _leftHexapodTransform);
+                    tasks.Add(MoveHexapod(_leftHexapodService, Vector3.Zero, leftRotation, "Left Hexapod"));
+                }
+
+                if (applyToRightHexapod)
+                {
+                    Vector3 rightRotation = TransformVector(rotation, _rightHexapodTransform);
+                    tasks.Add(MoveHexapod(_rightHexapodService, Vector3.Zero, rightRotation, "Right Hexapod"));
+                }
+
+                if (applyToBottomHexapod)
+                {
+                    Vector3 bottomRotation = TransformVector(rotation, _bottomHexapodTransform);
+                    tasks.Add(MoveHexapod(_bottomHexapodService, Vector3.Zero, bottomRotation, "Bottom Hexapod"));
+                }
+
+                await Task.WhenAll(tasks);
+                _logger.Information("Completed rotation movement");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error during rotation movement");
                 throw;
             }
         }
@@ -121,30 +157,38 @@ namespace UaaSolutionWpf.Motion
             return new Vector3(vector4.X, vector4.Y, vector4.Z);
         }
 
-        private async Task MoveHexapod(HexapodMovementService service, Vector3 movement, string deviceName)
+        private async Task MoveHexapod(HexapodMovementService service, Vector3 translation, Vector3 rotation, string deviceName)
         {
             try
             {
-                _logger.Debug("Moving {DeviceName} by {Movement}", deviceName, movement);
+                _logger.Debug("Moving {DeviceName} - Translation: {Translation}, Rotation: {Rotation}",
+                    deviceName, translation, rotation);
 
-                // Create relative movement array (X,Y,Z,U,V,W) - only translational movement for now
-                double[] relativeMove = new double[] {
-                    movement.X,
-                    movement.Y,
-                    movement.Z,
-                    0, // U (rotation)
-                    0, // V (rotation)
-                    0  // W (rotation)
-                };
+                var tasks = new List<Task>();
 
-                // Apply movements to each axis that has a non-zero value
-                for (int i = 0; i < 3; i++) // Only moving translational axes for now
+                // Handle translation movements
+                if (translation != Vector3.Zero)
                 {
-                    if (Math.Abs(relativeMove[i]) > 0.00001) // Small threshold to avoid unnecessary movements
-                    {
-                        await service.MoveRelativeAsync((HexapodMovementService.Axis)i, relativeMove[i]);
-                    }
+                    if (Math.Abs(translation.X) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.X, translation.X));
+                    if (Math.Abs(translation.Y) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.Y, translation.Y));
+                    if (Math.Abs(translation.Z) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.Z, translation.Z));
                 }
+
+                // Handle rotation movements
+                if (rotation != Vector3.Zero)
+                {
+                    if (Math.Abs(rotation.X) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.U, rotation.X));
+                    if (Math.Abs(rotation.Y) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.V, rotation.Y));
+                    if (Math.Abs(rotation.Z) > 0.00001)
+                        tasks.Add(service.MoveRelativeAsync(HexapodMovementService.Axis.W, rotation.Z));
+                }
+
+                await Task.WhenAll(tasks);
             }
             catch (Exception ex)
             {
@@ -159,14 +203,17 @@ namespace UaaSolutionWpf.Motion
             {
                 _logger.Debug("Moving Gantry by {Movement}", movement);
 
+                var tasks = new List<Task>();
+
                 // Apply movements to each axis that has a non-zero value
-                for (int i = 0; i < 3; i++)
-                {
-                    if (Math.Abs(movement[i]) > 0.00001) // Small threshold to avoid unnecessary movements
-                    {
-                        await _gantryService.MoveRelativeAsync(i, movement[i]);
-                    }
-                }
+                if (Math.Abs(movement.X) > 0.00001)
+                    tasks.Add(_gantryService.MoveRelativeAsync(0, movement.X));
+                if (Math.Abs(movement.Y) > 0.00001)
+                    tasks.Add(_gantryService.MoveRelativeAsync(1, movement.Y));
+                if (Math.Abs(movement.Z) > 0.00001)
+                    tasks.Add(_gantryService.MoveRelativeAsync(2, movement.Z));
+
+                await Task.WhenAll(tasks);
             }
             catch (Exception ex)
             {

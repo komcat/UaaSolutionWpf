@@ -21,6 +21,8 @@ namespace UaaSolutionWpf.Motion
         private readonly Dictionary<string, DeviceConfig> _deviceConfigs;
         private readonly DevicePositionMonitor _positionMonitor;
         private readonly PositionRegistry _positionRegistry;
+        private readonly Dictionary<string, DeviceSafetyLimits> _safetyLimits;
+
         public MotionGraphManager(
             DevicePositionMonitor positionMonitor,
             PositionRegistry positionRegistry,
@@ -34,8 +36,39 @@ namespace UaaSolutionWpf.Motion
             _positionRegistry = positionRegistry;
             LoadGraphs();
             LoadDeviceConfigs(configPath);
-        }
 
+            // Initialize safety limits
+            _safetyLimits = new Dictionary<string, DeviceSafetyLimits>
+            {
+                { "hex-left", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Left Hexapod" } },
+                { "hex-right", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Right Hexapod" } },
+                { "hex-bottom", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Bottom Hexapod" } },
+                { "gantry-main", new DeviceSafetyLimits { MaxInitialMoveDistance = 10.0, Name = "Main Gantry" } }
+            };
+        }
+        private bool IsInitialMoveWithinSafetyLimits(string deviceId, DevicePosition currentPosition, Position targetPosition, out double distance)
+        {
+            distance = Math.Sqrt(
+                Math.Pow(currentPosition.X - targetPosition.X, 2) +
+                Math.Pow(currentPosition.Y - targetPosition.Y, 2) +
+                Math.Pow(currentPosition.Z - targetPosition.Z, 2));
+
+            if (!_safetyLimits.TryGetValue(deviceId, out var limits))
+            {
+                _logger.Error("No safety limits defined for device {DeviceId}", deviceId);
+                return false;
+            }
+
+            bool isWithinLimits = distance <= limits.MaxInitialMoveDistance;
+            if (!isWithinLimits)
+            {
+                _logger.Warning(
+                    "Initial move distance {Distance:F3}mm exceeds safety limit of {Limit:F3}mm for {DeviceName}",
+                    distance, limits.MaxInitialMoveDistance, limits.Name);
+            }
+
+            return isWithinLimits;
+        }
         private void LoadGraphs()
         {
             try
@@ -103,14 +136,12 @@ namespace UaaSolutionWpf.Motion
         {
             try
             {
-                // Parse device type and location from ID (e.g., "hex-left", "gantry-main")
                 var parts = deviceId.Split('-');
                 if (parts.Length != 2)
                 {
                     throw new ArgumentException($"Invalid device ID format: {deviceId}");
                 }
 
-                // Tolerance for position matching (in mm)
                 const double POSITION_TOLERANCE = 0.1;  // 0.1mm
 
                 string closestPosition = null;
@@ -124,7 +155,6 @@ namespace UaaSolutionWpf.Motion
 
                         foreach (var position in hexPositions)
                         {
-                            // Calculate only linear distance for hexapods
                             double distance = Math.Sqrt(
                                 Math.Pow(currentPosition.X - position.Value.X, 2) +
                                 Math.Pow(currentPosition.Y - position.Value.Y, 2) +
@@ -139,7 +169,7 @@ namespace UaaSolutionWpf.Motion
                         break;
 
                     case "gantry":
-                        var gantryPositions = _positionRegistry.GetAllGantryPositions(4); // Assuming gantry ID 4
+                        var gantryPositions = _positionRegistry.GetAllGantryPositions(4);
 
                         foreach (var position in gantryPositions)
                         {
@@ -160,17 +190,19 @@ namespace UaaSolutionWpf.Motion
                         throw new ArgumentException($"Unknown device type: {parts[0]}");
                 }
 
-                // Check if we're within tolerance
                 if (minDistance <= POSITION_TOLERANCE)
                 {
                     _logger.Debug("Device {DeviceId} identified at position {Position} (distance: {Distance:F3}mm)",
                         deviceId, closestPosition, minDistance);
-                    return closestPosition;
+                }
+                else
+                {
+                    _logger.Information("Device {DeviceId} is {Distance:F3}mm from nearest known position {Position}",
+                        deviceId, minDistance, closestPosition);
                 }
 
-                _logger.Warning("Device {DeviceId} not near any known position (closest: {Position}, distance: {Distance:F3}mm)",
-                    deviceId, closestPosition, minDistance);
-                return null;
+                // Always return closest position, even if outside tolerance
+                return closestPosition;
             }
             catch (Exception ex)
             {
@@ -178,7 +210,6 @@ namespace UaaSolutionWpf.Motion
                 throw;
             }
         }
-
         public async Task<PathAnalysis> AnalyzeMovementPath(string deviceId, string targetPosition)
         {
             try
@@ -196,28 +227,53 @@ namespace UaaSolutionWpf.Motion
                     return new PathAnalysis { IsValid = false, Error = "Motion graph not found" };
                 }
 
-                // Get current position name
-                string currentPosition = await GetCurrentPosition(deviceId);
-                if (string.IsNullOrEmpty(currentPosition))
+                // Get current actual position and closest named position
+                var currentDevicePosition = await _positionMonitor.GetCurrentPosition(deviceId);
+                string closestNamedPosition = DeterminePositionName(deviceId, currentDevicePosition);
+
+                if (string.IsNullOrEmpty(closestNamedPosition))
                 {
                     return new PathAnalysis
                     {
                         IsValid = false,
-                        Error = $"Unable to determine current position for {deviceConfig.Name}"
+                        Error = $"Unable to determine nearest position for {deviceConfig.Name}"
                     };
                 }
 
-                // Find path
-                var path = graph.ShortestPath(currentPosition, targetPosition);
+                // Find path from closest named position to target
+                var path = graph.ShortestPath(closestNamedPosition, targetPosition);
                 if (path == null || path.Count == 0)
                 {
                     return new PathAnalysis
                     {
                         IsValid = false,
-                        Error = $"No valid path found from {currentPosition} to {targetPosition}",
-                        CurrentPosition = currentPosition,
+                        Error = $"No valid path found from {closestNamedPosition} to {targetPosition}",
+                        CurrentPosition = closestNamedPosition,
                         TargetPosition = targetPosition
                     };
+                }
+
+                // Check if we're at an exact position or need initial move
+                const double POSITION_TOLERANCE = 0.1;
+                bool requiresInitialMove = false;
+                Position closestPos;
+
+                if (deviceId.StartsWith("hex"))
+                {
+                    int hexapodId = _positionRegistry.GetHexapodIdFromLocation(deviceId.Split('-')[1]);
+                    requiresInitialMove = !_positionRegistry.TryGetHexapodPosition(hexapodId, closestNamedPosition, out closestPos);
+                }
+                else
+                {
+                    requiresInitialMove = !_positionRegistry.TryGetGantryPosition(4, closestNamedPosition, out closestPos);
+                }
+
+                if (requiresInitialMove)
+                {
+                    requiresInitialMove = Math.Sqrt(
+                        Math.Pow(currentDevicePosition.X - closestPos.X, 2) +
+                        Math.Pow(currentDevicePosition.Y - closestPos.Y, 2) +
+                        Math.Pow(currentDevicePosition.Z - closestPos.Z, 2)) > POSITION_TOLERANCE;
                 }
 
                 return new PathAnalysis
@@ -225,10 +281,12 @@ namespace UaaSolutionWpf.Motion
                     IsValid = true,
                     DeviceType = deviceConfig.Type,
                     DeviceName = deviceConfig.Name,
-                    CurrentPosition = currentPosition,
+                    CurrentPosition = closestNamedPosition,
                     TargetPosition = targetPosition,
                     Path = path,
-                    NumberOfSteps = path.Count - 1
+                    NumberOfSteps = path.Count - 1,
+                    RequiresInitialMove = requiresInitialMove,
+                    InitialPosition = currentDevicePosition
                 };
             }
             catch (Exception ex)
@@ -241,6 +299,128 @@ namespace UaaSolutionWpf.Motion
                 };
             }
         }
+
+
+        // Add this overload in MotionGraphManager
+        public async Task<PathAnalysis> AnalyzeMovementPath(string deviceId, string targetPosition, DevicePosition testPosition)
+        {
+            try
+            {
+                if (!_deviceConfigs.TryGetValue(deviceId, out var deviceConfig))
+                {
+                    _logger.Error("Device configuration not found for ID {DeviceId}", deviceId);
+                    return new PathAnalysis { IsValid = false, Error = "Device configuration not found" };
+                }
+
+                if (!_graphs.TryGetValue(deviceConfig.GraphId, out var graph))
+                {
+                    _logger.Error("Graph not found for device {DeviceId} with GraphId {GraphId}",
+                        deviceId, deviceConfig.GraphId);
+                    return new PathAnalysis { IsValid = false, Error = "Motion graph not found" };
+                }
+
+                // Use the test position instead of getting current position
+                var currentPosition = testPosition ?? await _positionMonitor.GetCurrentPosition(deviceId);
+                string closestNamedPosition = DeterminePositionName(deviceId, currentPosition);
+
+
+                if (string.IsNullOrEmpty(closestNamedPosition))
+                {
+                    return new PathAnalysis
+                    {
+                        IsValid = false,
+                        Error = $"Unable to determine nearest position for {deviceConfig.Name}"
+                    };
+                }
+
+                // Find path from closest named position to target
+                var path = graph.ShortestPath(closestNamedPosition, targetPosition);
+                if (path == null || path.Count == 0)
+                {
+                    return new PathAnalysis
+                    {
+                        IsValid = false,
+                        Error = $"No valid path found from {closestNamedPosition} to {targetPosition}",
+                        CurrentPosition = closestNamedPosition,
+                        TargetPosition = targetPosition
+                    };
+                }
+
+                // Check if we're at an exact position or need initial move
+                const double POSITION_TOLERANCE = 0.1;
+                
+                Position closestPos;
+                bool positionFound;
+
+                if (deviceId.StartsWith("hex"))
+                {
+                    int hexapodId = _positionRegistry.GetHexapodIdFromLocation(deviceId.Split('-')[1]);
+                    positionFound = _positionRegistry.TryGetHexapodPosition(hexapodId, closestNamedPosition, out closestPos);
+                }
+                else
+                {
+                    positionFound = _positionRegistry.TryGetGantryPosition(4, closestNamedPosition, out closestPos);
+                }
+
+                if (!positionFound)
+                {
+                    return new PathAnalysis
+                    {
+                        IsValid = false,
+                        Error = $"Could not find coordinates for position {closestNamedPosition}"
+                    };
+                }
+
+                // Check if initial move is needed and within safety limits
+                double initialMoveDistance=0;
+                bool requiresInitialMove = Math.Sqrt(
+                    Math.Pow(currentPosition.X - closestPos.X, 2) +
+                    Math.Pow(currentPosition.Y - closestPos.Y, 2) +
+                    Math.Pow(currentPosition.Z - closestPos.Z, 2)) > POSITION_TOLERANCE;
+
+                if (requiresInitialMove)
+                {
+                    bool isSafe = IsInitialMoveWithinSafetyLimits(deviceId, currentPosition, closestPos, out initialMoveDistance);
+                    if (!isSafe)
+                    {
+                        return new PathAnalysis
+                        {
+                            IsValid = false,
+                            Error = $"Initial move distance {initialMoveDistance:F3}mm exceeds safety limit",
+                            RequiresInitialMove = true,
+                            InitialPosition = currentPosition,
+                            CurrentPosition = closestNamedPosition
+                        };
+                    }
+                }
+
+                return new PathAnalysis
+                {
+                    IsValid = true,
+                    DeviceType = deviceConfig.Type,
+                    DeviceName = deviceConfig.Name,
+                    CurrentPosition = closestNamedPosition,
+                    TargetPosition = targetPosition,
+                    Path = path,
+                    NumberOfSteps = path.Count - 1,
+                    RequiresInitialMove = requiresInitialMove,
+                    InitialPosition = currentPosition,
+                    InitialMoveDistance = requiresInitialMove ? initialMoveDistance : 0
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error analyzing movement path for device {DeviceId}", deviceId);
+                return new PathAnalysis
+                {
+                    IsValid = false,
+                    Error = $"Error analyzing path: {ex.Message}"
+                };
+            }
+        }
+
+
+
 
         public IReadOnlyDictionary<string, DeviceConfig> GetConfiguredDevices()
         {
@@ -288,5 +468,14 @@ namespace UaaSolutionWpf.Motion
         public string TargetPosition { get; set; }
         public List<string> Path { get; set; }
         public int NumberOfSteps { get; set; }
+        public bool RequiresInitialMove { get; set; }
+        public DevicePosition InitialPosition { get; set; }
+        public double InitialMoveDistance { get; set; }  // Added to track distance of initial move
+    }
+
+    public class DeviceSafetyLimits
+    {
+        public double MaxInitialMoveDistance { get; set; }
+        public string Name { get; set; }
     }
 }

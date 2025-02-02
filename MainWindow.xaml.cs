@@ -270,21 +270,62 @@ namespace UaaSolutionWpf
 
         }
 
+
+        //test graph manager
         private async void TestGraph_Click(object sender, RoutedEventArgs e)
         {
-            var analysis = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED");
+            // Test case 1: Position exactly at Home
+            var exactHomePosition = new DevicePosition(3)
+            {
+                X = 3.0,
+                Y = 3.0,
+                Z = 12.0
+            };
 
+            logger.Information("Test Case 1: Exactly at Home position");
+            var analysis1 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", exactHomePosition);
+            LogPathAnalysis(analysis1);
+
+            // Test case 2: Position slightly off from Home (1.5mm in X)
+            var offHomePosition = new DevicePosition(3)
+            {
+                X = 4.5,  // 1.5mm off from Home X
+                Y = 3.0,
+                Z = 12.0
+            };
+
+            logger.Information("\nTest Case 2: 1.5mm off from Home position");
+            var analysis2 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", offHomePosition);
+            LogPathAnalysis(analysis2);
+
+            // Test case 3: Position way off from any known position
+            var arbitraryPosition = new DevicePosition(3)
+            {
+                X = 50.0,
+                Y = 50.0,
+                Z = 20.0
+            };
+
+            logger.Information("\nTest Case 3: Arbitrary position far from known positions");
+            var analysis3 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", arbitraryPosition);
+            LogPathAnalysis(analysis3);
+        }
+
+        private void LogPathAnalysis(PathAnalysis analysis)
+        {
             if (analysis.IsValid)
             {
                 logger.Information($"Device: {analysis.DeviceName} ({analysis.DeviceType})");
-                logger.Information($"Current Position: {analysis.CurrentPosition}");
+                logger.Information($"Starting at: X={analysis.InitialPosition.X:F3}, Y={analysis.InitialPosition.Y:F3}, Z={analysis.InitialPosition.Z:F3}");
+                logger.Information($"Closest Known Position: {analysis.CurrentPosition}");
+                logger.Information($"Requires Initial Move: {analysis.RequiresInitialMove}");
                 logger.Information($"Target Position: {analysis.TargetPosition}");
                 logger.Information($"Path: {string.Join(" -> ", analysis.Path)}");
                 logger.Information($"Number of steps: {analysis.NumberOfSteps}");
             }
             else
             {
-                logger.Information($"Error: {analysis.Error}");
+                logger.Error($"Error: {analysis.Error}");
             }
         }
     }

@@ -15,6 +15,7 @@ using Serilog;
 using Serilog.Core;
 using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf
 {
@@ -31,6 +32,9 @@ namespace UaaSolutionWpf
         private HexapodPositionsManager rightHexapodPositionsManager;
         private ILogger logger;
         private HexapodConnectionManager hexapodConnectionManager;
+
+        private GantryMovementService gantryMovementService;
+
         private AcsGantryConnectionManager gantryConnectionManager;
         private bool noMotorMode;
 
@@ -150,6 +154,10 @@ namespace UaaSolutionWpf
         {
             // Create the manager with just a logger
             gantryConnectionManager = new AcsGantryConnectionManager(GantryControl,logger);
+            gantryMovementService = new GantryMovementService(gantryConnectionManager, logger);
+
+            // Initialize controls with dependencies
+            GantryControl.SetDependencies(gantryMovementService);
 
 
 

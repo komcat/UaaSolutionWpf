@@ -1,8 +1,11 @@
-﻿using System;
+﻿using Serilog;
+using Serilog.Core;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -19,6 +22,8 @@ namespace UaaSolutionWpf.Controls
         private bool isYEnabled = false;
         private bool isZEnabled = false;
         private double selectedStepSize = 0.1;
+
+
 
         public bool IsXEnabled
         {
@@ -50,12 +55,22 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
-        public event PropertyChangedEventHandler ? PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private GantryMovementService _movementService;
+        private readonly ILogger _logger;
 
         public GantryControl()
         {
             InitializeComponent();
             DataContext = this;
+            InitializeMicronStepItems();
+            _logger = Log.ForContext<GantryControl>();
+        }
+
+        public void SetDependencies(GantryMovementService movementService)
+        {
+            _movementService = movementService ?? throw new ArgumentNullException(nameof(movementService));
+            
         }
 
         public string RobotName
@@ -133,34 +148,82 @@ namespace UaaSolutionWpf.Controls
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void OnXPlusClick(object sender, RoutedEventArgs e)
+        private async void OnXPlusClick(object sender, RoutedEventArgs e)
         {
-            XPosition += selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.X, selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move X axis positive");
+                MessageBox.Show("Failed to move X axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void OnXMinusClick(object sender, RoutedEventArgs e)
+        private async void OnXMinusClick(object sender, RoutedEventArgs e)
         {
-            XPosition -= selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.X, -selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move X axis negative");
+                MessageBox.Show("Failed to move X axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void OnYPlusClick(object sender, RoutedEventArgs e)
+        private async void OnYPlusClick(object sender, RoutedEventArgs e)
         {
-            YPosition += selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.Y, selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move Y axis positive");
+                MessageBox.Show("Failed to move Y axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void OnYMinusClick(object sender, RoutedEventArgs e)
+        private async void OnYMinusClick(object sender, RoutedEventArgs e)
         {
-            YPosition -= selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.Y, -selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move Y axis negative");
+                MessageBox.Show("Failed to move Y axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void OnZPlusClick(object sender, RoutedEventArgs e)
+        private async void OnZPlusClick(object sender, RoutedEventArgs e)
         {
-            ZPosition += selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.Z, selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move Z axis positive");
+                MessageBox.Show("Failed to move Z axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void OnZMinusClick(object sender, RoutedEventArgs e)
+        private async void OnZMinusClick(object sender, RoutedEventArgs e)
         {
-            ZPosition -= selectedStepSize;
+            try
+            {
+                await _movementService.MoveRelativeAsync((int)GantryMovementService.Axis.Z, -selectedStepSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move Z axis negative");
+                MessageBox.Show("Failed to move Z axis: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void OnXEnableClick(object sender, RoutedEventArgs e)
@@ -189,15 +252,30 @@ namespace UaaSolutionWpf.Controls
 
         private void OnStepSizeChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (e.AddedItems.Count > 0)
+            if (StepListBox.SelectedItem is MicronStepItem selectedItem)
             {
-                var item = e.AddedItems[0] as ListBoxItem;
-                if (item != null)
-                {
-                    string content = item.Content.ToString();
-                    selectedStepSize = double.Parse(content.Split(' ')[0]);
-                }
+                selectedStepSize = selectedItem.Value;
             }
+        }
+
+        private void InitializeMicronStepItems()
+        {
+            // First, clear any existing items
+            StepListBox.Items.Clear();
+            var micronSteps = new List<MicronStepItem>
+            {
+                new MicronStepItem { DisplayText = "1 micron", Value = 0.001 },
+                new MicronStepItem { DisplayText = "10 micron", Value = 0.010 },
+                new MicronStepItem { DisplayText = "50 micron", Value = 0.050 },
+                new MicronStepItem { DisplayText = "100 micron", Value = 0.100 },
+                new MicronStepItem { DisplayText = "500 micron", Value = 0.500 },
+                new MicronStepItem { DisplayText = "1 mm", Value = 1.000},
+                new MicronStepItem { DisplayText = "5 mm", Value = 5.000},
+                new MicronStepItem { DisplayText = "10 mm", Value = 10.000}
+            };
+
+            StepListBox.ItemsSource = micronSteps;
+            StepListBox.SelectedIndex = 0; // Select the first item by default
         }
     }
 }

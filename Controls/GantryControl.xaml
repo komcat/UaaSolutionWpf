@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="150" d:DesignWidth="750">
+             d:DesignHeight="150" d:DesignWidth="790.136">
     <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
         <Grid Margin="10">
             <Grid.RowDefinitions>
@@ -97,19 +97,19 @@
                 </StackPanel>
 
                 <!-- Step Size ListBox -->
-                <ListBox Grid.Column="6" 
-                        Width="80" 
+                <ListBox x:Name="StepListBox" Grid.Column="6" 
+                        Width="100" 
                         Height="100"
                         ScrollViewer.VerticalScrollBarVisibility="Visible"
                         ScrollViewer.CanContentScroll="True"
                         SelectedIndex="0"
                         SelectionChanged="OnStepSizeChanged">
-                    <ListBoxItem Content="1 micro"/>
-                    <ListBoxItem Content="5 micro"/>
-                    <ListBoxItem Content="10 micro"/>
-                    <ListBoxItem Content="200 micro"/>
-                    <ListBoxItem Content="500 micro"/>
-                    <ListBoxItem Content="1000 micro"/>
+                    <ListBoxItem Content="1 micron"/>
+                    <ListBoxItem Content="5 micron"/>
+                    <ListBoxItem Content="10 micron"/>
+                    <ListBoxItem Content="200 micron"/>
+                    <ListBoxItem Content="500 micron"/>
+                    <ListBoxItem Content="1000 micron"/>
                 </ListBox>
             </Grid>
 

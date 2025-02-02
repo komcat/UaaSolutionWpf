@@ -160,7 +160,7 @@
             </Canvas>
         </StackPanel>
         
-        <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" IsChecked="False"/>
+        <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" IsChecked="True"/>
 
 
     </Grid>

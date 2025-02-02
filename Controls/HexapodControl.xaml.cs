@@ -149,6 +149,7 @@ namespace UaaSolutionWpf.Controls
         {
             InitializeComponent();
             DataContext = this;
+            InitializeMicronStepItems();
         }
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -219,17 +220,50 @@ namespace UaaSolutionWpf.Controls
             WPosition = newPosition;
         }
 
-        private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+
+
+        private void InitializeMicronStepItems()
         {
-            if (e.AddedItems.Count > 0)
+            // First, clear any existing items
+            StepListBox.Items.Clear();
+            var micronSteps = new List<MicronStepItem>
             {
-                var item = e.AddedItems[0] as ListBoxItem;
-                if (item != null)
-                {
-                    string content = item.Content.ToString();
-                    selectedMicronStep = double.Parse(content.Split(' ')[0]);
-                }
+                new MicronStepItem { DisplayText = "0.1 micron", Value = 0.0001 },
+                new MicronStepItem { DisplayText = "0.2 micron", Value = 0.0002 },
+                new MicronStepItem { DisplayText = "0.5 micron", Value = 0.0005 },
+                new MicronStepItem { DisplayText = "1 micron", Value = 0.001 },
+                new MicronStepItem { DisplayText = "2 micron", Value = 0.002 },
+                new MicronStepItem { DisplayText = "3 micron", Value = 0.003 },
+                new MicronStepItem { DisplayText = "4 micron", Value = 0.004 },
+                new MicronStepItem { DisplayText = "5 micron", Value = 0.005 },
+                new MicronStepItem { DisplayText = "10 micron", Value = 0.010 },
+                new MicronStepItem { DisplayText = "20 micron", Value = 0.020 },
+                new MicronStepItem { DisplayText = "50 micron", Value = 0.050 },
+                new MicronStepItem { DisplayText = "100 micron", Value = 0.100 },
+                new MicronStepItem { DisplayText = "200 micron", Value = 0.200 },
+                new MicronStepItem { DisplayText = "500 micron", Value = 0.500 }
+            };
+
+            StepListBox.ItemsSource = micronSteps;
+            StepListBox.SelectedIndex = 0; // Select the first item by default
+        }
+
+        private void StepListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (StepListBox.SelectedItem is MicronStepItem selectedItem)
+            {
+                selectedMicronStep = selectedItem.Value;
             }
+        }
+    }
+    public class MicronStepItem
+    {
+        public string DisplayText { get; set; }
+        public double Value { get; set; }
+
+        public override string ToString()
+        {
+            return DisplayText;
         }
     }
 }

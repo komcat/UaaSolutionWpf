@@ -7,13 +7,17 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="300">
     <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,10">
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"  Orientation="Vertical" Margin="0,0,0,10">
             <DockPanel LastChildFill="False" Margin="0,0,0,5">
                 <TextBlock Text="Hexapod: {Binding RobotName}" VerticalAlignment="Center"/>
                 <Rectangle Width="10" Height="10" Margin="5,0,0,0" DockPanel.Dock="Right">
@@ -38,8 +42,8 @@
         <!-- Main Content -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left side controls -->
@@ -53,7 +57,7 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="X+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="X-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding XPosition, StringFormat='X: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding XPosition, StringFormat='X: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Y Controls -->
@@ -65,7 +69,7 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="Y+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="Y-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding YPosition, StringFormat='Y: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding YPosition, StringFormat='Y: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Z Controls -->
@@ -77,7 +81,7 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="Z+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="Z-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding ZPosition, StringFormat='Z: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding ZPosition, StringFormat='Z: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- U Controls -->
@@ -89,7 +93,7 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="U+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="U-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding UPosition, StringFormat='U: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding UPosition, StringFormat='U: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- V Controls -->
@@ -101,7 +105,7 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="V+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="V-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding VPosition, StringFormat='V: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding VPosition, StringFormat='V: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- W Controls -->
@@ -113,30 +117,33 @@
                     </Grid.ColumnDefinitions>
                     <Button Content="W+" Width="40" Height="30" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Content="W-" Width="40" Height="30" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding WPosition, StringFormat='W: {0:F4}'}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding WPosition, StringFormat='W: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
             </StackPanel>
 
-            <!-- Right side micron list -->
-            <ListBox Grid.Column="1" Margin="10,0,0,0" Width="100"
-                     Height="200"
-                     ScrollViewer.VerticalScrollBarVisibility="Visible"
-                     ScrollViewer.CanContentScroll="True">
-                <ListBoxItem Content="0.1 micron"/>
-                <ListBoxItem Content="0.2 micron"/>
-                <ListBoxItem Content="0.5 micron"/>
-                <ListBoxItem Content="1 micron"/>
-                <ListBoxItem Content="2 micron"/>
-                <ListBoxItem Content="3 micron"/>
-                <ListBoxItem Content="4 micron"/>
-                <ListBoxItem Content="5 micron"/>
-                <ListBoxItem Content="10 micron"/>
-                <ListBoxItem Content="20 micron"/>
-                <ListBoxItem Content="50 micron"/>
-                <ListBoxItem Content="100 micron"/>
-                <ListBoxItem Content="200 micron"/>
-                <ListBoxItem Content="500 micron"/>
-            </ListBox>
+
         </Grid>
+        <!-- Right side micron list -->
+        <ListBox x:Name="StepListBox" Margin="10,0,0,0" Width="100"
+            Height="200"
+            Grid.Column="2"
+            Grid.Row="0" Grid.RowSpan="3"
+             ScrollViewer.VerticalScrollBarVisibility="Visible"
+             ScrollViewer.CanContentScroll="True" SelectionChanged="StepListBox_SelectionChanged">
+            <ListBoxItem Content="0.1 micron"/>
+            <ListBoxItem Content="0.2 micron"/>
+            <ListBoxItem Content="0.5 micron"/>
+            <ListBoxItem Content="1 micron"/>
+            <ListBoxItem Content="2 micron"/>
+            <ListBoxItem Content="3 micron"/>
+            <ListBoxItem Content="4 micron"/>
+            <ListBoxItem Content="5 micron"/>
+            <ListBoxItem Content="10 micron"/>
+            <ListBoxItem Content="20 micron"/>
+            <ListBoxItem Content="50 micron"/>
+            <ListBoxItem Content="100 micron"/>
+            <ListBoxItem Content="200 micron"/>
+            <ListBoxItem Content="500 micron"/>
+        </ListBox>
     </Grid>
 </UserControl>

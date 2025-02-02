@@ -130,7 +130,7 @@ namespace UaaSolutionWpf
                 hexapodConnectionManager = new HexapodConnectionManager(controls);
                 logger.Information("Created HexapodConnectionManager instance");
 
-                //hexapodConnectionManager.InitializeConnections();
+                hexapodConnectionManager.InitializeConnections();
                 logger.Information("Initialized hexapod connections");
             }
             catch (Exception ex)

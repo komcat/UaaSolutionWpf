@@ -55,8 +55,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="X+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="X-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="X+" Width="40" Height="30" Margin="0,0,5,0" Click="OnXPlusClick"/>
+                    <Button Grid.Column="1" Content="X-" Width="40" Height="30" Margin="0,0,10,0" Click="OnXMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding XPosition, StringFormat='X: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -67,8 +67,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="Y+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="Y-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="Y+" Width="40" Height="30" Margin="0,0,5,0" Click="OnYPlusClick"/>
+                    <Button Grid.Column="1" Content="Y-" Width="40" Height="30" Margin="0,0,10,0" Click="OnYMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding YPosition, StringFormat='Y: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -79,8 +79,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="Z+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="Z-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="Z+" Width="40" Height="30" Margin="0,0,5,0" Click="OnZPlusClick"/>
+                    <Button Grid.Column="1" Content="Z-" Width="40" Height="30" Margin="0,0,10,0" Click="OnZMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding ZPosition, StringFormat='Z: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -91,8 +91,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="U+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="U-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="U+" Width="40" Height="30" Margin="0,0,5,0" Click="OnUPlusClick"/>
+                    <Button Grid.Column="1" Content="U-" Width="40" Height="30" Margin="0,0,10,0" Click="OnUMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding UPosition, StringFormat='U: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -103,8 +103,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="V+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="V-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="V+" Width="40" Height="30" Margin="0,0,5,0" Click="OnVPlusClick"/>
+                    <Button Grid.Column="1" Content="V-" Width="40" Height="30" Margin="0,0,10,0" Click="OnVMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding VPosition, StringFormat='V: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
 
@@ -115,8 +115,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="W+" Width="40" Height="30" Margin="0,0,5,0"/>
-                    <Button Grid.Column="1" Content="W-" Width="40" Height="30" Margin="0,0,10,0"/>
+                    <Button Content="W+" Width="40" Height="30" Margin="0,0,5,0" Click="OnWPlusClick"/>
+                    <Button Grid.Column="1" Content="W-" Width="40" Height="30" Margin="0,0,10,0" Click="OnWMinusClick"/>
                     <TextBlock Grid.Column="2" Text="{Binding WPosition, StringFormat='W: {0:+0.0000;-0.0000;+0.0000}'}" VerticalAlignment="Center"/>
                 </Grid>
             </StackPanel>

@@ -30,7 +30,10 @@ namespace UaaSolutionWpf
         private HexapodPositionsManager leftHexapodPositionsManager;
         private HexapodPositionsManager bottomHexapodPositionsManager;
         private HexapodPositionsManager rightHexapodPositionsManager;
-        private ILogger logger;
+        private Dictionary<HexapodConnectionManager.HexapodType, HexapodMovementService> _hexapodMovementServices;
+
+
+
         private HexapodConnectionManager hexapodConnectionManager;
 
         private GantryMovementService gantryMovementService;
@@ -39,6 +42,9 @@ namespace UaaSolutionWpf
         private bool noMotorMode;
 
         private MotionGraphManager motionManager;
+
+        private ILogger logger;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -134,6 +140,22 @@ namespace UaaSolutionWpf
                 hexapodConnectionManager = new HexapodConnectionManager(controls);
                 logger.Information("Created HexapodConnectionManager instance");
 
+                // Initialize movement services for each hexapod
+                _hexapodMovementServices = new Dictionary<HexapodConnectionManager.HexapodType, HexapodMovementService>();
+
+                foreach (var kvp in controls)
+                {
+                    var movementService = new HexapodMovementService(
+                        hexapodConnectionManager,
+                        kvp.Key,
+                        logger
+                    );
+                    _hexapodMovementServices[kvp.Key] = movementService;
+
+                    // Set dependencies for the control
+                    kvp.Value.SetDependencies(movementService);
+                }
+
                 hexapodConnectionManager.InitializeConnections();
                 logger.Information("Initialized hexapod connections");
             }
@@ -149,11 +171,10 @@ namespace UaaSolutionWpf
             }
         }
 
-
         private async void IntiailizeAcsGantry()
         {
             // Create the manager with just a logger
-            gantryConnectionManager = new AcsGantryConnectionManager(GantryControl,logger);
+            gantryConnectionManager = new AcsGantryConnectionManager(GantryControl, logger);
             gantryMovementService = new GantryMovementService(gantryConnectionManager, logger);
 
             // Initialize controls with dependencies
@@ -171,7 +192,7 @@ namespace UaaSolutionWpf
         {
             base.OnClosed(e);
             hexapodConnectionManager?.Dispose();
-           
+            gantryConnectionManager?.Dispose();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -179,13 +200,13 @@ namespace UaaSolutionWpf
             noMotorMode = false;
             if (noMotorModeCheckBox.IsChecked == true)
             {
-                noMotorMode=true;
+                noMotorMode = true;
                 logger.Warning("Running with motors OFF");
             }
             logger.Warning("Running with motors ON");
 
 
-            if (noMotorModeCheckBox.IsChecked==false)
+            if (noMotorModeCheckBox.IsChecked == false)
             {
                 InitializeHexapod();
                 IntiailizeAcsGantry();

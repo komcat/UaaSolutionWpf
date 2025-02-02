@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Serilog;
+using Serilog.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -14,6 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -35,7 +38,7 @@ namespace UaaSolutionWpf.Controls
         private double selectedMicronStep = 0.1;
 
         public event PropertyChangedEventHandler ? PropertyChanged;
-
+        private ILogger _logger;
         public string RobotName
         {
             get => robotName;
@@ -144,48 +147,99 @@ namespace UaaSolutionWpf.Controls
         public event PositionUpdateHandler UPositionUpdated;
         public event PositionUpdateHandler VPositionUpdated;
         public event PositionUpdateHandler WPositionUpdated;
-
+        private HexapodMovementService _movementService;
         public HexapodControl()
         {
             InitializeComponent();
             DataContext = this;
             InitializeMicronStepItems();
         }
-
+        public void SetDependencies(HexapodMovementService movementService)
+        {
+            _movementService = movementService ?? throw new ArgumentNullException(nameof(movementService));
+            _logger = Log.Logger.ForContext<HexapodControl>();
+        }
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void MoveAxis(string axis, bool positive)
+        private async void OnXPlusClick(object sender, RoutedEventArgs e)
         {
-            // This method can be called from the robot control class
-            switch (axis)
+            await MoveAxisRelative(HexapodMovementService.Axis.X, selectedMicronStep);
+        }
+
+        private async void OnXMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.X, -selectedMicronStep);
+        }
+
+        private async void OnYPlusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.Y, selectedMicronStep);
+        }
+
+        private async void OnYMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.Y, -selectedMicronStep);
+        }
+
+        private async void OnZPlusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.Z, selectedMicronStep);
+        }
+
+        private async void OnZMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.Z, -selectedMicronStep);
+        }
+
+        private async void OnUPlusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.U, selectedMicronStep);
+        }
+
+        private async void OnUMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.U, -selectedMicronStep);
+        }
+
+        private async void OnVPlusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.V, selectedMicronStep);
+        }
+
+        private async void OnVMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.V, -selectedMicronStep);
+        }
+
+        private async void OnWPlusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.W, selectedMicronStep);
+        }
+
+        private async void OnWMinusClick(object sender, RoutedEventArgs e)
+        {
+            await MoveAxisRelative(HexapodMovementService.Axis.W, -selectedMicronStep);
+        }
+
+        private async Task MoveAxisRelative(HexapodMovementService.Axis axis, double distance)
+        {
+            try
             {
-                case "X":
-                    XPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    XPositionUpdated?.Invoke(XPosition);
-                    break;
-                case "Y":
-                    YPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    YPositionUpdated?.Invoke(YPosition);
-                    break;
-                case "Z":
-                    ZPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    ZPositionUpdated?.Invoke(ZPosition);
-                    break;
-                case "U":
-                    UPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    UPositionUpdated?.Invoke(UPosition);
-                    break;
-                case "V":
-                    VPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    VPositionUpdated?.Invoke(VPosition);
-                    break;
-                case "W":
-                    WPosition += positive ? selectedMicronStep : -selectedMicronStep;
-                    WPositionUpdated?.Invoke(WPosition);
-                    break;
+                if (_movementService == null)
+                {
+                    MessageBox.Show("Movement service not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                await _movementService.MoveRelativeAsync(axis, distance);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move {Axis} axis by {Distance}", axis, distance);
+                MessageBox.Show($"Failed to move {axis} axis: {ex.Message}", "Movement Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

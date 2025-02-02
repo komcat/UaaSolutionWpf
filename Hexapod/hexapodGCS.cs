@@ -782,6 +782,100 @@ namespace UaaSolutionWpf.Hexapod
                 throw;
             }
         }
+
+
+        // Add these methods to your HexapodGCS class
+
+        public async Task MoveRelative(int axis, double distance)
+        {
+            await _moveSemaphore.WaitAsync();
+            try
+            {
+                // Create array for relative movement
+                double[] relativeMove = new double[PI_NUMBER_OF_AXIS];
+                relativeMove[axis] = distance;  // Set the distance for the specified axis
+
+                _logger.Debug("Initiating relative move - Axis: {Axis}, Distance: {Distance}", axis, distance);
+
+                if (GCS2.MVR(ControllerId, Axis, relativeMove) == PI_RESULT_FAILURE)
+                {
+                    string errorMessage = $"Failed to execute relative move on axis {axis} by {distance}";
+                    _logger.Error(errorMessage);
+                    throw new GcsCommandError(errorMessage);
+                }
+
+                await WaitForMotionDone();
+
+                string successMessage = $"Completed relative move - Axis: {axis}, Distance: {distance}";
+                _logger.Information(successMessage);
+                MovedSuccessEvent?.Invoke(this, successMessage);
+            }
+            finally
+            {
+                _moveSemaphore.Release();
+            }
+        }
+
+        // Overload for moving multiple axes at once
+        public async Task MoveRelative(double[] relativeDistances)
+        {
+            if (relativeDistances == null || relativeDistances.Length != PI_NUMBER_OF_AXIS)
+            {
+                throw new ArgumentException($"Relative distances array must have length {PI_NUMBER_OF_AXIS}");
+            }
+
+            await _moveSemaphore.WaitAsync();
+            try
+            {
+                _logger.Debug("Initiating multi-axis relative move: X:{0}, Y:{1}, Z:{2}, U:{3}, V:{4}, W:{5}",
+                    relativeDistances[0], relativeDistances[1], relativeDistances[2],
+                    relativeDistances[3], relativeDistances[4], relativeDistances[5]);
+
+                if (GCS2.MVR(ControllerId, Axis, relativeDistances) == PI_RESULT_FAILURE)
+                {
+                    string errorMessage = "Failed to execute multi-axis relative move";
+                    _logger.Error(errorMessage);
+                    throw new GcsCommandError(errorMessage);
+                }
+
+                await WaitForMotionDone();
+
+                string successMessage = $"Completed multi-axis relative move";
+                _logger.Information(successMessage);
+                MovedSuccessEvent?.Invoke(this, successMessage);
+            }
+            finally
+            {
+                _moveSemaphore.Release();
+            }
+        }
+
+        // Helper method for single axis relative movement using PositionHexapod
+        public async Task MoveRelativeAxis(string axis, double distance)
+        {
+            int axisIndex = GetAxisIndex(axis);
+            if (axisIndex == -1)
+            {
+                throw new ArgumentException($"Invalid axis name: {axis}");
+            }
+
+            await MoveRelative(axisIndex, distance);
+        }
+
+        private int GetAxisIndex(string axis)
+        {
+            return axis.ToUpper() switch
+            {
+                "X" => 0,
+                "Y" => 1,
+                "Z" => 2,
+                "U" => 3,
+                "V" => 4,
+                "W" => 5,
+                _ => -1
+            };
+        }
+
         internal class GcsCommandError : Exception
         {
             public GcsCommandError(string message)

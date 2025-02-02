@@ -43,7 +43,7 @@
                     Background="#F5F5F5">
                 <StackPanel>
                     <TextBlock Text="ListBox step jog" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <ListBox x:Name="StepSizeListBox" Width="150" Height="120">
+                    <ListBox x:Name="StepListBox" Width="150" Height="120" SelectionChanged="StepListBox_SelectionChanged">
                         <ListBoxItem Content="0.1 micron"/>
                         <ListBoxItem Content="1.0 micron"/>
                         <ListBoxItem Content="10.0 micron"/>
@@ -71,19 +71,19 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Top row -->
-                    <Button Content="Step-" Grid.Row="0" Grid.Column="0" 
+                    <Button x:Name="BtnStepMinus" Content="Step-" Grid.Row="0" Grid.Column="0" 
                             Width="80" Height="40" Margin="5" Background="Yellow"/>
-                    <Button Content="In" Grid.Row="0" Grid.Column="1" 
+                    <Button x:Name="BtnIn" Content="In" Grid.Row="0" Grid.Column="1" 
                             Width="80" Height="40" Margin="5"/>
-                    <Button Content="Step+" Grid.Row="0" Grid.Column="2" 
+                    <Button x:Name="BtnStepPlus" Content="Step+" Grid.Row="0" Grid.Column="2" 
                             Width="80" Height="40" Margin="5" Background="Yellow"/>
 
                     <!-- Bottom row -->
-                    <Button Content="Left" Grid.Row="1" Grid.Column="0" 
+                    <Button x:Name="BtnLeft" Content="Left" Grid.Row="1" Grid.Column="0" 
                             Width="80" Height="40" Margin="5"/>
-                    <Button Content="Out" Grid.Row="1" Grid.Column="1" 
+                    <Button x:Name="BtnOut" Content="Out" Grid.Row="1" Grid.Column="1" 
                             Width="80" Height="40" Margin="5"/>
-                    <Button Content="Right" Grid.Row="1" Grid.Column="2" 
+                    <Button x:Name="BtnRight" Content="Right" Grid.Row="1" Grid.Column="2" 
                             Width="80" Height="40" Margin="5"/>
                 </Grid>
             </Border>
@@ -96,8 +96,8 @@
                     Padding="5"
                     Background="#F5F5F5">
                 <StackPanel>
-                    <Button Content="Up" Height="40" Width="80" Margin="5,5,5,10"/>
-                    <Button Content="Down" Height="40" Width="80" Margin="5"/>
+                    <Button x:Name="BtnUp" Content="Up" Height="40" Width="80" Margin="5,5,5,10"/>
+                    <Button x:Name="BtnDown" Content="Down" Height="40" Width="80" Margin="5"/>
                 </StackPanel>
             </Border>
 
@@ -120,21 +120,21 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- U Controls -->
-                    <Button Content="U+" Grid.Row="0" Grid.Column="0" 
+                    <Button x:Name="BtnUPlus" Content="U+" Grid.Row="0" Grid.Column="0" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
-                    <Button Content="U-" Grid.Row="0" Grid.Column="1" 
+                    <Button x:Name="BtnUMinus" Content="U-" Grid.Row="0" Grid.Column="1" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
 
                     <!-- V Controls -->
-                    <Button Content="V+" Grid.Row="1" Grid.Column="0" 
+                    <Button x:Name="BtnVPlus" Content="V+" Grid.Row="1" Grid.Column="0" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
-                    <Button Content="V-" Grid.Row="1" Grid.Column="1" 
+                    <Button x:Name="BtnVMinus" Content="V-" Grid.Row="1" Grid.Column="1" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
 
                     <!-- W Controls -->
-                    <Button Content="W+" Grid.Row="2" Grid.Column="0" 
+                    <Button x:Name="BtnWPlus" Content="W+" Grid.Row="2" Grid.Column="0" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
-                    <Button Content="W-" Grid.Row="2" Grid.Column="1" 
+                    <Button x:Name="BtnWMinus" Content="W-" Grid.Row="2" Grid.Column="1" 
                             Width="40" Height="40" Margin="5" Background="LightGray"/>
                 </Grid>
             </Border>

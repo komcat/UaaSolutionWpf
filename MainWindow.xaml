@@ -46,7 +46,7 @@
         </StackPanel>
 
         <StackPanel x:Name="BottomRowPanel" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" >
-            <controls:SimpleJogControl  Margin="5"/>
+            <controls:SimpleJogControl x:Name="SimpleJogControl"  Margin="5"/>
         </StackPanel>
 
 

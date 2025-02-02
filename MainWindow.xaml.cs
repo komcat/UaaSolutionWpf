@@ -32,7 +32,7 @@ namespace UaaSolutionWpf
         private HexapodPositionsManager rightHexapodPositionsManager;
         private Dictionary<HexapodConnectionManager.HexapodType, HexapodMovementService> _hexapodMovementServices;
 
-
+        private SimpleJogControl simpleJogControl;
 
         private HexapodConnectionManager hexapodConnectionManager;
 
@@ -78,7 +78,25 @@ namespace UaaSolutionWpf
 
         }
 
-
+        private void InitializeJogControl()
+        {
+            
+            if (SimpleJogControl != null)
+            {
+                SimpleJogControl.Initialize(
+                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
+                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
+                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                    gantryMovementService,
+                    logger
+                );
+                logger.Information("SimpleJogControl initialized successfully");
+            }
+            else
+            {
+                logger.Error("SimpleJogControl reference is null");
+            }
+        }
         private void InitializePositionManagers()
         {
             string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "WorkingPositions.json");
@@ -210,6 +228,7 @@ namespace UaaSolutionWpf
             {
                 InitializeHexapod();
                 IntiailizeAcsGantry();
+                InitializeJogControl();  // Global Jog control
             }
         }
 

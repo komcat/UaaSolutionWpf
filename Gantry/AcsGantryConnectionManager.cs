@@ -292,7 +292,7 @@ namespace UaaSolutionWpf.Gantry
             }
         }
 
-        private ACSController GetController()
+        public ACSController GetController()
         {
             if (!_controllers.ContainsKey(0))
             {

@@ -162,6 +162,7 @@
         
         <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" 
                   IsChecked="False"/>
+        <Button x:Name="TestGraph" Grid.Column="3" Content="Button" HorizontalAlignment="Left" Margin="136,107,0,0" Grid.Row="4" VerticalAlignment="Top" Height="55" Width="123" Click="TestGraph_Click"/>
 
 
     </Grid>

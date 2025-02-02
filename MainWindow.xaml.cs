@@ -37,11 +37,13 @@ namespace UaaSolutionWpf
         private HexapodConnectionManager hexapodConnectionManager;
 
         private GantryMovementService gantryMovementService;
-
         private AcsGantryConnectionManager gantryConnectionManager;
-        private bool noMotorMode;
+        private bool simulationMode;
 
-        private MotionGraphManager motionManager;
+        private MotionGraphManager motionGraphManager;
+        private DevicePositionMonitor devicePositionMonitor;
+        private PositionRegistry positionRegistry;
+
 
         private ILogger logger;
 
@@ -72,7 +74,7 @@ namespace UaaSolutionWpf
             if (RightHexapodControl != null)
                 ((HexapodControl)RightHexapodControl).RobotName = "Right Hexapod";
 
-            InitializePositionManagers();
+            
 
 
 
@@ -213,41 +215,77 @@ namespace UaaSolutionWpf
             gantryConnectionManager?.Dispose();
         }
 
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            noMotorMode = false;
-            if (noMotorModeCheckBox.IsChecked == true)
-            {
-                noMotorMode = true;
-                logger.Warning("Running with motors OFF");
-            }
-            logger.Warning("Running with motors ON");
+            // Show dialog to ask user about motor connection
+            var result = MessageBox.Show(
+                "Do you want to connect to the motors?\n\nYes - Connect to motors\nNo - Run in simulation mode",
+                "Motor Connection",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
 
+            simulationMode = (result == MessageBoxResult.No);
+            noMotorModeCheckBox.IsChecked = simulationMode;
 
-            if (noMotorModeCheckBox.IsChecked == false)
+            if (simulationMode)
             {
-                InitializeHexapod();
-                IntiailizeAcsGantry();
-                InitializeJogControl();  // Global Jog control
+                logger.Warning("Running with motors OFF (Simulation Mode)");
             }
+            else
+            {
+                logger.Warning("Running with motors ON");
+                try
+                {
+                    InitializeHexapod();
+                    IntiailizeAcsGantry();
+                    InitializeJogControl();  // Global Jog control
+                    InitializePositionManagers();
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Failed to initialize motors");
+                    MessageBox.Show(
+                        $"Failed to initialize motors: {ex.Message}\nSwitching to simulation mode.",
+                        "Initialization Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+
+                    simulationMode = true;
+                    noMotorModeCheckBox.IsChecked = true;
+                }
+            }
+            string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
+            positionRegistry = new PositionRegistry(workingPositionsPath, logger);
+            devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, logger,positionRegistry,simulationMode);
+
+            string configPath = Path.Combine("Config", "motionSystem.json");
+
+            motionGraphManager = new MotionGraphManager(devicePositionMonitor,positionRegistry, configPath, logger);
+            InitializePositionManagers();
         }
 
         private async void InitializeMotionGraphManagers()
         {
-            // In your main window or controller:
-            motionManager = new MotionGraphManager(
-                hexapodConnectionManager,
-                gantryConnectionManager,
-                "Config/motionSystem.json",
-                logger
-            );
 
-            // Move a specific device
-            await motionManager.MoveDeviceToPosition("hex-left", "Home");
-            await motionManager.MoveDeviceToPosition("gantry-main", "PreDispense");
+        }
 
-            // Get all configured devices
-            var devices = motionManager.GetConfiguredDevices();
+        private async void TestGraph_Click(object sender, RoutedEventArgs e)
+        {
+            var analysis = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED");
+
+            if (analysis.IsValid)
+            {
+                logger.Information($"Device: {analysis.DeviceName} ({analysis.DeviceType})");
+                logger.Information($"Current Position: {analysis.CurrentPosition}");
+                logger.Information($"Target Position: {analysis.TargetPosition}");
+                logger.Information($"Path: {string.Join(" -> ", analysis.Path)}");
+                logger.Information($"Number of steps: {analysis.NumberOfSteps}");
+            }
+            else
+            {
+                logger.Information($"Error: {analysis.Error}");
+            }
         }
     }
 }

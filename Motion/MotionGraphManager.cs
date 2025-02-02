@@ -8,42 +8,32 @@ using System.IO;
 using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Config;
 using UaaSolutionWpf.Hexapod;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.Motion
 {
-    public class DeviceConfig
-    {
-        public string Id { get; set; }
-        public string Type { get; set; }  // "Hexapod" or "Gantry"
-        public string Name { get; set; }
-        public string GraphId { get; set; }  // Reference to the graph in WorkingGraphs.json
-    }
 
-    public class MotionSystemConfig
-    {
-        public List<DeviceConfig> Devices { get; set; }
-    }
 
     public class MotionGraphManager
     {
         private readonly ILogger _logger;
         private readonly Dictionary<string, Graph> _graphs;
-        private readonly Dictionary<string, object> _deviceControllers;
         private readonly Dictionary<string, DeviceConfig> _deviceConfigs;
-
+        private readonly DevicePositionMonitor _positionMonitor;
+        private readonly PositionRegistry _positionRegistry;
         public MotionGraphManager(
-            HexapodConnectionManager hexapodManager,
-            AcsGantryConnectionManager gantryConnectionManager,
+            DevicePositionMonitor positionMonitor,
+            PositionRegistry positionRegistry,
             string configPath,
             ILogger logger)
         {
             _logger = logger.ForContext<MotionGraphManager>();
             _graphs = new Dictionary<string, Graph>();
-            _deviceControllers = new Dictionary<string, object>();
             _deviceConfigs = new Dictionary<string, DeviceConfig>();
-
+            _positionMonitor = positionMonitor ?? throw new ArgumentNullException(nameof(positionMonitor));
+            _positionRegistry = positionRegistry;
             LoadGraphs();
-            InitializeDevices(hexapodManager, gantryConnectionManager, configPath);
+            LoadDeviceConfigs(configPath);
         }
 
         private void LoadGraphs()
@@ -75,10 +65,7 @@ namespace UaaSolutionWpf.Motion
             }
         }
 
-        private void InitializeDevices(
-            HexapodConnectionManager hexapodManager,
-            AcsGantryConnectionManager gantryConnectionManager,
-            string configPath)
+        private void LoadDeviceConfigs(string configPath)
         {
             try
             {
@@ -88,208 +75,170 @@ namespace UaaSolutionWpf.Motion
                 foreach (var device in config.Devices)
                 {
                     _deviceConfigs[device.Id] = device;
-
-                    switch (device.Type.ToLower())
-                    {
-                        case "hexapod":
-                            if (Enum.TryParse<HexapodConnectionManager.HexapodType>(device.Name, true, out var hexapodType))
-                            {
-                                var controller = hexapodManager.GetHexapodController(hexapodType);
-                                if (controller != null)
-                                {
-                                    _deviceControllers[device.Id] = controller;
-                                    _logger.Information("Successfully initialized Hexapod device {Id}", device.Id);
-                                }
-                            }
-                            break;
-
-                        case "gantry":
-                            _deviceControllers[device.Id] = gantryConnectionManager;
-                            _logger.Information("Successfully initialized Gantry device {Id}", device.Id);
-                            break;
-
-                        default:
-                            _logger.Warning("Unknown device type {Type} for device {Id}", device.Type, device.Id);
-                            break;
-                    }
+                    _logger.Information("Loaded configuration for device {Id} of type {Type}", device.Id, device.Type);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to initialize devices");
+                _logger.Error(ex, "Failed to load device configurations");
                 throw;
             }
         }
 
-        public async Task<bool> MoveDeviceToPosition(string deviceId, string targetPosition, bool showConfirmation = true)
+        private async Task<string> GetCurrentPosition(string deviceId)
+        {
+            try
+            {
+                var position = await _positionMonitor.GetCurrentPosition(deviceId);
+                return DeterminePositionName(deviceId, position);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to get current position for device {DeviceId}", deviceId);
+                throw;
+            }
+        }
+
+        private string DeterminePositionName(string deviceId, DevicePosition currentPosition)
+        {
+            try
+            {
+                // Parse device type and location from ID (e.g., "hex-left", "gantry-main")
+                var parts = deviceId.Split('-');
+                if (parts.Length != 2)
+                {
+                    throw new ArgumentException($"Invalid device ID format: {deviceId}");
+                }
+
+                // Tolerance for position matching (in mm)
+                const double POSITION_TOLERANCE = 0.1;  // 0.1mm
+
+                string closestPosition = null;
+                double minDistance = double.MaxValue;
+
+                switch (parts[0].ToLower())
+                {
+                    case "hex":
+                        int hexapodId = _positionRegistry.GetHexapodIdFromLocation(parts[1]);
+                        var hexPositions = _positionRegistry.GetAllHexapodPositions(hexapodId);
+
+                        foreach (var position in hexPositions)
+                        {
+                            // Calculate only linear distance for hexapods
+                            double distance = Math.Sqrt(
+                                Math.Pow(currentPosition.X - position.Value.X, 2) +
+                                Math.Pow(currentPosition.Y - position.Value.Y, 2) +
+                                Math.Pow(currentPosition.Z - position.Value.Z, 2));
+
+                            if (distance < minDistance)
+                            {
+                                minDistance = distance;
+                                closestPosition = position.Key;
+                            }
+                        }
+                        break;
+
+                    case "gantry":
+                        var gantryPositions = _positionRegistry.GetAllGantryPositions(4); // Assuming gantry ID 4
+
+                        foreach (var position in gantryPositions)
+                        {
+                            double distance = Math.Sqrt(
+                                Math.Pow(currentPosition.X - position.Value.X, 2) +
+                                Math.Pow(currentPosition.Y - position.Value.Y, 2) +
+                                Math.Pow(currentPosition.Z - position.Value.Z, 2));
+
+                            if (distance < minDistance)
+                            {
+                                minDistance = distance;
+                                closestPosition = position.Key;
+                            }
+                        }
+                        break;
+
+                    default:
+                        throw new ArgumentException($"Unknown device type: {parts[0]}");
+                }
+
+                // Check if we're within tolerance
+                if (minDistance <= POSITION_TOLERANCE)
+                {
+                    _logger.Debug("Device {DeviceId} identified at position {Position} (distance: {Distance:F3}mm)",
+                        deviceId, closestPosition, minDistance);
+                    return closestPosition;
+                }
+
+                _logger.Warning("Device {DeviceId} not near any known position (closest: {Position}, distance: {Distance:F3}mm)",
+                    deviceId, closestPosition, minDistance);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error determining position name for device {DeviceId}", deviceId);
+                throw;
+            }
+        }
+
+        public async Task<PathAnalysis> AnalyzeMovementPath(string deviceId, string targetPosition)
         {
             try
             {
                 if (!_deviceConfigs.TryGetValue(deviceId, out var deviceConfig))
                 {
                     _logger.Error("Device configuration not found for ID {DeviceId}", deviceId);
-                    return false;
-                }
-
-                if (!_deviceControllers.TryGetValue(deviceId, out var controller))
-                {
-                    _logger.Error("Device controller not found for ID {DeviceId}", deviceId);
-                    return false;
+                    return new PathAnalysis { IsValid = false, Error = "Device configuration not found" };
                 }
 
                 if (!_graphs.TryGetValue(deviceConfig.GraphId, out var graph))
                 {
                     _logger.Error("Graph not found for device {DeviceId} with GraphId {GraphId}",
                         deviceId, deviceConfig.GraphId);
-                    return false;
+                    return new PathAnalysis { IsValid = false, Error = "Motion graph not found" };
                 }
 
-                _logger.Information("Attempting to move {DeviceType} {DeviceName} to position {Position}",
-                    deviceConfig.Type, deviceConfig.Name, targetPosition);
-
-                // Get current position
-                string currentPosition = await GetCurrentPosition(deviceConfig, controller);
+                // Get current position name
+                string currentPosition = await GetCurrentPosition(deviceId);
                 if (string.IsNullOrEmpty(currentPosition))
                 {
-                    MessageBox.Show($"Unable to determine current position for {deviceConfig.Name}",
-                        "Position Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
+                    return new PathAnalysis
+                    {
+                        IsValid = false,
+                        Error = $"Unable to determine current position for {deviceConfig.Name}"
+                    };
                 }
 
                 // Find path
                 var path = graph.ShortestPath(currentPosition, targetPosition);
                 if (path == null || path.Count == 0)
                 {
-                    MessageBox.Show($"No valid path found from {currentPosition} to {targetPosition}",
-                        "Path Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return false;
-                }
-
-                // Show confirmation if requested
-                if (showConfirmation)
-                {
-                    var result = MessageBox.Show(
-                        $"Move {deviceConfig.Name} through path:\n{string.Join(" -> ", path)}",
-                        "Confirm Movement",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question);
-
-                    if (result != MessageBoxResult.Yes)
+                    return new PathAnalysis
                     {
-                        return false;
-                    }
+                        IsValid = false,
+                        Error = $"No valid path found from {currentPosition} to {targetPosition}",
+                        CurrentPosition = currentPosition,
+                        TargetPosition = targetPosition
+                    };
                 }
 
-                // Execute movement
-                return await ExecuteMovement(deviceConfig, controller, path);
+                return new PathAnalysis
+                {
+                    IsValid = true,
+                    DeviceType = deviceConfig.Type,
+                    DeviceName = deviceConfig.Name,
+                    CurrentPosition = currentPosition,
+                    TargetPosition = targetPosition,
+                    Path = path,
+                    NumberOfSteps = path.Count - 1
+                };
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error during movement for device {DeviceId}", deviceId);
-                MessageBox.Show($"Error during movement: {ex.Message}",
-                    "Movement Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-        }
-
-        private async Task<string> GetCurrentPosition(DeviceConfig config, object controller)
-        {
-            switch (config.Type.ToLower())
-            {
-                case "hexapod":
-                    if (controller is HexapodGCS hexapodController)
-                    {
-                        return hexapodController.WhereAmI();
-                    }
-                    break;
-
-                case "gantry":
-                    if (controller is AcsGantryConnectionManager gantryController)
-                    {
-                        // Implement gantry position detection
-                        return "Current"; // Placeholder
-                    }
-                    break;
-            }
-
-            return string.Empty;
-        }
-
-        private async Task<bool> ExecuteMovement(DeviceConfig config, object controller, List<string> path)
-        {
-            foreach (var position in path)
-            {
-                _logger.Information("Moving {DeviceName} to position: {Position}",
-                    config.Name, position);
-
-                bool success = false;
-                switch (config.Type.ToLower())
+                _logger.Error(ex, "Error analyzing movement path for device {DeviceId}", deviceId);
+                return new PathAnalysis
                 {
-                    case "hexapod":
-                        if (controller is HexapodGCS hexapodController)
-                        {
-                            success = await MoveHexapod(hexapodController, position);
-                        }
-                        break;
-
-                    case "gantry":
-                        if (controller is AcsGantryConnectionManager gantryController)
-                        {
-                            success = await MoveGantry(gantryController, position);
-                        }
-                        break;
-                }
-
-                if (!success)
-                {
-                    _logger.Error("Failed to move {DeviceName} to position {Position}",
-                        config.Name, position);
-                    return false;
-                }
-
-                // Wait for movement to complete
-                await Task.Delay(100); // Implement proper movement completion detection
-            }
-
-            return true;
-        }
-
-        private async Task<bool> MoveHexapod(HexapodGCS controller, string position)
-        {
-            try
-            {
-                // Implement the actual hexapod movement logic
-                // This should use the appropriate method from your HexapodGCS class
-                _logger.Information("Moving hexapod to position {Position}", position);
-
-                // Example:
-                // await controller.MoveToPositionName(position);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error moving hexapod to position {Position}", position);
-                return false;
-            }
-        }
-
-        private async Task<bool> MoveGantry(AcsGantryConnectionManager controller, string position)
-        {
-            try
-            {
-                // Implement the actual gantry movement logic
-                _logger.Information("Moving gantry to position {Position}", position);
-
-                // Example:
-                // await controller.MoveToPosition(position);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error moving gantry to position {Position}", position);
-                return false;
+                    IsValid = false,
+                    Error = $"Error analyzing path: {ex.Message}"
+                };
             }
         }
 
@@ -298,7 +247,6 @@ namespace UaaSolutionWpf.Motion
             return _deviceConfigs;
         }
     }
-
     // Supporting classes for graph structure
     public class GraphSet
     {
@@ -316,5 +264,29 @@ namespace UaaSolutionWpf.Motion
         public string from { get; set; }
         public string to { get; set; }
         public int weight { get; set; }
+    }
+    public class DeviceConfig
+    {
+        public string Id { get; set; }
+        public string Type { get; set; }  // "Hexapod" or "Gantry"
+        public string Name { get; set; }
+        public string GraphId { get; set; }  // Reference to the graph in WorkingGraphs.json
+    }
+
+    public class MotionSystemConfig
+    {
+        public List<DeviceConfig> Devices { get; set; }
+    }
+
+    public class PathAnalysis
+    {
+        public bool IsValid { get; set; }
+        public string Error { get; set; }
+        public string DeviceType { get; set; }
+        public string DeviceName { get; set; }
+        public string CurrentPosition { get; set; }
+        public string TargetPosition { get; set; }
+        public List<string> Path { get; set; }
+        public int NumberOfSteps { get; set; }
     }
 }

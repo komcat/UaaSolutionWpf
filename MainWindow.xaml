@@ -146,7 +146,21 @@
                 </TabItem>
                 <TabItem Header="I/O">
                     <Grid>
-                        <!-- Content for Tab 2 -->
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" 
+                  HorizontalScrollBarVisibility="Disabled" Margin="10">
+                            <controls:IOMonitorControl x:Name="IOBottomMonitor" Width="400"/>
+                        </ScrollViewer>
+
+                        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" 
+                  HorizontalScrollBarVisibility="Disabled" Margin="10">
+                            <controls:IOMonitorControl x:Name="IOTopMonitor" Width="400"/>
+                        </ScrollViewer>
                     </Grid>
                 </TabItem>
             </TabControl>

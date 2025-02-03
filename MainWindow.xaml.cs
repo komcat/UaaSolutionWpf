@@ -47,7 +47,7 @@ namespace UaaSolutionWpf
         private IOService _ioService;
         private IOMonitor _ioMonitor;
         private ILogger logger;
-
+        private IOConfig.IOConfigRoot _config;
         public MainWindow()
         {
             InitializeComponent();
@@ -263,7 +263,8 @@ namespace UaaSolutionWpf
 
 
             await InitializeIODevicesAsync();
-            await InitializeIOMonitorAsync();
+            //await InitializeIOMonitorAsync();
+            await InitializeIOMonitorControlsAsync();
         }
 
 
@@ -426,6 +427,68 @@ namespace UaaSolutionWpf
                 throw;
             }
         }        // Make sure to clean up when the application closes
+
+        private async Task InitializeIOMonitorControlsAsync()
+        {
+            try
+            {
+                // Initialize bottom IO device monitor
+                var bottomDevice = _config.Eziio.FirstOrDefault(d => d.Name == "IOBottom");
+                if (bottomDevice != null)
+                {
+                    IOBottomMonitor.Initialize(logger, _ioService, _ioMonitor, bottomDevice.Name, bottomDevice.IP);
+
+                    // Add output pins
+                    foreach (var output in bottomDevice.IOConfig.Outputs)
+                    {
+                        IOBottomMonitor.AddOutputPin(output.Name, output.Pin);
+                    }
+
+                    // Add input pins
+                    foreach (var input in bottomDevice.IOConfig.Inputs)
+                    {
+                        IOBottomMonitor.AddInputPin(input.Name, input.Pin);
+                    }
+
+                    logger.Information("Initialized Bottom IO Monitor with {OutputCount} outputs and {InputCount} inputs",
+                        bottomDevice.IOConfig.Outputs.Count,
+                        bottomDevice.IOConfig.Inputs.Count);
+                }
+
+                // Initialize top IO device monitor
+                var topDevice = _config.Eziio.FirstOrDefault(d => d.Name == "IOTop");
+                if (topDevice != null)
+                {
+                    IOTopMonitor.Initialize(logger, _ioService, _ioMonitor, topDevice.Name, topDevice.IP);
+
+                    // Add output pins
+                    foreach (var output in topDevice.IOConfig.Outputs)
+                    {
+                        IOTopMonitor.AddOutputPin(output.Name, output.Pin);
+                    }
+
+                    // Add input pins
+                    foreach (var input in topDevice.IOConfig.Inputs)
+                    {
+                        IOTopMonitor.AddInputPin(input.Name, input.Pin);
+                    }
+
+                    logger.Information("Initialized Top IO Monitor with {OutputCount} outputs and {InputCount} inputs",
+                        topDevice.IOConfig.Outputs.Count,
+                        topDevice.IOConfig.Inputs.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error initializing IO Monitor Controls");
+                MessageBox.Show(
+                    "Failed to initialize IO Monitor Controls. Check the logs for details.",
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);

@@ -334,19 +334,7 @@ namespace UaaSolutionWpf
             base.OnClosed(e);
             hexapodConnectionManager?.Dispose();
             gantryConnectionManager?.Dispose();
-            try
-            {
-                if (_ioMonitor != null)
-                {
-                    logger.Information("Disposing IO Monitor...");
-                    _ioMonitor.Dispose();
-                    logger.Information("IO Monitor disposed successfully");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Error disposing IO Monitor");
-            }
+
         }
     }
 }

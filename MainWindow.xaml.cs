@@ -16,6 +16,7 @@ using Serilog.Core;
 using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
+using UaaSolutionWpf.IO;
 
 namespace UaaSolutionWpf
 {
@@ -44,7 +45,7 @@ namespace UaaSolutionWpf
         private DevicePositionMonitor devicePositionMonitor;
         private PositionRegistry positionRegistry;
         private IOService _ioService;
-
+        private IOMonitor _ioMonitor;
         private ILogger logger;
 
         public MainWindow()
@@ -207,13 +208,6 @@ namespace UaaSolutionWpf
             logger.Information("Initialized ACS Gantry connections");
         }
 
-        // Add cleanup in the Window class
-        protected override void OnClosed(EventArgs e)
-        {
-            base.OnClosed(e);
-            hexapodConnectionManager?.Dispose();
-            gantryConnectionManager?.Dispose();
-        }
 
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -269,7 +263,7 @@ namespace UaaSolutionWpf
 
 
             await InitializeIODevicesAsync();
-
+            await InitializeIOMonitorAsync();
         }
 
 
@@ -364,6 +358,107 @@ namespace UaaSolutionWpf
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
                 );
+            }
+        }
+
+        private async Task InitializeIOMonitorAsync()
+        {
+            try
+            {
+                logger.Information("Starting IO Monitor initialization");
+
+                // Create the monitor with 100ms polling interval
+                _ioMonitor = new IOMonitor(logger, _ioService, monitoringIntervalMs: 100);
+
+                logger.Information("Adding pins to monitor...");
+
+                // Add pins to monitor
+                var pinsToMonitor = new[]
+                {
+            ("IOBottom", "L_Gripper"),
+            ("IOBottom", "UV_Head"),
+            ("IOTop", "UV_Head_Up")
+        };
+
+                foreach (var (device, pin) in pinsToMonitor)
+                {
+                    _ioMonitor.AddPinToMonitor(device, pin);
+                    logger.Information("Added pin {Pin} on device {Device} to monitoring", pin, device);
+                }
+
+                // Subscribe to state changes with detailed logging
+                _ioMonitor.PinStateChanged += (sender, pinStatus) =>
+                {
+                    logger.Information(
+                        "[IO Status Change] Device: {DeviceName}, Pin: {PinName}, New State: {State}, " +
+                        "Last Update: {LastUpdate}, Update Count: {UpdateCount}",
+                        pinStatus.DeviceName,
+                        pinStatus.PinName,
+                        pinStatus.State,
+                        pinStatus.LastUpdateTime.ToString("HH:mm:ss.fff"),
+                        pinStatus.UpdateCount
+                    );
+                };
+
+                logger.Information("Starting IO monitoring...");
+                await _ioMonitor.StartMonitoringAsync();
+
+                // Log initial states
+                logger.Information("Checking initial pin states...");
+
+                var gripperStatus = _ioMonitor.GetPinStatus("IOBottom", "L_Gripper");
+                if (gripperStatus != null)
+                {
+                    logger.Information(
+                        "Initial L_Gripper status - State: {State}, Last Update: {LastUpdate}",
+                        gripperStatus.State,
+                        gripperStatus.LastUpdateTime.ToString("HH:mm:ss.fff")
+                    );
+                }
+
+                var bottomDeviceStatuses = _ioMonitor.GetDevicePinStatuses("IOBottom");
+                logger.Information(
+                    "IOBottom device has {Count} monitored pins",
+                    bottomDeviceStatuses.Count
+                );
+
+                var allStatuses = _ioMonitor.GetAllPinStatuses();
+                foreach (var device in allStatuses)
+                {
+                    logger.Information(
+                        "Device {DeviceName} has {PinCount} monitored pins",
+                        device.Key,
+                        device.Value.Count
+                    );
+                }
+
+                logger.Information("IO Monitor initialization completed successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error initializing IO Monitor");
+                throw;
+            }
+        }
+
+        // Make sure to clean up when the application closes
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            hexapodConnectionManager?.Dispose();
+            gantryConnectionManager?.Dispose();
+            try
+            {
+                if (_ioMonitor != null)
+                {
+                    logger.Information("Disposing IO Monitor...");
+                    _ioMonitor.Dispose();
+                    logger.Information("IO Monitor disposed successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error disposing IO Monitor");
             }
         }
     }

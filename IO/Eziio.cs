@@ -17,7 +17,6 @@ namespace UaaSolutionWpf.IO
         public int IpB { get; set; } = 168;
         public int IpC { get; set; } = 0;
         public int IpD { get; set; } = 3;
-        public Dictionary<string, int> PinMapping { get; set; } = new Dictionary<string, int>();
     }
 
     /// <summary>
@@ -67,7 +66,7 @@ namespace UaaSolutionWpf.IO
     /// <summary>
     /// Main class for controlling Fastech EziIO devices
     /// </summary>
-    public class EziioClass : IDisposable
+    public partial class EziioClass : IDisposable
     {
         public const int OUTPUTPIN = 16;
         private readonly ILogger _logger;
@@ -394,5 +393,60 @@ namespace UaaSolutionWpf.IO
         {
             Dispose(false);
         }
+    }
+
+    public partial class EziioClass
+    {
+        /// <summary>
+        /// Gets the status of a specific pin.
+        /// </summary>
+        /// <param name="boardId">The board ID</param>
+        /// <param name="pinNumber">Pin number (0-15)</param>
+        /// <returns>True if pin is ON, False if pin is OFF</returns>
+        public bool GetPinStatus(int boardId, int pinNumber)
+        {
+            if (pinNumber < 0 || pinNumber >= OUTPUTPIN)
+            {
+                _logger.Error("Invalid pin number: {PinNumber}", pinNumber);
+                return false;
+            }
+
+            uint uOutput = 0;
+            uint uStatus = 0;
+
+            if (EziMOTIONPlusELib.FAS_GetOutput(boardId, ref uOutput, ref uStatus) != EziMOTIONPlusELib.FMM_OK)
+            {
+                _logger.Error("Failed to get output status for BoardID: {BoardID}, Pin: {PinNumber}", boardId, pinNumber);
+                return false;
+            }
+
+            return (uOutput & PinMasks[pinNumber]) != 0;
+        }
+
+        /// <summary>
+        /// Gets all pin statuses at once.
+        /// </summary>
+        /// <param name="boardId">The board ID</param>
+        /// <returns>Array of boolean values representing pin states (true = ON, false = OFF)</returns>
+        public bool[] GetAllPinStatuses(int boardId)
+        {
+            uint uOutput = 0;
+            uint uStatus = 0;
+            bool[] statuses = new bool[OUTPUTPIN];
+
+            if (EziMOTIONPlusELib.FAS_GetOutput(boardId, ref uOutput, ref uStatus) != EziMOTIONPlusELib.FMM_OK)
+            {
+                _logger.Error("Failed to get output status for BoardID: {BoardID}", boardId);
+                return statuses;
+            }
+
+            for (int i = 0; i < OUTPUTPIN; i++)
+            {
+                statuses[i] = (uOutput & PinMasks[i]) != 0;
+            }
+
+            return statuses;
+        }
+
     }
 }

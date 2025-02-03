@@ -18,6 +18,7 @@ using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.IO;
 using Newtonsoft.Json;
+using IOControl;
 
 namespace UaaSolutionWpf
 {
@@ -262,7 +263,7 @@ namespace UaaSolutionWpf
             motionGraphManager = new MotionGraphManager(devicePositionMonitor,positionRegistry, configPath, logger);
 
 
-
+            InitializeIO();
             //await InitializeIOMonitorControlsAsync();
         }
 
@@ -327,7 +328,30 @@ namespace UaaSolutionWpf
             }
         }
 
+        private async void InitializeIO()
+        {
 
+            var ioManager = new IOManager(logger, "IOConfig.json");
+
+            // Connect to all IO blocks
+            await ioManager.InitializeAllBlocksAsync();
+
+            // Control outputs
+            //ioManager.SetOutput("IOBottom", "UV_Head", true);  // Turn on UV head
+            //ioManager.SetOutput("IOBottom", "Dispenser_Head", false);  // Turn off dispenser head
+
+            // Read inputs
+            bool isUVHeadUp = ioManager.GetInput("IOTop", "UV_Head_Up");
+            bool isUVHeadDown = ioManager.GetInput("IOTop", "UV_Head_Down");
+            bool isDispenserHeadUp = ioManager.GetInput("IOTop", "Dispenser_Head_Up");
+            bool isPickUpToolUp = ioManager.GetInput("IOTop", "Pick_Up_Tool_Up");
+
+            logger.Information($"UV_Head_Up input status = {isUVHeadUp}");
+            logger.Information($"UV_Head_Down input status = {isUVHeadDown}");
+            logger.Information($"Dispenser_Head_Up input status = {isDispenserHeadUp}");
+            logger.Information($"Pick_Up_Tool_Up input status = {isPickUpToolUp}");
+
+        }
 
         protected override void OnClosed(EventArgs e)
         {

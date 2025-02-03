@@ -17,6 +17,7 @@ using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.IO;
+using Newtonsoft.Json;
 
 namespace UaaSolutionWpf
 {
@@ -44,10 +45,9 @@ namespace UaaSolutionWpf
         private MotionGraphManager motionGraphManager;
         private DevicePositionMonitor devicePositionMonitor;
         private PositionRegistry positionRegistry;
-        private IOService _ioService;
-        private IOMonitor _ioMonitor;
+
         private ILogger logger;
-        private IOConfig.IOConfigRoot _config;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -262,9 +262,8 @@ namespace UaaSolutionWpf
             motionGraphManager = new MotionGraphManager(devicePositionMonitor,positionRegistry, configPath, logger);
 
 
-            await InitializeIODevicesAsync();
-            //await InitializeIOMonitorAsync();
-            await InitializeIOMonitorControlsAsync();
+
+            //await InitializeIOMonitorControlsAsync();
         }
 
 
@@ -328,166 +327,7 @@ namespace UaaSolutionWpf
             }
         }
 
-        // Add this to your existing field declarations
-        public async Task InitializeIODevicesAsync()
-        {
-            try
-            {
-                string configPath = Path.Combine("Config", "IOConfig.json");
-                _ioService = new IOService(logger, configPath);
-                await _ioService.InitializeAsync();
 
-                // Test the connections by trying to set some outputs
-                bool bottomResult = _ioService.SetOutput("IOBottom", "L_Gripper", false);
-                bool topResult = _ioService.SetOutput("IOTop", "Output0", false);
-
-                if (bottomResult && topResult)
-                {
-                    logger.Information("IO devices initialized successfully");
-                }
-                else
-                {
-                    logger.Warning("Some IO devices failed to initialize properly");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Failed to initialize IO devices");
-                MessageBox.Show(
-                    "Failed to initialize IO devices. Check the logs for details.",
-                    "IO Initialization Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-            }
-        }
-
-        private async Task InitializeIOMonitorAsync()
-        {
-            try
-            {
-                logger.Information("Starting IO Monitor initialization");
-
-                _ioMonitor = new IOMonitor(logger, _ioService, monitoringIntervalMs: 100);
-
-                // Add input pins
-                var inputPinsToMonitor = new[]
-                {
-            ("IOTop", "UV_Head_Up"),
-            ("IOTop", "UV_Head_Down"),
-            ("IOTop", "Dispenser_Head_Up"),
-            ("IOTop", "Dispenser_Head_Down"),
-            ("IOTop", "Pick_Up_Tool_Up"),
-            ("IOTop", "Pick_Up_Tool_Down")
-        };
-
-                foreach (var (device, pin) in inputPinsToMonitor)
-                {
-                    _ioMonitor.AddPinToMonitor(device, pin, IOPinType.Input);
-                    logger.Information("Added input pin {Pin} on device {Device} to monitoring", pin, device);
-                }
-
-                // Add output pins
-                var outputPinsToMonitor = new[]
-                {
-            ("IOBottom", "L_Gripper"),
-            ("IOBottom", "UV_Head"),
-            ("IOBottom", "Dispenser_Head"),
-            ("IOBottom", "Pick_Up_Tool")
-        };
-
-                foreach (var (device, pin) in outputPinsToMonitor)
-                {
-                    _ioMonitor.AddPinToMonitor(device, pin, IOPinType.Output);
-                    logger.Information("Added output pin {Pin} on device {Device} to monitoring", pin, device);
-                }
-
-                _ioMonitor.PinStateChanged += (sender, pinStatus) =>
-                {
-                    logger.Information(
-                        "[IO {Type} Change] Device: {DeviceName}, Pin: {PinName}, New State: {State}, " +
-                        "Last Update: {LastUpdate}, Update Count: {UpdateCount}",
-                        pinStatus.PinType,
-                        pinStatus.DeviceName,
-                        pinStatus.PinName,
-                        pinStatus.State,
-                        pinStatus.LastUpdateTime.ToString("HH:mm:ss.fff"),
-                        pinStatus.UpdateCount
-                    );
-                };
-
-                logger.Information("Starting IO monitoring...");
-                await _ioMonitor.StartMonitoringAsync();
-
-                logger.Information("IO Monitor initialization completed successfully");
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Error initializing IO Monitor");
-                throw;
-            }
-        }        // Make sure to clean up when the application closes
-
-        private async Task InitializeIOMonitorControlsAsync()
-        {
-            try
-            {
-                // Initialize bottom IO device monitor
-                var bottomDevice = _config.Eziio.FirstOrDefault(d => d.Name == "IOBottom");
-                if (bottomDevice != null)
-                {
-                    IOBottomMonitor.Initialize(logger, _ioService, _ioMonitor, bottomDevice.Name, bottomDevice.IP);
-
-                    // Add output pins
-                    foreach (var output in bottomDevice.IOConfig.Outputs)
-                    {
-                        IOBottomMonitor.AddOutputPin(output.Name, output.Pin);
-                    }
-
-                    // Add input pins
-                    foreach (var input in bottomDevice.IOConfig.Inputs)
-                    {
-                        IOBottomMonitor.AddInputPin(input.Name, input.Pin);
-                    }
-
-                    logger.Information("Initialized Bottom IO Monitor with {OutputCount} outputs and {InputCount} inputs",
-                        bottomDevice.IOConfig.Outputs.Count,
-                        bottomDevice.IOConfig.Inputs.Count);
-                }
-
-                // Initialize top IO device monitor
-                var topDevice = _config.Eziio.FirstOrDefault(d => d.Name == "IOTop");
-                if (topDevice != null)
-                {
-                    IOTopMonitor.Initialize(logger, _ioService, _ioMonitor, topDevice.Name, topDevice.IP);
-
-                    // Add output pins
-                    foreach (var output in topDevice.IOConfig.Outputs)
-                    {
-                        IOTopMonitor.AddOutputPin(output.Name, output.Pin);
-                    }
-
-                    // Add input pins
-                    foreach (var input in topDevice.IOConfig.Inputs)
-                    {
-                        IOTopMonitor.AddInputPin(input.Name, input.Pin);
-                    }
-
-                    logger.Information("Initialized Top IO Monitor with {OutputCount} outputs and {InputCount} inputs",
-                        topDevice.IOConfig.Outputs.Count,
-                        topDevice.IOConfig.Inputs.Count);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Error initializing IO Monitor Controls");
-                MessageBox.Show(
-                    "Failed to initialize IO Monitor Controls. Check the logs for details.",
-                    "Initialization Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-        }
 
         protected override void OnClosed(EventArgs e)
         {

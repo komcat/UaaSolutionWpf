@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserControl x:Class="UaaSolutionWpf.Controls.EziioControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
+             xmlns:converters="clr-namespace:UaaSolutionWpf.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="400">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Connection Status -->
+        <Border Grid.Row="0" 
+                Background="#f3f4f6" 
+                CornerRadius="4" 
+                Padding="10" 
+                Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" 
+                          Text="{Binding DeviceName}" 
+                          FontSize="16" 
+                          FontWeight="SemiBold"/>
+
+                <TextBlock Grid.Column="1" 
+                          Text="{Binding IpAddress}" 
+                          Margin="10,0"
+                          VerticalAlignment="Center"/>
+
+                <Ellipse Grid.Column="2" 
+                         Width="12" 
+                         Height="12" 
+                         Fill="{Binding IsConnected, Converter={StaticResource BoolToConnectionColorConverter}}"/>
+            </Grid>
+        </Border>
+
+        <!-- Input Pins Section -->
+        <GroupBox Grid.Row="1" 
+                  Header="Input Pins" 
+                  Margin="0,0,0,10">
+            <ItemsControl ItemsSource="{Binding InputPins}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" 
+                                      Text="{Binding PinNumber}" 
+                                      Width="30"/>
+
+                            <TextBlock Grid.Column="1" 
+                                      Text="{Binding Name}" 
+                                      Margin="10,0"/>
+
+                            <Ellipse Grid.Column="2" 
+                                     Width="16" 
+                                     Height="16" 
+                                     Fill="{Binding State, Converter={StaticResource BoolToPinStateColorConverter}}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </GroupBox>
+
+        <!-- Output Pins Section -->
+        <GroupBox Grid.Row="2" 
+                  Header="Output Pins" 
+                  Margin="0,0,0,10">
+            <ItemsControl ItemsSource="{Binding OutputPins}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" 
+                                      Text="{Binding PinNumber}" 
+                                      Width="30"/>
+
+                            <TextBlock Grid.Column="1" 
+                                      Text="{Binding Name}" 
+                                      Margin="10,0"/>
+
+                            <ToggleButton Grid.Column="2"
+                                        Width="50"
+                                        Height="24"
+                                        IsChecked="{Binding State}"
+                                        Command="{Binding DataContext.TogglePinCommand, 
+                                                  RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                <ToggleButton.Style>
+                                    <Style TargetType="ToggleButton">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ToggleButton">
+                                                    <Border x:Name="border" 
+                                                            Background="#e5e7eb"
+                                                            CornerRadius="12"
+                                                            BorderThickness="0">
+                                                        <Grid>
+                                                            <Ellipse x:Name="switch"
+                                                                     Width="20" 
+                                                                     Height="20"
+                                                                     Fill="White"
+                                                                     HorizontalAlignment="Left"
+                                                                     Margin="2,0,0,0"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="border" Property="Background" Value="#10b981"/>
+                                                            <Setter TargetName="switch" Property="HorizontalAlignment" Value="Right"/>
+                                                            <Setter TargetName="switch" Property="Margin" Value="0,0,2,0"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ToggleButton.Style>
+                            </ToggleButton>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </GroupBox>
+
+        <!-- Status and Error Messages -->
+        <Border Grid.Row="3" 
+                Background="#f3f4f6" 
+                CornerRadius="4" 
+                Padding="10" 
+                Margin="0,10,0,0">
+            <TextBlock Text="{Binding StatusMessage}" 
+                       TextWrapping="Wrap"/>
+        </Border>
+    </Grid>
+
+    
+</UserControl>

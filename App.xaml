@@ -2,8 +2,22 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UaaSolutionWpf"
+             xmlns:converters="clr-namespace:UaaSolutionWpf.Converters"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Colors -->
+        <SolidColorBrush x:Key="ConnectedBrush" Color="#10b981"/>
+        <SolidColorBrush x:Key="DisconnectedBrush" Color="#ef4444"/>
+        <SolidColorBrush x:Key="PinOnBrush" Color="#10b981"/>
+        <SolidColorBrush x:Key="PinOffBrush" Color="#9ca3af"/>
+
+        <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <converters:BoolToConnectionColorConverter x:Key="BoolToConnectionColorConverter"
+            ConnectedBrush="{StaticResource ConnectedBrush}"
+            DisconnectedBrush="{StaticResource DisconnectedBrush}"/>
+        <converters:BoolToPinStateColorConverter x:Key="BoolToPinStateColorConverter"
+            OnBrush="{StaticResource PinOnBrush}"
+            OffBrush="{StaticResource PinOffBrush}"/>
     </Application.Resources>
 </Application>

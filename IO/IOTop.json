@@ -1,0 +1,25 @@
+{
+  "name": "TopIO",
+  "OutputQty": 8,
+  "outputs": {
+    "output0": 0,
+    "output1": 1,
+    "output2": 2,
+    "output3": 3,
+    "output4": 4,
+    "output5": 5,
+    "output6": 6,
+    "output7": 7
+  },
+  "InputQty": 8,
+  "inputs": {
+    "input0": 0,
+    "UV_HEAD_UP": 1,
+    "UV_HEAD_DOWN": 2,
+    "DISPENSOR_HEAD_UP": 3,
+    "DISPENSOR_HEAD_DOWN": 4,
+    "PICK_UP_TOOL_UP": 5,
+    "PICK_UP_TOOL_DOWN": 6,
+    "input7": 7
+  }
+}

@@ -2,82 +2,21 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using System.Globalization;
 using Serilog;
 
 namespace UaaSolutionWpf.IO
 {
-    /// <summary>
-    /// Configuration class for EziIO device
-    /// </summary>
-    public class EziioConfiguration
+    public class EziioClass
     {
-        public int IpA { get; set; } = 192;
-        public int IpB { get; set; } = 168;
-        public int IpC { get; set; } = 0;
-        public int IpD { get; set; } = 3;
-    }
-
-    /// <summary>
-    /// Custom exception for EziIO operations
-    /// </summary>
-    public class EziioException : Exception
-    {
-        public int BoardId { get; }
-        public string Operation { get; }
-
-        public EziioException(string message, int boardId, string operation, Exception innerException = null)
-            : base(message, innerException)
-        {
-            BoardId = boardId;
-            Operation = operation;
-        }
-    }
-
-    /// <summary>
-    /// Connection type enumeration
-    /// </summary>
-    public enum ConnectionType
-    {
-        TCP = 0,
-        UDP = 1
-    }
-
-    /// <summary>
-    /// Pin state enumeration
-    /// </summary>
-    public enum PinState
-    {
-        Off = 0,
-        On = 1
-    }
-
-    /// <summary>
-    /// Class to track pin status information
-    /// </summary>
-    public class PinStatus
-    {
-        public bool State { get; set; }
-        public DateTime LastChanged { get; set; }
-        public int ChangeCount { get; set; }
-    }
-
-    /// <summary>
-    /// Main class for controlling Fastech EziIO devices
-    /// </summary>
-    public partial class EziioClass : IDisposable
-    {
+        public const int TCP = 0;
+        public const int UDP = 1;
         public const int OUTPUTPIN = 16;
-        private readonly ILogger _logger;
-        private readonly EziioConfiguration _config;
-        private readonly object _pinStatusLock = new object();
-        private readonly Dictionary<int, PinStatus> _pinStatuses = new Dictionary<int, PinStatus>();
-        private bool _disposed;
-
-        /// <summary>
-        /// Pin mask array for output control
-        /// </summary>
         public static readonly uint[] PinMasks = new uint[16]
         {
             0x00010000, // Pin 0
@@ -99,187 +38,164 @@ namespace UaaSolutionWpf.IO
         };
 
         /// <summary>
-        /// Dictionary for pin name to number mapping
+        /// PinStatus 0=OFF, 1=ON
         /// </summary>
-        public static Dictionary<string, int> PinMapping { get; private set; } = new Dictionary<string, int>();
+        public static bool[] PinStatus = new bool[16];
+        public static Dictionary<string, int> PinMapping;
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public EziioClass(ILogger logger, EziioConfiguration config = null)
+        public int ipA = 192;
+        public int ipB = 168;
+        public int ipC = 0;
+        public int ipD = 3;
+
+        private readonly ILogger _logger;
+
+        public EziioClass(ILogger logger)
         {
             _logger = logger.ForContext<EziioClass>();
-            _config = config ?? new EziioConfiguration();
         }
 
         /// <summary>
-        /// Connect to EziIO device
+        /// Eziio connect function
         /// </summary>
-        public async Task<bool> ConnectAsync(ConnectionType connType, int boardId, int ipA = 192, int ipB = 168, int ipC = 0, int ipD = 3)
+        /// <param name="nCommType">TCP=0, UDP=1</param>
+        /// <param name="nBdID">internal ID</param>
+        /// <param name="_ipa">ipaddress 192</param>
+        /// <param name="_ipb">ipaddress 168</param>
+        /// <param name="_ipc">ipaddress 0</param>
+        /// <param name="_ipd">ipaddress 3</param>
+        /// <returns></returns>
+        public bool Connect(int nCommType, int nBdID, int _ipa = 192, int _ipb = 168, int _ipc = 0, int _ipd = 3)
         {
-            return await Task.Run(() => Connect(connType, boardId, ipA, ipB, ipC, ipD));
-        }
+            IPAddress ip = new IPAddress(new byte[] { (byte)_ipa, (byte)_ipb, (byte)_ipc, (byte)_ipd });
+            bool bSuccess = true;
 
-        /// <summary>
-        /// Synchronous connection method
-        /// </summary>
-        public bool Connect(ConnectionType connType, int boardId, int ipA = 192, int ipB = 168, int ipC = 0, int ipD = 3)
-        {
-            try
+            // Connection
+            switch (nCommType)
             {
-                ValidateIPAddress(ipA, ipB, ipC, ipD);
-
-                IPAddress ip = new IPAddress(new byte[] { (byte)ipA, (byte)ipB, (byte)ipC, (byte)ipD });
-                bool success = true;
-
-                switch (connType)
-                {
-                    case ConnectionType.TCP:
-                        if (!EziMOTIONPlusELib.FAS_ConnectTCP(ip, boardId))
-                        {
-                            _logger.Error("TCP Connection Failed for IP: {IP}, BoardID: {BoardID}", ip, boardId);
-                            success = false;
-                        }
-                        break;
-
-                    case ConnectionType.UDP:
-                        if (!EziMOTIONPlusELib.FAS_Connect(ip, boardId))
-                        {
-                            _logger.Error("UDP Connection Failed for IP: {IP}, BoardID: {BoardID}", ip, boardId);
-                            success = false;
-                        }
-                        break;
-
-                    default:
-                        _logger.Error("Invalid communication type: {CommType}", connType);
-                        success = false;
-                        break;
-                }
-
-                if (success)
-                {
-                    _logger.Information("Connected successfully to IP: {IP}, BoardID: {BoardID}", ip, boardId);
-                }
-
-                return success;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Connection failed for IP: {IP}.{IP}.{IP}.{IP}, BoardID: {BoardID}",
-                    ipA, ipB, ipC, ipD, boardId);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Close connection to EziIO device
-        /// </summary>
-        public void CloseConnection(int boardId)
-        {
-            try
-            {
-                EziMOTIONPlusELib.FAS_Close(boardId);
-                _logger.Information("Connection closed for BoardID: {BoardID}", boardId);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error closing connection for BoardID: {BoardID}", boardId);
-            }
-        }
-
-        /// <summary>
-        /// Get output status
-        /// </summary>
-        public bool GetOutput(int boardId)
-        {
-            lock (_pinStatusLock)
-            {
-                try
-                {
-                    uint uOutput = 0;
-                    uint uStatus = 0;
-
-                    if (EziMOTIONPlusELib.FAS_GetOutput(boardId, ref uOutput, ref uStatus) != EziMOTIONPlusELib.FMM_OK)
+                case TCP:
+                    // TCP Connection
+                    if (EziMOTIONPlusELib.FAS_ConnectTCP(ip, nBdID) == false)
                     {
-                        throw new EziioException("Failed to get output", boardId, "GetOutput");
+                        _logger.Error("TCP Connection Failed for IP: {IP}, BoardID: {BoardID}", ip, nBdID);
+                        bSuccess = false;
                     }
+                    break;
 
-                    UpdatePinStatus(uOutput);
-                    _logger.Information("Output status: {OutputStatus}", ConvertToBinaryWithSpaces(uOutput));
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Error getting output for BoardID: {BoardID}", boardId);
-                    return false;
-                }
+                case UDP:
+                    // UDP Connection
+                    if (EziMOTIONPlusELib.FAS_Connect(ip, nBdID) == false)
+                    {
+                        _logger.Error("UDP Connection Failed for IP: {IP}, BoardID: {BoardID}", ip, nBdID);
+                        bSuccess = false;
+                    }
+                    break;
+
+                default:
+                    _logger.Error("Wrong communication type: {CommType}", nCommType);
+                    bSuccess = false;
+                    break;
             }
+
+            if (bSuccess)
+                _logger.Information("Connected successfully to IP: {IP}, BoardID: {BoardID}", ip, nBdID);
+
+            return bSuccess;
         }
 
-        /// <summary>
-        /// Set output pin state
-        /// </summary>
-        public bool SetOutput(int boardId, int pinNum)
+        public void CloseConnection(int nBdID)
         {
-            try
+            EziMOTIONPlusELib.FAS_Close(nBdID);
+            _logger.Information("Connection closed for BoardID: {BoardID}", nBdID);
+        }
+
+        public bool GetOutput(int nBdID)
+        {
+            uint uOutput = 0;
+            uint uStatus = 0;
+
+            if (EziMOTIONPlusELib.FAS_GetOutput(nBdID, ref uOutput, ref uStatus) != EziMOTIONPlusELib.FMM_OK)
             {
-                ValidatePin(pinNum);
-
-                uint uSetMask = PinMasks[pinNum];
-                uint uClrMask = 0x00000000;
-
-                if (EziMOTIONPlusELib.FAS_SetOutput(boardId, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
-                {
-                    throw new EziioException($"Failed to set output for pin {pinNum}", boardId, "SetOutput");
-                }
-
-                _logger.Information("Successfully set output for BoardID: {BoardID}, Pin: {PinNumber}", boardId, pinNum);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error setting output for BoardID: {BoardID}, Pin: {PinNumber}", boardId, pinNum);
+                _logger.Error("Function(FAS_GetOutput) failed for BoardID: {BoardID}", nBdID);
                 return false;
             }
+            else
+            {
+                _logger.Information("Output status: {OutputStatus}", ConvertToBinaryWithSpaces(uOutput));
+                UpdatePinStatus(uOutput);
+            }
+
+            return true;
         }
 
-        /// <summary>
-        /// Clear output pin state
-        /// </summary>
-        public bool ClearOutput(int boardId, int pinNum)
+        private void UpdatePinStatus(uint uOutput)
         {
-            try
+            for (int i = 0; i < 16; i++)
             {
-                ValidatePin(pinNum);
-
-                uint uSetMask = 0x00000000;
-                uint uClrMask = PinMasks[pinNum];
-
-                if (EziMOTIONPlusELib.FAS_SetOutput(boardId, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
-                {
-                    throw new EziioException($"Failed to clear output for pin {pinNum}", boardId, "ClearOutput");
-                }
-
-                _logger.Information("Successfully cleared output for BoardID: {BoardID}, Pin: {PinNumber}", boardId, pinNum);
-                return true;
+                PinStatus[i] = (uOutput & PinMasks[i]) != 0;
             }
-            catch (Exception ex)
+        }
+
+        public void CheckPinStatus(uint uOutput)
+        {
+            for (int i = 0; i < 16; i++)
             {
-                _logger.Error(ex, "Error clearing output for BoardID: {BoardID}, Pin: {PinNumber}", boardId, pinNum);
+                bool isSet = (uOutput & PinMasks[i]) != 0;
+                _logger.Information("Pin {PinNumber}: {Status}", i, isSet ? "ON" : "OFF");
+            }
+        }
+
+        public bool SetOutput(int nBdID, int pinNum)
+        {
+            uint uSetMask = PinMasks[pinNum];
+            uint uClrMask = 0x00000000;
+
+            if (EziMOTIONPlusELib.FAS_SetOutput(nBdID, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
+            {
+                _logger.Error("Function(FAS_SetOutput) failed for BoardID: {BoardID}, Pin: {PinNumber}", nBdID, pinNum);
                 return false;
             }
+            else
+            {
+                _logger.Information("Successfully set output for BoardID: {BoardID}, Pin: {PinNumber}", nBdID, pinNum);
+                return true;
+            }
         }
 
-        /// <summary>
-        /// Load pin mapping from JSON file
-        /// </summary>
+        public bool ClearOutput(int nBdID, int pinNum)
+        {
+            uint uSetMask = 0x00000000;
+            uint uClrMask = PinMasks[pinNum];
+
+            if (EziMOTIONPlusELib.FAS_SetOutput(nBdID, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
+            {
+                _logger.Error("Function(FAS_SetOutput) failed for BoardID: {BoardID}, Pin: {PinNumber}", nBdID, pinNum);
+                return false;
+            }
+            else
+            {
+                _logger.Information("Successfully cleared output for BoardID: {BoardID}, Pin: {PinNumber}", nBdID, pinNum);
+                return true;
+            }
+        }
+
+        public static string ConvertToBinaryWithSpaces(uint value)
+        {
+            string binaryString = Convert.ToString(value, 2).PadLeft(32, '0');
+            for (int i = 4; i < binaryString.Length; i += 5)
+            {
+                binaryString = binaryString.Insert(i, " ");
+            }
+            return binaryString;
+        }
+
         public void LoadPinMapping(string filePath)
         {
             try
             {
-                if (System.IO.File.Exists(filePath))
+                if (File.Exists(filePath))
                 {
-                    string json = System.IO.File.ReadAllText(filePath);
+                    string json = File.ReadAllText(filePath);
                     PinMapping = JsonConvert.DeserializeObject<Dictionary<string, int>>(json);
                     _logger.Information("Successfully loaded pin mapping from {FilePath}", filePath);
                 }
@@ -295,104 +211,5 @@ namespace UaaSolutionWpf.IO
                 PinMapping = new Dictionary<string, int>();
             }
         }
-
-        /// <summary>
-        /// Convert uint to binary string with spaces
-        /// </summary>
-        public static string ConvertToBinaryWithSpaces(uint value)
-        {
-            string binaryString = Convert.ToString(value, 2).PadLeft(32, '0');
-            for (int i = 4; i < binaryString.Length; i += 5)
-            {
-                binaryString = binaryString.Insert(i, " ");
-            }
-            return binaryString;
-        }
-
-        /// <summary>
-        /// Get pin status
-        /// </summary>
-        public PinStatus GetPinStatus(int pinNum)
-        {
-            lock (_pinStatusLock)
-            {
-                ValidatePin(pinNum);
-                return _pinStatuses.ContainsKey(pinNum) ? _pinStatuses[pinNum] : null;
-            }
-        }
-
-        private void UpdatePinStatus(uint uOutput)
-        {
-            lock (_pinStatusLock)
-            {
-                for (int i = 0; i < OUTPUTPIN; i++)
-                {
-                    bool newState = (uOutput & PinMasks[i]) != 0;
-                    if (!_pinStatuses.ContainsKey(i))
-                    {
-                        _pinStatuses[i] = new PinStatus { State = newState, LastChanged = DateTime.Now };
-                    }
-                    else if (_pinStatuses[i].State != newState)
-                    {
-                        _pinStatuses[i].State = newState;
-                        _pinStatuses[i].LastChanged = DateTime.Now;
-                        _pinStatuses[i].ChangeCount++;
-                    }
-                }
-            }
-        }
-
-        private void ValidatePin(int pinNum)
-        {
-            if (pinNum < 0 || pinNum >= OUTPUTPIN)
-            {
-                throw new ArgumentOutOfRangeException(nameof(pinNum),
-                    $"Pin number must be between 0 and {OUTPUTPIN - 1}");
-            }
-        }
-
-        private void ValidateIPAddress(int ipA, int ipB, int ipC, int ipD)
-        {
-            if (ipA < 0 || ipA > 255 || ipB < 0 || ipB > 255 ||
-                ipC < 0 || ipC > 255 || ipD < 0 || ipD > 255)
-            {
-                throw new ArgumentException("Invalid IP address octets");
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    // Clean up any managed resources here
-                    try
-                    {
-                        // Note: You might want to store the boardId as a class member
-                        // to properly close the connection here
-                        // CloseConnection(boardId);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Error during disposal");
-                    }
-                }
-
-                _disposed = true;
-            }
-        }
-
-        ~EziioClass()
-        {
-            Dispose(false);
-        }
     }
-
 }

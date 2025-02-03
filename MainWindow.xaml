@@ -146,7 +146,30 @@
                 </TabItem>
                 <TabItem Header="I/O">
                     <Grid>
-                       
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left side - Bottom IO Control -->
+                        <ScrollViewer Grid.Column="0" 
+                     VerticalScrollBarVisibility="Auto" 
+                     HorizontalScrollBarVisibility="Disabled"
+                     Margin="10">
+                            <controls:EziioControl x:Name="EziioControlBottom"
+                                 DataContext="{Binding BottomEziioViewModel}">
+                            </controls:EziioControl>
+                        </ScrollViewer>
+
+                        <!-- Right side - Top IO Control -->
+                        <ScrollViewer Grid.Column="1" 
+                     VerticalScrollBarVisibility="Auto" 
+                     HorizontalScrollBarVisibility="Disabled"
+                     Margin="10">
+                            <controls:EziioControl x:Name="EziioControlTop"
+                                 DataContext="{Binding TopEziioViewModel}">
+                            </controls:EziioControl>
+                        </ScrollViewer>
                     </Grid>
                 </TabItem>
             </TabControl>

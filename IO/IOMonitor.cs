@@ -5,13 +5,17 @@ using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.IO
 {
-    /// <summary>
-    /// Represents the status of an IO pin
-    /// </summary>
+    public enum IOPinType
+    {
+        Input,
+        Output
+    }
+
     public class PinStatusInfo
     {
         public string DeviceName { get; set; }
         public string PinName { get; set; }
+        public IOPinType PinType { get; set; }
         public bool State { get; set; }
         public DateTime LastUpdateTime { get; set; }
         public long UpdateCount { get; set; }
@@ -119,14 +123,19 @@ namespace UaaSolutionWpf.IO
             {
                 try
                 {
-                    // This will need to be implemented based on your IOService's capabilities
                     foreach (var deviceName in _devicePinStatus.Keys)
                     {
                         var devicePins = _devicePinStatus[deviceName];
                         foreach (var pinName in devicePins.Keys)
                         {
-                            var currentStatus = await Task.Run(() => _ioService.GetInput(deviceName, pinName));
-                            UpdatePinStatus(deviceName, pinName, currentStatus);
+                            if (devicePins.TryGetValue(pinName, out var pinStatus))
+                            {
+                                bool currentStatus = pinStatus.PinType == IOPinType.Input
+                                    ? await Task.Run(() => _ioService.GetInput(deviceName, pinName))
+                                    : await Task.Run(() => _ioService.GetOutput(deviceName, pinName));
+
+                                UpdatePinStatus(deviceName, pinName, currentStatus);
+                            }
                         }
                     }
 
@@ -144,7 +153,6 @@ namespace UaaSolutionWpf.IO
                 }
             }
         }
-
         private void UpdatePinStatus(string deviceName, string pinName, bool currentState)
         {
             if (!_devicePinStatus.TryGetValue(deviceName, out var devicePins))
@@ -178,13 +186,14 @@ namespace UaaSolutionWpf.IO
         /// <summary>
         /// Adds a pin to be monitored
         /// </summary>
-        public void AddPinToMonitor(string deviceName, string pinName)
+        public void AddPinToMonitor(string deviceName, string pinName, IOPinType pinType)
         {
             var devicePins = _devicePinStatus.GetOrAdd(deviceName, _ => new ConcurrentDictionary<string, PinStatusInfo>());
             devicePins.GetOrAdd(pinName, _ => new PinStatusInfo
             {
                 DeviceName = deviceName,
                 PinName = pinName,
+                PinType = pinType,
                 State = false,
                 LastUpdateTime = DateTime.UtcNow,
                 UpdateCount = 0

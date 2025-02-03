@@ -367,31 +367,46 @@ namespace UaaSolutionWpf
             {
                 logger.Information("Starting IO Monitor initialization");
 
-                // Create the monitor with 100ms polling interval
                 _ioMonitor = new IOMonitor(logger, _ioService, monitoringIntervalMs: 100);
 
-                logger.Information("Adding pins to monitor...");
+                // Add input pins
+                var inputPinsToMonitor = new[]
+                {
+            ("IOTop", "UV_Head_Up"),
+            ("IOTop", "UV_Head_Down"),
+            ("IOTop", "Dispenser_Head_Up"),
+            ("IOTop", "Dispenser_Head_Down"),
+            ("IOTop", "Pick_Up_Tool_Up"),
+            ("IOTop", "Pick_Up_Tool_Down")
+        };
 
-                // Add pins to monitor
-                var pinsToMonitor = new[]
+                foreach (var (device, pin) in inputPinsToMonitor)
+                {
+                    _ioMonitor.AddPinToMonitor(device, pin, IOPinType.Input);
+                    logger.Information("Added input pin {Pin} on device {Device} to monitoring", pin, device);
+                }
+
+                // Add output pins
+                var outputPinsToMonitor = new[]
                 {
             ("IOBottom", "L_Gripper"),
             ("IOBottom", "UV_Head"),
-            ("IOTop", "UV_Head_Up")
+            ("IOBottom", "Dispenser_Head"),
+            ("IOBottom", "Pick_Up_Tool")
         };
 
-                foreach (var (device, pin) in pinsToMonitor)
+                foreach (var (device, pin) in outputPinsToMonitor)
                 {
-                    _ioMonitor.AddPinToMonitor(device, pin);
-                    logger.Information("Added pin {Pin} on device {Device} to monitoring", pin, device);
+                    _ioMonitor.AddPinToMonitor(device, pin, IOPinType.Output);
+                    logger.Information("Added output pin {Pin} on device {Device} to monitoring", pin, device);
                 }
 
-                // Subscribe to state changes with detailed logging
                 _ioMonitor.PinStateChanged += (sender, pinStatus) =>
                 {
                     logger.Information(
-                        "[IO Status Change] Device: {DeviceName}, Pin: {PinName}, New State: {State}, " +
+                        "[IO {Type} Change] Device: {DeviceName}, Pin: {PinName}, New State: {State}, " +
                         "Last Update: {LastUpdate}, Update Count: {UpdateCount}",
+                        pinStatus.PinType,
                         pinStatus.DeviceName,
                         pinStatus.PinName,
                         pinStatus.State,
@@ -403,35 +418,6 @@ namespace UaaSolutionWpf
                 logger.Information("Starting IO monitoring...");
                 await _ioMonitor.StartMonitoringAsync();
 
-                // Log initial states
-                logger.Information("Checking initial pin states...");
-
-                var gripperStatus = _ioMonitor.GetPinStatus("IOBottom", "L_Gripper");
-                if (gripperStatus != null)
-                {
-                    logger.Information(
-                        "Initial L_Gripper status - State: {State}, Last Update: {LastUpdate}",
-                        gripperStatus.State,
-                        gripperStatus.LastUpdateTime.ToString("HH:mm:ss.fff")
-                    );
-                }
-
-                var bottomDeviceStatuses = _ioMonitor.GetDevicePinStatuses("IOBottom");
-                logger.Information(
-                    "IOBottom device has {Count} monitored pins",
-                    bottomDeviceStatuses.Count
-                );
-
-                var allStatuses = _ioMonitor.GetAllPinStatuses();
-                foreach (var device in allStatuses)
-                {
-                    logger.Information(
-                        "Device {DeviceName} has {PinCount} monitored pins",
-                        device.Key,
-                        device.Value.Count
-                    );
-                }
-
                 logger.Information("IO Monitor initialization completed successfully");
             }
             catch (Exception ex)
@@ -439,9 +425,7 @@ namespace UaaSolutionWpf
                 logger.Error(ex, "Error initializing IO Monitor");
                 throw;
             }
-        }
-
-        // Make sure to clean up when the application closes
+        }        // Make sure to clean up when the application closes
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);

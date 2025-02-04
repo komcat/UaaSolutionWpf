@@ -81,62 +81,76 @@ namespace UaaSolutionWpf
 
 
         }
+
+        #region
+        private IOManager _ioManager;
+
         private void InitializeIOMonitorControls()
         {
-            try
-            {
-                string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                string inputMappingFilePath = Path.Combine(appDirectory, "IO", "IOTop.json");
-                string outputMappingFilePath = Path.Combine(appDirectory, "IO", "IOBottom.json");
-
-                // Initialize Bottom Eziio (ID 0) with IP 192.168.0.5
-                string bottomConfigPath = Path.Combine(appDirectory, "IO", "IOTop.json");
-                var bottomController = new EziioControllerClass(
-                    EziioController.TCP,
-                    0,  // board ID
-                    "192.168.0.5",  // IP: 192.168.0.5
-                    inputMappingFilePath,
-                    outputMappingFilePath,
-                    logger
-                );
-
-                // Initialize Top Eziio (ID 1) with IP 192.168.0.3
-                string topConfigPath = Path.Combine(appDirectory, "IO", "IOBottom.json");
-                var topController = new EziioControllerClass(
-                    EziioControllerClass.TCP,
-                    1,  // board ID
-                    "192.168.0.3",  // IP: 192.168.0.3
-                    inputMappingFilePath,
-                    outputMappingFilePath,
-                    logger
-                );
-
-                // Connect the controllers
-                if (!bottomController.Connect())
-                {
-                    throw new Exception("Failed to connect to Bottom Eziio controller");
-                }
-                if (!topController.Connect())
-                {
-                    throw new Exception("Failed to connect to Top Eziio controller");
-                }
-
-                // Assign to UI controls
-                EziioControlBottom.DataContext = bottomController;
-                EziioControlTop.DataContext = topController;
-
-                logger.Information("Successfully initialized IO monitor controls");
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Failed to initialize IO monitor controls");
-                MessageBox.Show(
-                    $"Failed to initialize IO controls: {ex.Message}",
-                    "Initialization Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
+            _ioManager = new IOManager(EziioControlBottom, EziioControlTop, logger);
+            _ioManager.Initialize();
         }
+
+
+        //private void InitializeIOMonitorControls()
+        //{
+        //    try
+        //    {
+        //        string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        //        string inputMappingFilePath = Path.Combine(appDirectory, "IO", "IOTop.json");
+        //        string outputMappingFilePath = Path.Combine(appDirectory, "IO", "IOBottom.json");
+
+        //        // Initialize Bottom Eziio (ID 0) with IP 192.168.0.5
+        //        string bottomConfigPath = Path.Combine(appDirectory, "IO", "IOTop.json");
+        //        var bottomController = new EziioControllerClass(
+        //            EziioController.TCP,
+        //            0,  // board ID
+        //            "192.168.0.5",  // IP: 192.168.0.5
+        //            inputMappingFilePath,
+        //            outputMappingFilePath,
+        //            logger
+        //        );
+
+        //        // Initialize Top Eziio (ID 1) with IP 192.168.0.3
+        //        string topConfigPath = Path.Combine(appDirectory, "IO", "IOBottom.json");
+        //        var topController = new EziioControllerClass(
+        //            EziioControllerClass.TCP,
+        //            1,  // board ID
+        //            "192.168.0.3",  // IP: 192.168.0.3
+        //            inputMappingFilePath,
+        //            outputMappingFilePath,
+        //            logger
+        //        );
+
+        //        // Connect the controllers
+        //        if (!bottomController.Connect())
+        //        {
+        //            throw new Exception("Failed to connect to Bottom Eziio controller");
+        //        }
+        //        if (!topController.Connect())
+        //        {
+        //            throw new Exception("Failed to connect to Top Eziio controller");
+        //        }
+
+        //        // Assign to UI controls
+        //        EziioControlBottom.DataContext = bottomController;
+        //        EziioControlTop.DataContext = topController;
+
+        //        logger.Information("Successfully initialized IO monitor controls");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        logger.Error(ex, "Failed to initialize IO monitor controls");
+        //        MessageBox.Show(
+        //            $"Failed to initialize IO controls: {ex.Message}",
+        //            "Initialization Error",
+        //            MessageBoxButton.OK,
+        //            MessageBoxImage.Error);
+        //    }
+        //}
+
+        #endregion
+
         private void InitializeJogControl()
         {
 
@@ -388,6 +402,7 @@ namespace UaaSolutionWpf
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
+            _ioManager?.Dispose();
             hexapodConnectionManager?.Dispose();
             gantryConnectionManager?.Dispose();
 

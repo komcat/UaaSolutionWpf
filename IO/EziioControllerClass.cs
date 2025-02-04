@@ -85,7 +85,21 @@ namespace UaaSolutionWpf.IO
             LoadOutputPinMapping(outputMappingFilePath);
             _logger = logger;
         }
+        public EziioControllerClass(int commType, int bdID, string ipAddress,ILogger logger)
+        {
 
+            _logger = logger;
+            nCommType = commType;
+            nBdID = bdID;
+
+            if (!IPAddress.TryParse(ipAddress, out ip))
+            {
+                throw new ArgumentException("Invalid IP address format.");
+            }
+
+           
+            _logger = logger;
+        }
         private void LoadInputMapping(string mappingFilePath)
         {
             if (File.Exists(mappingFilePath))
@@ -200,15 +214,18 @@ namespace UaaSolutionWpf.IO
                 {
                     if (uInput != previousInput)
                     {
-                        //WireInputStatus(uInput);
                         for (int i = 0; i < 16; i++)
                         {
-                            bool isOn = ((uInput & (0x01 << i)) != 0);
+                            // Use PinMasks array instead of bit shift to match the hardware's bit pattern
+                            bool isOn = ((uInput & PinMasks[i]) != 0);
                             inputStatus[i] = isOn;
                             if (inputStatusPreviously[i] != inputStatus[i])
                             {
                                 string ikey = GetKeyByValue(i);
-                                InputStatusChanged?.Invoke(ikey, isOn);
+                                if (!string.IsNullOrEmpty(ikey))
+                                {
+                                    InputStatusChanged?.Invoke(ikey, isOn);
+                                }
                             }
                         }
                         previousInput = uInput;
@@ -219,7 +236,6 @@ namespace UaaSolutionWpf.IO
                 Thread.Sleep(10);
             }
         }
-
         private void CopyPreviousIsNowArray()
         {
             Array.Copy(inputStatus, inputStatusPreviously, 16);
@@ -403,23 +419,27 @@ namespace UaaSolutionWpf.IO
         }
         private void GetPinStatusContinuously()
         {
+            string deviceName = $"IO Board {nBdID}"; // or could pass in a friendly name
+
             while (continueGettingStatus)
             {
                 uint currentOutputStatus = GetOutputStatus();
                 if (currentOutputStatus != lastLoggedOutputStatus)
                 {
                     lastLoggedOutputStatus = currentOutputStatus;
-                    _logger.Information("Output status: {OutputStatus}", ConvertToBinaryWithSpaces(currentOutputStatus));
+                    _logger.Information("[{Device}] Output status: {OutputStatus}",
+                        deviceName, ConvertToBinaryWithSpaces(currentOutputStatus));
                 }
 
                 uint currentInputStatus = GetInputStatus();
                 if (currentInputStatus != lastLoggedInputStatus)
                 {
                     lastLoggedInputStatus = currentInputStatus;
-                    _logger.Information("Input status: {InputStatus}", ConvertToBinaryWithSpaces(currentInputStatus));
+                    _logger.Information("[{Device}] Input status: {InputStatus}",
+                        deviceName, ConvertToBinaryWithSpaces(currentInputStatus));
                 }
 
-                Thread.Sleep(100); // Adjust the sleep time as needed
+                Thread.Sleep(100);
             }
         }
 

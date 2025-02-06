@@ -20,6 +20,7 @@ using UaaSolutionWpf.IO;
 using Newtonsoft.Json;
 
 
+
 namespace UaaSolutionWpf
 {
 
@@ -48,7 +49,7 @@ namespace UaaSolutionWpf
         private PositionRegistry positionRegistry;
 
         private ILogger logger;
-
+        private CameraManagerWpf cameraManagerWpf;
         public MainWindow()
         {
             InitializeComponent();
@@ -79,8 +80,52 @@ namespace UaaSolutionWpf
 
             InitializeIOMonitorControls();
 
-
+            // Initialize the camera control
+            // Initialize the camera control
+            if (cameraDisplayViewControl != null)
+            {
+                cameraDisplayViewControl.CameraConnected += OnCameraConnected;
+                cameraDisplayViewControl.CameraDisconnected += OnCameraDisconnected;
+                cameraDisplayViewControl.LiveViewStarted += OnLiveViewStarted;
+                cameraDisplayViewControl.LiveViewStopped += OnLiveViewStopped;
+            }
         }
+
+        #region camera basler 
+        private void OnCameraConnected(object sender, CameraConnectionEventArgs e)
+        {
+            if (e.IsConnected)
+            {
+                logger.Information("Camera connected: {0}", e.CameraInfo);
+            }
+            else
+            {
+                logger.Error("Camera connection failed: {0}", e.ErrorMessage);
+            }
+        }
+
+        private void OnCameraDisconnected(object sender, CameraConnectionEventArgs e)
+        {
+            logger.Information("Camera disconnected");
+        }
+
+        private void OnLiveViewStarted(object sender, LiveViewEventArgs e)
+        {
+            if (!e.IsActive)
+            {
+                logger.Error("Failed to start live view: {0}", e.ErrorMessage);
+            }
+        }
+
+        private void OnLiveViewStopped(object sender, LiveViewEventArgs e)
+        {
+            if (e.ErrorMessage != null)
+            {
+                logger.Error("Error stopping live view: {0}", e.ErrorMessage);
+            }
+        }
+
+        #endregion
 
         #region
         private IOManager _ioManager;
@@ -334,11 +379,109 @@ namespace UaaSolutionWpf
 
 
             //await InitializeIOMonitorControlsAsync();
+            // Initialize camera with automatic connection and live view
+            await InitializeCameraAsync();
         }
 
+        private async Task InitializeCameraAsync()
+        {
+            try
+            {
+                if (cameraDisplayViewControl != null)
+                {
+                    // Wire up events
+                    cameraDisplayViewControl.CameraConnected += OnCameraConnected;
+                    cameraDisplayViewControl.CameraDisconnected += OnCameraDisconnected;
+                    cameraDisplayViewControl.LiveViewStarted += OnLiveViewStarted;
+                    cameraDisplayViewControl.LiveViewStopped += OnLiveViewStopped;
 
+                    logger.Information("Attempting to connect to camera...");
 
+                    // Simulate clicking the connect button
+                    var connectButton = cameraDisplayViewControl.FindName("btnConnect") as Button;
+                    if (connectButton != null)
+                    {
+                        connectButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
+                        // Wait a bit for the connection to establish
+                        await Task.Delay(1000);
+
+                        // Start live view if connected
+                        var startLiveButton = cameraDisplayViewControl.FindName("btnStartLive") as Button;
+                        if (startLiveButton != null && startLiveButton.IsEnabled)
+                        {
+                            startLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                            logger.Information("Started camera live view");
+                        }
+                        else
+                        {
+                            logger.Warning("Could not start live view - camera may not be connected");
+                        }
+                    }
+                    else
+                    {
+                        logger.Error("Could not find camera connect button");
+                    }
+                }
+                else
+                {
+                    logger.Error("Camera control not initialized");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error initializing camera");
+                MessageBox.Show($"Error initializing camera: {ex.Message}", "Camera Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public async Task StartCameraLiveViewAsync()
+        {
+            try
+            {
+                var startLiveButton = cameraDisplayViewControl?.FindName("btnStartLive") as Button;
+                if (startLiveButton != null && startLiveButton.IsEnabled)
+                {
+                    startLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    logger.Information("Started camera live view");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error starting camera live view");
+                throw;
+            }
+        }
+
+        public async Task StopCameraLiveViewAsync()
+        {
+            try
+            {
+                var stopLiveButton = cameraDisplayViewControl?.FindName("btnStopLive") as Button;
+                if (stopLiveButton != null && stopLiveButton.IsEnabled)
+                {
+                    stopLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    logger.Information("Stopped camera live view");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error stopping camera live view");
+                throw;
+            }
+        }
+
+        public bool IsCameraLiveViewActive()
+        {
+            var startLiveButton = cameraDisplayViewControl?.FindName("btnStartLive") as Button;
+            var stopLiveButton = cameraDisplayViewControl?.FindName("btnStopLive") as Button;
+
+            if (startLiveButton != null && stopLiveButton != null)
+            {
+                return !startLiveButton.IsEnabled && stopLiveButton.IsEnabled;
+            }
+            return false;
+        }
         //test graph manager
         private async void TestGraph_Click(object sender, RoutedEventArgs e)
         {
@@ -403,9 +546,10 @@ namespace UaaSolutionWpf
         {
             base.OnClosed(e);
             _ioManager?.Dispose();
+            cameraManagerWpf?.Dispose();
             hexapodConnectionManager?.Dispose();
             gantryConnectionManager?.Dispose();
-
+            cameraDisplayViewControl?.Dispose();
         }
     }
 }

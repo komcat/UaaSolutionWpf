@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:UaaSolutionWpf"
-        xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"
+        xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"        
         mc:Ignorable="d"
         Title="MainWindow" Height="1024" Width="2200" Loaded="Window_Loaded">
     <Grid>
@@ -178,11 +178,9 @@
         </StackPanel>
 
         <StackPanel x:Name="DisplayPanel" Grid.Column="1" Grid.Row="2" Grid.RowSpan="2">
-            <Canvas Width="800" Height="600" Margin="5" Background="LightBlue">
-                <!-- Canvas content will go here -->
-            </Canvas>
+            <controls:BaslerDisplayViewControl x:Name="cameraDisplayViewControl" />
         </StackPanel>
-        
+
         <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" 
                   IsChecked="False"/>
         <Button x:Name="TestGraph" Grid.Column="3" Content="Button" HorizontalAlignment="Left" Margin="136,107,0,0" Grid.Row="4" VerticalAlignment="Top" Height="55" Width="123" Click="TestGraph_Click"/>

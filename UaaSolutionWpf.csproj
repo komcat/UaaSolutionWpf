@@ -17,12 +17,16 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="ACS.SPiiPlusNET">
       <HintPath>..\acs_solution_Net8\ACS.SPiiPlusNET.dll</HintPath>
+    </Reference>
+    <Reference Include="Basler.Pylon">
+      <HintPath>Basler.Pylon.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -42,6 +46,12 @@
 
   <ItemGroup>
     <None Update="ACS.SPiiPlusNET.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Basler.Pylon.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Basler.Pylon.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Config\appsettings.json">

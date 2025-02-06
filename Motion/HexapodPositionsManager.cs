@@ -9,6 +9,7 @@ using Serilog;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.Hexapod;
+using System.Text;
 
 namespace UaaSolutionWpf.Motion
 {
@@ -141,27 +142,94 @@ namespace UaaSolutionWpf.Motion
                     return;
                 }
 
-                // Build movement details message
-                var message = $"Moving {GetHexapodName(hexapodId)} Hexapod to: {positionName}\n" +
-                            $"Current Position: {pathAnalysis.CurrentPosition}\n" +
-                            $"Path: {string.Join(" → ", pathAnalysis.Path)}\n" +
-                            $"Number of steps: {pathAnalysis.NumberOfSteps}";
+                // Build message including initial move if needed
+                var message = new StringBuilder();
+                message.AppendLine($"Moving {GetHexapodName(hexapodId)} Hexapod to: {positionName}");
 
                 if (pathAnalysis.RequiresInitialMove)
                 {
-                    message += $"\n\nInitial move required: {pathAnalysis.InitialMoveDistance:F3}mm";
+                    message.AppendLine($"\nInitial move required:");
+                    message.AppendLine($"Current Position: X={pathAnalysis.InitialPosition.X:F3}, Y={pathAnalysis.InitialPosition.Y:F3}, Z={pathAnalysis.InitialPosition.Z:F3}");
+                    message.AppendLine($"Moving to nearest known position: {pathAnalysis.CurrentPosition}");
+                    message.AppendLine($"Distance: {pathAnalysis.InitialMoveDistance:F3}mm");
+                    message.AppendLine();
                 }
 
-                // Ask for confirmation
+                message.AppendLine($"Then following path:");
+                message.AppendLine($"Path: {string.Join(" → ", pathAnalysis.Path)}");
+                message.AppendLine($"Number of steps: {pathAnalysis.NumberOfSteps}");
+
                 var result = MessageBox.Show(
-                    message,
+                    message.ToString(),
                     "Confirm Movement",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
 
                 if (result == MessageBoxResult.Yes)
                 {
-                    await ExecuteMovement(pathAnalysis);
+                    // Execute the movement sequence
+                    if (pathAnalysis.RequiresInitialMove)
+                    {
+                        _logger.Information("Executing initial move to nearest known position {Position}",
+                            pathAnalysis.CurrentPosition);
+
+                        // Get the position coordinates
+                        Position targetPos;
+                        if (hexapodId >= 0 && hexapodId <= 2)  // Hexapod
+                        {
+                            if (!_positionRegistry.TryGetHexapodPosition(hexapodId, pathAnalysis.CurrentPosition, out targetPos))
+                            {
+                                throw new InvalidOperationException($"Could not find coordinates for position {pathAnalysis.CurrentPosition}");
+                            }
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Invalid hexapod ID: {hexapodId}");
+                        }
+
+                        // Execute the initial move
+                        var controller = _hexapodConnectionManager.GetHexapodController(GetHexapodType(hexapodId));
+                        if (controller != null)
+                        {
+                            await controller.MoveToAbsoluteTarget(new double[]
+                            {
+                        targetPos.X, targetPos.Y, targetPos.Z,
+                        targetPos.U, targetPos.V, targetPos.W
+                            });
+                            _logger.Information("Completed initial move to {Position}", pathAnalysis.CurrentPosition);
+                        }
+                    }
+
+                    // Execute the path moves
+                    _logger.Information(
+                        "Executing movement of {HexapodName} Hexapod to {PositionName} via path: {Path}",
+                        GetHexapodName(hexapodId),
+                        positionName,
+                        string.Join(" → ", pathAnalysis.Path));
+
+                    // TODO: Execute the remaining path movements
+                    foreach (var position in pathAnalysis.Path.Skip(1)) // Skip first position as we're already there
+                    {
+                        // Similar movement code for each position in the path
+                        _logger.Information("Moving to {Position} in path", position);
+
+                        // Get position coordinates and execute move
+                        if (_positionRegistry.TryGetHexapodPosition(hexapodId, position, out var pathPos))
+                        {
+                            var controller = _hexapodConnectionManager.GetHexapodController(GetHexapodType(hexapodId));
+                            if (controller != null)
+                            {
+                                await controller.MoveToAbsoluteTarget(new double[]
+                                {
+                            pathPos.X, pathPos.Y, pathPos.Z,
+                            pathPos.U, pathPos.V, pathPos.W
+                                });
+                                _logger.Information("Completed move to {Position}", position);
+                            }
+                        }
+                    }
+
+                    _logger.Information("Movement sequence completed successfully");
                 }
             }
             catch (Exception ex)
@@ -175,7 +243,6 @@ namespace UaaSolutionWpf.Motion
                     MessageBoxImage.Error);
             }
         }
-
         private void CreateHexapodPositionButtons()
         {
             if (workingPositions?.Hexapods == null || workingPositions.Hexapods.Count == 0)
@@ -232,12 +299,21 @@ namespace UaaSolutionWpf.Motion
             _logger.Debug("Created button for position {PositionName} on {HexapodName} Hexapod",
                 positionName, GetHexapodName(hexapodId));
         }
-
+        private HexapodConnectionManager.HexapodType GetHexapodType(int hexapodId)
+        {
+            return hexapodId switch
+            {
+                0 => HexapodConnectionManager.HexapodType.Left,
+                1 => HexapodConnectionManager.HexapodType.Bottom,
+                2 => HexapodConnectionManager.HexapodType.Right,
+                _ => throw new ArgumentException($"Invalid hexapod ID: {hexapodId}")
+            };
+        }
         private async Task ExecuteMovement(PathAnalysis pathAnalysis)
         {
             try
             {
-                var hexapodController = _hexapodConnectionManager.GetHexapodController((HexapodConnectionManager.HexapodType)hexapodId);
+                var hexapodController = _hexapodConnectionManager.GetHexapodController(GetHexapodType(hexapodId));
                 if (hexapodController == null)
                 {
                     throw new InvalidOperationException($"No controller found for {GetHexapodName(hexapodId)} Hexapod");

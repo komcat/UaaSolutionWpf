@@ -70,6 +70,8 @@ namespace UaaSolutionWpf.Motion
             { "SeePIC", "👁️ PIC" },
             { "SeeFocusLens", "🔍 Focus Lens" },
             { "SeeCollimateLens", "🔍 Collimate Lens" },
+            {"SeeGripCollLens","👁️ Grip Coll Lens" },
+            {"SeeGripFocusLens","👁️ Grip Focus Lens" },
             { "CamSeeNumber", "🔢 See Number" }
         };
 

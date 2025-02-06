@@ -189,15 +189,16 @@ namespace UaaSolutionWpf
 
             var gantryPositionsToShow = new[]
             {
-        "Home", "Dispense1", "Dispense2", "PreDispense", "UV",
-        "SeeCollimateLens", "SeeFocusLens", "SeeSLED", "SeePIC", "CamSeeNumber"
-    };
+                "Home", "Dispense1", "Dispense2", "PreDispense", "UV",
+                "SeeCollimateLens", "SeeFocusLens", "SeeSLED", "SeePIC",
+                        "SeeGripCollLens","SeeGripFocusLens","CamSeeNumber"
+            };
 
             var hexapodPositionsToShow = new[]
             {
-        "Home", "LensGrip", "ApproachLensGrip", "LensPlace",
-        "ApproachLensPlace", "AvoidDispenser", "RejectLens", "ParkInside"
-    };
+                "Home", "LensGrip", "ApproachLensGrip", "LensPlace",
+                "ApproachLensPlace", "AvoidDispenser", "RejectLens", "ParkInside"
+            };
 
             // Initialize Gantry Manager with motion system components
             gantryPositionsManager = new GantryPositionsManager(

@@ -87,6 +87,17 @@
 
       ]
     },
+    "HexapodBottom": {
+      "nodes": [ "Home" ],
+      "edges": [
+        {
+          "from": "Home",
+          "to": "Home",
+          "weight": 1
+        }
+      ]
+    },
+
     "HexapodRight": {
       "nodes": [
         "Home",
@@ -206,8 +217,8 @@
         "MidBack",
         "SeeSLED",
         "SeePIC",
-        "GripLeftLens",
-        "GripRightLens",
+        "SeeGripCollLens",
+        "SeeGripFocusLens",
         "SeeFocusLens",
         "SeeCollimateLens",
         "Fiducial1",
@@ -261,12 +272,12 @@
         },
         {
           "from": "MidCenter",
-          "to": "GripLeftLens",
+          "to": "SeeGripCollLens",
           "weight": 1
         },
         {
           "from": "MidCenter",
-          "to": "GripRightLens",
+          "to": "SeeGripFocusLens",
           "weight": 1
         },
         {
@@ -336,17 +347,17 @@
         },
         {
           "from": "MidCenter",
-          "to": "GripLeftLens",
+          "to": "SeeGripCollLens",
           "weight": 1
         },
         {
           "from": "MidCenter",
-          "to": "GripRightLens",
+          "to": "SeeGripFocusLens",
           "weight": 1
         },
         {
-          "from": "GripLeftLens",
-          "to": "GripRightLens",
+          "from": "SeeGripCollLens",
+          "to": "SeeGripFocusLens",
           "weight": 1
         },
         {
@@ -365,47 +376,47 @@
           "weight": 1
         },
         {
-          "from": "GripLeftLens",
+          "from": "SeeGripCollLens",
           "to": "SeeCollimateLens",
           "weight": 1
         },
         {
-          "from": "GripLeftLens",
+          "from": "SeeGripCollLens",
           "to": "SeeFocusLens",
           "weight": 1
         },
         {
-          "from": "GripRightLens",
+          "from": "SeeGripFocusLens",
           "to": "SeeFocusLens",
           "weight": 1
         },
         {
-          "from": "GripRightLens",
+          "from": "SeeGripFocusLens",
           "to": "SeeCollimateLens",
           "weight": 1
         },
         {
-          "from": "GripRightLens",
-          "to": "GripLeftLens",
+          "from": "SeeGripFocusLens",
+          "to": "SeeGripCollLens",
           "weight": 1
         },
         {
-          "from": "GripRightLens",
+          "from": "SeeGripFocusLens",
           "to": "SeePIC",
           "weight": 1
         },
         {
-          "from": "GripRightLens",
+          "from": "SeeGripFocusLens",
           "to": "SeeSLED",
           "weight": 1
         },
         {
-          "from": "GripLeftLens",
+          "from": "SeeGripCollLens",
           "to": "SeePIC",
           "weight": 1
         },
         {
-          "from": "GripLeftLens",
+          "from": "SeeGripCollLens",
           "to": "SeeSLED",
           "weight": 1
         },

@@ -15,9 +15,9 @@ public class HexapodConnectionManager : IDisposable
 
     public enum HexapodType
     {
-        Left,
-        Right,
-        Bottom
+        Left,       
+        Bottom,
+        Right
     }
 
     public HexapodConnectionManager(Dictionary<HexapodType, HexapodControl> controls)
@@ -38,7 +38,7 @@ public class HexapodConnectionManager : IDisposable
             throw;
         }
     }
-    
+
     private void InitializeConnectionSettings()
     {
         try

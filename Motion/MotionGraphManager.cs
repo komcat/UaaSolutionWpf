@@ -40,9 +40,9 @@ namespace UaaSolutionWpf.Motion
             // Initialize safety limits
             _safetyLimits = new Dictionary<string, DeviceSafetyLimits>
             {
-                { "hex-left", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Left Hexapod" } },
-                { "hex-right", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Right Hexapod" } },
-                { "hex-bottom", new DeviceSafetyLimits { MaxInitialMoveDistance = 3.0, Name = "Bottom Hexapod" } },
+                { "hex-left", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Left Hexapod" } },
+                { "hex-right", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Right Hexapod" } },
+                { "hex-bottom", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Bottom Hexapod" } },
                 { "gantry-main", new DeviceSafetyLimits { MaxInitialMoveDistance = 10.0, Name = "Main Gantry" } }
             };
         }
@@ -255,25 +255,32 @@ namespace UaaSolutionWpf.Motion
 
                 // Check if we're at an exact position or need initial move
                 const double POSITION_TOLERANCE = 0.1;
-                bool requiresInitialMove = false;
                 Position closestPos;
+                bool requiresInitialMove = false;
+                double distance = 0;
 
                 if (deviceId.StartsWith("hex"))
                 {
                     int hexapodId = _positionRegistry.GetHexapodIdFromLocation(deviceId.Split('-')[1]);
-                    requiresInitialMove = !_positionRegistry.TryGetHexapodPosition(hexapodId, closestNamedPosition, out closestPos);
-                }
-                else
-                {
-                    requiresInitialMove = !_positionRegistry.TryGetGantryPosition(4, closestNamedPosition, out closestPos);
-                }
+                    if (_positionRegistry.TryGetHexapodPosition(hexapodId, closestNamedPosition, out closestPos))
+                    {
+                        distance = Math.Sqrt(
+                            Math.Pow(currentDevicePosition.X - closestPos.X, 2) +
+                            Math.Pow(currentDevicePosition.Y - closestPos.Y, 2) +
+                            Math.Pow(currentDevicePosition.Z - closestPos.Z, 2));
 
-                if (requiresInitialMove)
-                {
-                    requiresInitialMove = Math.Sqrt(
-                        Math.Pow(currentDevicePosition.X - closestPos.X, 2) +
-                        Math.Pow(currentDevicePosition.Y - closestPos.Y, 2) +
-                        Math.Pow(currentDevicePosition.Z - closestPos.Z, 2)) > POSITION_TOLERANCE;
+                        requiresInitialMove = distance > POSITION_TOLERANCE;
+
+                        _logger.Information(
+                            "Device {DeviceId} distance from {Position}: {Distance:F3}mm, requires initial move: {RequiresMove}",
+                            deviceId, closestNamedPosition, distance, requiresInitialMove);
+                    }
+                    else
+                    {
+                        _logger.Error("Failed to get position coordinates for {DeviceId} at {Position}",
+                            deviceId, closestNamedPosition);
+                        return new PathAnalysis { IsValid = false, Error = "Failed to get position coordinates" };
+                    }
                 }
 
                 return new PathAnalysis

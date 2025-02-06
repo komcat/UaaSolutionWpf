@@ -17,6 +17,7 @@ using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.IO;
+using UaaSolutionWpf.Motion;
 using Newtonsoft.Json;
 
 
@@ -137,62 +138,6 @@ namespace UaaSolutionWpf
         }
 
 
-        //private void InitializeIOMonitorControls()
-        //{
-        //    try
-        //    {
-        //        string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        //        string inputMappingFilePath = Path.Combine(appDirectory, "IO", "IOTop.json");
-        //        string outputMappingFilePath = Path.Combine(appDirectory, "IO", "IOBottom.json");
-
-        //        // Initialize Bottom Eziio (ID 0) with IP 192.168.0.5
-        //        string bottomConfigPath = Path.Combine(appDirectory, "IO", "IOTop.json");
-        //        var bottomController = new EziioControllerClass(
-        //            EziioController.TCP,
-        //            0,  // board ID
-        //            "192.168.0.5",  // IP: 192.168.0.5
-        //            inputMappingFilePath,
-        //            outputMappingFilePath,
-        //            logger
-        //        );
-
-        //        // Initialize Top Eziio (ID 1) with IP 192.168.0.3
-        //        string topConfigPath = Path.Combine(appDirectory, "IO", "IOBottom.json");
-        //        var topController = new EziioControllerClass(
-        //            EziioControllerClass.TCP,
-        //            1,  // board ID
-        //            "192.168.0.3",  // IP: 192.168.0.3
-        //            inputMappingFilePath,
-        //            outputMappingFilePath,
-        //            logger
-        //        );
-
-        //        // Connect the controllers
-        //        if (!bottomController.Connect())
-        //        {
-        //            throw new Exception("Failed to connect to Bottom Eziio controller");
-        //        }
-        //        if (!topController.Connect())
-        //        {
-        //            throw new Exception("Failed to connect to Top Eziio controller");
-        //        }
-
-        //        // Assign to UI controls
-        //        EziioControlBottom.DataContext = bottomController;
-        //        EziioControlTop.DataContext = topController;
-
-        //        logger.Information("Successfully initialized IO monitor controls");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        logger.Error(ex, "Failed to initialize IO monitor controls");
-        //        MessageBox.Show(
-        //            $"Failed to initialize IO controls: {ex.Message}",
-        //            "Initialization Error",
-        //            MessageBoxButton.OK,
-        //            MessageBoxImage.Error);
-        //    }
-        //}
 
         #endregion
 
@@ -217,51 +162,90 @@ namespace UaaSolutionWpf
         }
         private void InitializePositionManagers()
         {
-            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "WorkingPositions.json");
+            // First ensure motion system components are initialized
+            if (motionGraphManager == null)
+            {
+                logger.Error("Motion system not initialized - initializing now");
 
-            // Initialize Gantry Positions
+                string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
+                positionRegistry = new PositionRegistry(workingPositionsPath, logger);
+
+                devicePositionMonitor = new DevicePositionMonitor(
+                    hexapodConnectionManager,
+                    gantryConnectionManager,
+                    logger,
+                    positionRegistry,
+                    simulationMode);
+
+                string configPath = Path.Combine("Config", "motionSystem.json");
+                motionGraphManager = new MotionGraphManager(
+                    devicePositionMonitor,
+                    positionRegistry,
+                    configPath,
+                    logger);
+            }
+
+            string positionsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "WorkingPositions.json");
+
             var gantryPositionsToShow = new[]
             {
-                "Home",
-                "Dispense1",
-                "Dispense2",
-                "PreDispense",
-                "UV",
-                "SeeCollimateLens",
-                "SeeFocusLens",
-                "SeeSLED",
-                "SeePIC",
-                "CamSeeNumber"
-            };
+        "Home", "Dispense1", "Dispense2", "PreDispense", "UV",
+        "SeeCollimateLens", "SeeFocusLens", "SeeSLED", "SeePIC", "CamSeeNumber"
+    };
 
-            // Initialize Hexapod Positions
             var hexapodPositionsToShow = new[]
             {
-                "Home",
-                "LensGrip",
-                "ApproachLensGrip",
-                "LensPlace",
-                "ApproachLensPlace",
-                "AvoidDispenser",
-                "RejectLens",
-                "ParkInside"
-            };
+        "Home", "LensGrip", "ApproachLensGrip", "LensPlace",
+        "ApproachLensPlace", "AvoidDispenser", "RejectLens", "ParkInside"
+    };
 
-            // Initialize Gantry Manager
-            gantryPositionsManager = new GantryPositionsManager(GantryManualMoveControl, gantryPositionsToShow);
-            gantryPositionsManager.LoadPositionsAndCreateButtons(configPath);
+            // Initialize Gantry Manager with motion system components
+            gantryPositionsManager = new GantryPositionsManager(
+                GantryManualMoveControl,
+                gantryConnectionManager,
+                gantryPositionsToShow,
+                null, // default button labels
+                motionGraphManager,
+                positionRegistry,
+                logger);
+            gantryPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
 
-            // Initialize Hexapod Managers
-            leftHexapodPositionsManager = new HexapodPositionsManager(LeftHexapodManualMoveControl, 0, hexapodPositionsToShow);
-            bottomHexapodPositionsManager = new HexapodPositionsManager(BottomHexapodManualMoveControl, 1, hexapodPositionsToShow);
-            rightHexapodPositionsManager = new HexapodPositionsManager(RightHexapodManualMoveControl, 2, hexapodPositionsToShow);
+            // Initialize Hexapod Managers with all dependencies in correct order
+            leftHexapodPositionsManager = new HexapodPositionsManager(
+                panel: LeftHexapodManualMoveControl,
+                hexapodId: 0,
+                hexapodConnectionManager: hexapodConnectionManager,
+                positionsToShow: hexapodPositionsToShow,
+                customButtonLabels: null,  // use defaults
+                motionGraphManager: motionGraphManager,
+                positionRegistry: positionRegistry,
+                logger: logger);
+
+            bottomHexapodPositionsManager = new HexapodPositionsManager(
+                panel: BottomHexapodManualMoveControl,
+                hexapodId: 1,
+                hexapodConnectionManager: hexapodConnectionManager,
+                positionsToShow: hexapodPositionsToShow,
+                customButtonLabels: null,  // use defaults
+                motionGraphManager: motionGraphManager,
+                positionRegistry: positionRegistry,
+                logger: logger);
+
+            rightHexapodPositionsManager = new HexapodPositionsManager(
+                panel: RightHexapodManualMoveControl,
+                hexapodId: 2,
+                hexapodConnectionManager: hexapodConnectionManager,
+                positionsToShow: hexapodPositionsToShow,
+                customButtonLabels: null,  // use defaults
+                motionGraphManager: motionGraphManager,
+                positionRegistry: positionRegistry,
+                logger: logger);
 
             // Load positions for each hexapod
-            leftHexapodPositionsManager.LoadPositionsAndCreateButtons(configPath);
-            bottomHexapodPositionsManager.LoadPositionsAndCreateButtons(configPath);
-            rightHexapodPositionsManager.LoadPositionsAndCreateButtons(configPath);
+            leftHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
+            bottomHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
+            rightHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
         }
-
         private void InitializeHexapod()
         {
             try
@@ -382,6 +366,9 @@ namespace UaaSolutionWpf
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
         }
+
+
+
 
         private async Task InitializeCameraAsync()
         {

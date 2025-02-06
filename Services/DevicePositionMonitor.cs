@@ -1,6 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Serilog;
 using UaaSolutionWpf.Gantry;
+using UaaSolutionWpf.Motion;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.Services
 {
@@ -73,28 +76,29 @@ namespace UaaSolutionWpf.Services
         private readonly ILogger _logger;
         private readonly HexapodConnectionManager _hexapodManager;
         private readonly AcsGantryConnectionManager _gantryManager;
-        private bool _simulationMode = false;
         private readonly PositionRegistry _positionRegistry;
+        private bool _simulationMode = false;
+
+        private const double POSITION_TOLERANCE = 0.1; // 0.1mm tolerance for position matching
 
         public DevicePositionMonitor(
             HexapodConnectionManager hexapodManager,
             AcsGantryConnectionManager gantryManager,
             ILogger logger,
             PositionRegistry positionRegistry,
-            bool simulationMode=false)
+            bool simulationMode = false)
         {
             _hexapodManager = hexapodManager;
             _gantryManager = gantryManager;
             _logger = logger.ForContext<DevicePositionMonitor>();
-            _simulationMode= simulationMode;
-            _positionRegistry = positionRegistry;
+            _positionRegistry = positionRegistry ?? throw new ArgumentNullException(nameof(positionRegistry));
+            _simulationMode = simulationMode;
         }
 
         public async Task<DevicePosition> GetCurrentPosition(string deviceId)
         {
             try
             {
-                // Parse device type from ID (e.g., "hex-left", "gantry-main")
                 var parts = deviceId.Split('-');
                 if (parts.Length != 2)
                 {
@@ -103,52 +107,15 @@ namespace UaaSolutionWpf.Services
 
                 if (_simulationMode)
                 {
-                    switch (parts[0].ToLower())
-                    {
-                        case "hex":
-                            int hexapodId = _positionRegistry.GetHexapodIdFromLocation(parts[1]);
-                            if (_positionRegistry.TryGetHexapodPosition(hexapodId, "Home", out Position hexPosition))
-                            {
-                                var devicePosition = new DevicePosition(6); // Hexapod has 6 axes
-                                devicePosition.X = hexPosition.X;
-                                devicePosition.Y = hexPosition.Y;
-                                devicePosition.Z = hexPosition.Z;
-                                devicePosition.U = hexPosition.U;
-                                devicePosition.V = hexPosition.V;
-                                devicePosition.W = hexPosition.W;
-                                devicePosition.Name = "Home";
-                                return devicePosition;
-                            }
-                            throw new InvalidOperationException($"Home position not found for hexapod: {parts[1]}");
-
-                        case "gantry":
-                            if (_positionRegistry.TryGetGantryPosition(4, "Home", out Position gantryPosition))
-                            {
-                                var devicePosition = new DevicePosition(3); // Gantry has 3 axes
-                                devicePosition.X = gantryPosition.X;
-                                devicePosition.Y = gantryPosition.Y;
-                                devicePosition.Z = gantryPosition.Z;
-                                devicePosition.Name = "Home";
-                                return devicePosition;
-                            }
-                            throw new InvalidOperationException($"Home position not found for gantry: {parts[1]}");
-
-                        default:
-                            throw new ArgumentException($"Unknown device type: {parts[0]}");
-                    }
+                    return await GetSimulatedPosition(parts[0], parts[1]);
                 }
-                else
+
+                return parts[0].ToLower() switch
                 {
-                    switch (parts[0].ToLower())
-                    {
-                        case "hex":
-                            return await GetHexapodPosition(parts[1]);
-                        case "gantry":
-                            return await GetGantryPosition(parts[1]);
-                        default:
-                            throw new ArgumentException($"Unknown device type: {parts[0]}");
-                    }
-                }
+                    "hex" => await GetHexapodPosition(parts[1]),
+                    "gantry" => await GetGantryPosition(parts[1]),
+                    _ => throw new ArgumentException($"Unknown device type: {parts[0]}")
+                };
             }
             catch (Exception ex)
             {
@@ -156,11 +123,53 @@ namespace UaaSolutionWpf.Services
                 throw;
             }
         }
+
+        private async Task<DevicePosition> GetSimulatedPosition(string deviceType, string location)
+        {
+            switch (deviceType.ToLower())
+            {
+                case "hex":
+                    int hexapodId = _positionRegistry.GetHexapodIdFromLocation(location);
+                    if (_positionRegistry.TryGetHexapodPosition(hexapodId, "Home", out Position hexPosition))
+                    {
+                        return CreateDevicePosition(hexPosition, 6, "Home");
+                    }
+                    throw new InvalidOperationException($"Home position not found for hexapod: {location}");
+
+                case "gantry":
+                    if (_positionRegistry.TryGetGantryPosition(4, "Home", out Position gantryPosition))
+                    {
+                        return CreateDevicePosition(gantryPosition, 3, "Home");
+                    }
+                    throw new InvalidOperationException($"Home position not found for gantry: {location}");
+
+                default:
+                    throw new ArgumentException($"Unknown device type: {deviceType}");
+            }
+        }
+
+        private DevicePosition CreateDevicePosition(Position position, int numAxes, string name)
+        {
+            var devicePosition = new DevicePosition(numAxes)
+            {
+                X = position.X,
+                Y = position.Y,
+                Z = position.Z,
+                Name = name
+            };
+
+            if (numAxes > 3)
+            {
+                devicePosition.U = position.U;
+                devicePosition.V = position.V;
+                devicePosition.W = position.W;
+            }
+
+            return devicePosition;
+        }
+
         private async Task<DevicePosition> GetHexapodPosition(string location)
         {
-
-
-
             HexapodConnectionManager.HexapodType type = location.ToLower() switch
             {
                 "left" => HexapodConnectionManager.HexapodType.Left,
@@ -175,10 +184,15 @@ namespace UaaSolutionWpf.Services
                 throw new InvalidOperationException($"No controller found for hexapod: {location}");
             }
 
-            var position = new DevicePosition(6); // Hexapod has 6 axes
-            var coords = controller.GetPosition();
-            position.Coordinates = coords;
-            position.Name = controller.WhereAmI();
+            var currentCoords = controller.GetPosition();
+            var position = new DevicePosition(6)
+            {
+                Coordinates = currentCoords
+            };
+
+            // Find the closest named position in the WorkingPositions.json registry
+            int hexapodId = (int)type;
+            position.Name = FindClosestPosition(hexapodId, position);
 
             return position;
         }
@@ -190,36 +204,91 @@ namespace UaaSolutionWpf.Services
                 throw new InvalidOperationException("Gantry is not connected");
             }
 
-            var position = new DevicePosition(3); // Gantry has 3 axes
-            // Implement getting gantry position based on your AcsGantryConnectionManager
-            // This is just an example - adjust based on your actual implementation
+            var position = new DevicePosition(3);
             var controller = _gantryManager.GetController();
+
             position.X = controller.GetAxisStatus(0).position;
             position.Y = controller.GetAxisStatus(1).position;
             position.Z = controller.GetAxisStatus(2).position;
 
+            // Find the closest named position in the WorkingPositions.json registry
+            position.Name = FindClosestGantryPosition(position);
+
             return position;
         }
 
-        // Optional: Add methods for comparing positions, calculating distances, etc.
-        public double CalculateDistance(DevicePosition pos1, DevicePosition pos2)
+        private string FindClosestPosition(int hexapodId, DevicePosition currentPosition)
         {
-            if (pos1.NumAxes != pos2.NumAxes)
+            string closestPosition = null;
+            double minDistance = double.MaxValue;
+
+            var allPositions = _positionRegistry.GetAllHexapodPositions(hexapodId);
+            foreach (var position in allPositions)
             {
-                throw new ArgumentException("Cannot compare positions with different number of axes");
+                double distance = CalculateDistance(
+                    currentPosition,
+                    new double[] { position.Value.X, position.Value.Y, position.Value.Z,
+                                  position.Value.U, position.Value.V, position.Value.W }
+                );
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestPosition = position.Key;
+                }
             }
 
-            double sumOfSquares = 0;
-            for (int i = 0; i < pos1.NumAxes; i++)
+            _logger.Debug(
+                "Hexapod {HexapodId} closest to position {Position} (distance: {Distance:F3}mm)",
+                hexapodId, closestPosition, minDistance
+            );
+
+            return closestPosition;
+        }
+
+        private string FindClosestGantryPosition(DevicePosition currentPosition)
+        {
+            string closestPosition = null;
+            double minDistance = double.MaxValue;
+
+            var allPositions = _positionRegistry.GetAllGantryPositions(4);
+            foreach (var position in allPositions)
             {
-                double diff = pos1.Coordinates[i] - pos2.Coordinates[i];
+                double distance = CalculateDistance(
+                    currentPosition,
+                    new double[] { position.Value.X, position.Value.Y, position.Value.Z }
+                );
+
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestPosition = position.Key;
+                }
+            }
+
+            _logger.Debug(
+                "Gantry closest to position {Position} (distance: {Distance:F3}mm)",
+                closestPosition, minDistance
+            );
+
+            return closestPosition;
+        }
+
+        public double CalculateDistance(DevicePosition pos1, double[] coords2)
+        {
+            double sumOfSquares = 0;
+            int dimensions = Math.Min(pos1.NumAxes, coords2.Length);
+
+            for (int i = 0; i < dimensions; i++)
+            {
+                double diff = pos1.Coordinates[i] - coords2[i];
                 sumOfSquares += diff * diff;
             }
 
             return Math.Sqrt(sumOfSquares);
         }
 
-        public bool ArePositionsClose(DevicePosition pos1, DevicePosition pos2, double tolerance = 0.001)
+        public bool ArePositionsClose(DevicePosition pos1, DevicePosition pos2, double tolerance = POSITION_TOLERANCE)
         {
             if (pos1.NumAxes != pos2.NumAxes)
             {

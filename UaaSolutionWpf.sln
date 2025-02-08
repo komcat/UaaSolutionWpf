@@ -5,6 +5,8 @@ VisualStudioVersion = 17.11.35303.130
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UaaSolutionWpf", "UaaSolutionWpf.csproj", "{C19D8C7E-471F-4603-B9AD-52432D175435}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPIBKeithleyCurrentMeasurement", "..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj", "{B9DF7C73-B812-4C94-8531-A12E89A6076B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{C19D8C7E-471F-4603-B9AD-52432D175435}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C19D8C7E-471F-4603-B9AD-52432D175435}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C19D8C7E-471F-4603-B9AD-52432D175435}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

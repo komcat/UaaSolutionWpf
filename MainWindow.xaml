@@ -172,6 +172,34 @@
                         </ScrollViewer>
                     </Grid>
                 </TabItem>
+                <TabItem Header="Measurements">
+                    <Grid>
+                        <!-- Content for Tab 3 -->
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <!-- Left side - Bottom IO Control -->
+                        <ScrollViewer Grid.Row="0" Grid.Column="0">
+                            <ItemsControl x:Name="ChannelsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:MeasurementChannelControl 
+                                            ChannelNumber="{Binding ChannelNumber}"
+                                            ChannelName="{Binding ChannelName}"
+                                            ResourceName="{Binding ResourceName}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
             </TabControl>
 
 

@@ -19,6 +19,7 @@ using UaaSolutionWpf.Services;
 using UaaSolutionWpf.IO;
 using UaaSolutionWpf.Motion;
 using Newtonsoft.Json;
+using UaaSolutionWpf.Config;
 
 
 
@@ -51,6 +52,7 @@ namespace UaaSolutionWpf
 
         private ILogger logger;
         private CameraManagerWpf cameraManagerWpf;
+        private ChannelConfigurationManager channelConfigurationManager;
         public MainWindow()
         {
             InitializeComponent();
@@ -90,6 +92,9 @@ namespace UaaSolutionWpf
                 cameraDisplayViewControl.LiveViewStarted += OnLiveViewStarted;
                 cameraDisplayViewControl.LiveViewStopped += OnLiveViewStopped;
             }
+
+            //load sensors channel
+            LoadChannelConfigurations();
         }
 
         #region camera basler 
@@ -528,7 +533,12 @@ namespace UaaSolutionWpf
             }
         }
 
-
+        private void LoadChannelConfigurations()
+        {
+            
+            var configurations = ChannelConfigurationManager.LoadConfiguration();
+            ChannelsItemsControl.ItemsSource = configurations;
+        }
 
         protected override void OnClosed(EventArgs e)
         {

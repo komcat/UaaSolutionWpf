@@ -1,0 +1,66 @@
+{
+  "channels": [
+    {
+      "channelNumber": 0,
+      "channelName": "Keithley Current",
+      "resourceName": "GPIB0::1::INSTR",
+      "measurementType": "current",
+      "unit": "A",
+      "settings": {
+        "readInterval": 100,
+        "timeout": 5000
+      }
+    },
+    {
+      "channelNumber": 1,
+      "channelName": "PI Ch5",
+      "resourceName": "PI_Channel5",
+      "measurementType": "position",
+      "unit": "mm",
+      "settings": {
+        "readInterval": 50,
+        "timeout": 2000
+      }
+    },
+    {
+      "channelNumber": 2,
+      "channelName": "PI Ch6",
+      "resourceName": "PI_Channel6",
+      "measurementType": "position",
+      "unit": "mm",
+      "settings": {
+        "readInterval": 50,
+        "timeout": 2000
+      }
+    },
+    {
+      "channelNumber": 3,
+      "channelName": "Keithley Voltage",
+      "resourceName": "GPIB0::2::INSTR",
+      "measurementType": "voltage",
+      "unit": "V",
+      "settings": {
+        "readInterval": 100,
+        "timeout": 5000
+      }
+    },
+    {
+      "channelNumber": 4,
+      "channelName": "Temperature Sensor",
+      "resourceName": "USB0::0x0957::0x0607::MY47000419::0::INSTR",
+      "measurementType": "temperature",
+      "unit": "°C",
+      "settings": {
+        "readInterval": 1000,
+        "timeout": 3000
+      }
+    }
+  ],
+  "globalSettings": {
+    "logEnabled": true,
+    "logPath": "C:\\MeasurementLogs",
+    "autoReconnect": true,
+    "reconnectAttempts": 3,
+    "reconnectDelay": 1000
+  }
+}

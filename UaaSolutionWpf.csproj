@@ -57,6 +57,9 @@
     <None Update="Config\appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Config\channelconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Config\IOConfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -94,6 +97,14 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Charts\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />
   </ItemGroup>
 
 </Project>

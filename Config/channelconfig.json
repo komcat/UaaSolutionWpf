@@ -43,17 +43,6 @@
         "readInterval": 100,
         "timeout": 5000
       }
-    },
-    {
-      "channelNumber": 4,
-      "channelName": "Temperature Sensor",
-      "resourceName": "USB0::0x0957::0x0607::MY47000419::0::INSTR",
-      "measurementType": "temperature",
-      "unit": "°C",
-      "settings": {
-        "readInterval": 1000,
-        "timeout": 3000
-      }
     }
   ],
   "globalSettings": {

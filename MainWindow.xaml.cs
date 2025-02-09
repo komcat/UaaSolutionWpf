@@ -50,15 +50,14 @@ namespace UaaSolutionWpf
         private DevicePositionMonitor devicePositionMonitor;
         private PositionRegistry positionRegistry;
 
-        private ILogger logger;
+        private ILogger _logger;
         private CameraManagerWpf cameraManagerWpf;
-        private ChannelConfigurationManager channelConfigurationManager;
         public MainWindow()
         {
             InitializeComponent();
 
 
-            logger = new LoggerConfiguration()
+            _logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}")
@@ -67,7 +66,7 @@ namespace UaaSolutionWpf
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] [{Operation}] {Message:lj}{NewLine}{Properties:j}{NewLine}{Exception}")
                 .Enrich.FromLogContext()  // This line is important for context properties
                 .CreateLogger();
-            Log.Logger = logger;
+            Log.Logger = _logger;
 
 
             // Set names for each Hexapod
@@ -94,32 +93,82 @@ namespace UaaSolutionWpf
             }
 
             //load sensors channel
-            LoadChannelConfigurations();
+            InitializeKeithleyControl();
         }
+        private async void InitializeKeithleyControl()
+        {
 
+
+
+            try
+            {
+                
+                if (_KeithleyCurrentControl != null)
+                {
+                    _KeithleyCurrentControl.SetLogger(_logger);
+                    _KeithleyCurrentControl.Init();
+                    _logger.Information("Initializing Keithley Current Control");
+
+                    if (!simulationMode)
+                    {
+                        try
+                        {
+                            //await _KeithleyCurrentControl.StartMeasuringAsync();
+                            _logger.Information("Keithley Current Control automatically connected and started");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "Failed to auto-connect Keithley Current Control");
+                            MessageBox.Show(
+                                "Failed to automatically connect Keithley: " + ex.Message,
+                                "Connection Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
+                    else
+                    {
+                        _logger.Information("Keithley Current Control in simulation mode - skipping auto-connect");
+                    }
+                }
+                else
+                {
+                    _logger.Warning("KeithleyCurrentControl reference is null");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to initialize Keithley Current Control");
+                MessageBox.Show(
+                    "Failed to initialize Keithley Current Control: " + ex.Message,
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
         #region camera basler 
         private void OnCameraConnected(object sender, CameraConnectionEventArgs e)
         {
             if (e.IsConnected)
             {
-                logger.Information("Camera connected: {0}", e.CameraInfo);
+                _logger.Information("Camera connected: {0}", e.CameraInfo);
             }
             else
             {
-                logger.Error("Camera connection failed: {0}", e.ErrorMessage);
+                _logger.Error("Camera connection failed: {0}", e.ErrorMessage);
             }
         }
 
         private void OnCameraDisconnected(object sender, CameraConnectionEventArgs e)
         {
-            logger.Information("Camera disconnected");
+            _logger.Information("Camera disconnected");
         }
 
         private void OnLiveViewStarted(object sender, LiveViewEventArgs e)
         {
             if (!e.IsActive)
             {
-                logger.Error("Failed to start live view: {0}", e.ErrorMessage);
+                _logger.Error("Failed to start live view: {0}", e.ErrorMessage);
             }
         }
 
@@ -127,7 +176,7 @@ namespace UaaSolutionWpf
         {
             if (e.ErrorMessage != null)
             {
-                logger.Error("Error stopping live view: {0}", e.ErrorMessage);
+                _logger.Error("Error stopping live view: {0}", e.ErrorMessage);
             }
         }
 
@@ -138,7 +187,7 @@ namespace UaaSolutionWpf
 
         private void InitializeIOMonitorControls()
         {
-            _ioManager = new IOManager(EziioControlBottom, EziioControlTop, logger);
+            _ioManager = new IOManager(EziioControlBottom, EziioControlTop, _logger);
             _ioManager.Initialize();
         }
 
@@ -156,13 +205,13 @@ namespace UaaSolutionWpf
                     _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
                     _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
                     gantryMovementService,
-                    logger
+                    _logger
                 );
-                logger.Information("SimpleJogControl initialized successfully");
+                _logger.Information("SimpleJogControl initialized successfully");
             }
             else
             {
-                logger.Error("SimpleJogControl reference is null");
+                _logger.Error("SimpleJogControl reference is null");
             }
         }
         private void InitializePositionManagers()
@@ -170,15 +219,15 @@ namespace UaaSolutionWpf
             // First ensure motion system components are initialized
             if (motionGraphManager == null)
             {
-                logger.Error("Motion system not initialized - initializing now");
+                _logger.Error("Motion system not initialized - initializing now");
 
                 string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
-                positionRegistry = new PositionRegistry(workingPositionsPath, logger);
+                positionRegistry = new PositionRegistry(workingPositionsPath, _logger);
 
                 devicePositionMonitor = new DevicePositionMonitor(
                     hexapodConnectionManager,
                     gantryConnectionManager,
-                    logger,
+                    _logger,
                     positionRegistry,
                     simulationMode);
 
@@ -187,7 +236,7 @@ namespace UaaSolutionWpf
                     devicePositionMonitor,
                     positionRegistry,
                     configPath,
-                    logger);
+                    _logger);
             }
 
             string positionsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "WorkingPositions.json");
@@ -213,7 +262,7 @@ namespace UaaSolutionWpf
                 null, // default button labels
                 motionGraphManager,
                 positionRegistry,
-                logger);
+                _logger);
             gantryPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
 
             // Initialize Hexapod Managers with all dependencies in correct order
@@ -225,7 +274,7 @@ namespace UaaSolutionWpf
                 customButtonLabels: null,  // use defaults
                 motionGraphManager: motionGraphManager,
                 positionRegistry: positionRegistry,
-                logger: logger);
+                logger: _logger);
 
             bottomHexapodPositionsManager = new HexapodPositionsManager(
                 panel: BottomHexapodManualMoveControl,
@@ -235,7 +284,7 @@ namespace UaaSolutionWpf
                 customButtonLabels: null,  // use defaults
                 motionGraphManager: motionGraphManager,
                 positionRegistry: positionRegistry,
-                logger: logger);
+                logger: _logger);
 
             rightHexapodPositionsManager = new HexapodPositionsManager(
                 panel: RightHexapodManualMoveControl,
@@ -245,7 +294,7 @@ namespace UaaSolutionWpf
                 customButtonLabels: null,  // use defaults
                 motionGraphManager: motionGraphManager,
                 positionRegistry: positionRegistry,
-                logger: logger);
+                logger: _logger);
 
             // Load positions for each hexapod
             leftHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
@@ -264,7 +313,7 @@ namespace UaaSolutionWpf
                 };
 
                 hexapodConnectionManager = new HexapodConnectionManager(controls);
-                logger.Information("Created HexapodConnectionManager instance");
+                _logger.Information("Created HexapodConnectionManager instance");
 
                 // Initialize movement services for each hexapod
                 _hexapodMovementServices = new Dictionary<HexapodConnectionManager.HexapodType, HexapodMovementService>();
@@ -274,7 +323,7 @@ namespace UaaSolutionWpf
                     var movementService = new HexapodMovementService(
                         hexapodConnectionManager,
                         kvp.Key,
-                        logger
+                        _logger
                     );
                     _hexapodMovementServices[kvp.Key] = movementService;
 
@@ -283,11 +332,11 @@ namespace UaaSolutionWpf
                 }
 
                 hexapodConnectionManager.InitializeConnections();
-                logger.Information("Initialized hexapod connections");
+                _logger.Information("Initialized hexapod connections");
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Failed to initialize hexapod connections");
+                _logger.Error(ex, "Failed to initialize hexapod connections");
                 MessageBox.Show(
                     $"Failed to initialize hexapod connections: {ex.Message}",
                     "Initialization Error",
@@ -299,9 +348,9 @@ namespace UaaSolutionWpf
 
         private async void IntiailizeAcsGantry()
         {
-            // Create the manager with just a logger
-            gantryConnectionManager = new AcsGantryConnectionManager(GantryControl, logger);
-            gantryMovementService = new GantryMovementService(gantryConnectionManager, logger);
+            // Create the manager with just a _logger
+            gantryConnectionManager = new AcsGantryConnectionManager(GantryControl, _logger);
+            gantryMovementService = new GantryMovementService(gantryConnectionManager, _logger);
 
             // Initialize controls with dependencies
             GantryControl.SetDependencies(gantryMovementService);
@@ -310,7 +359,7 @@ namespace UaaSolutionWpf
 
             // Initialize with a name
             await gantryConnectionManager.InitializeControllerAsync("MainGantry");
-            logger.Information("Initialized ACS Gantry connections");
+            _logger.Information("Initialized ACS Gantry connections");
         }
 
 
@@ -332,12 +381,12 @@ namespace UaaSolutionWpf
             if (simulationMode)
             {
                 //THis is simulation mode
-                logger.Warning("Running with motors OFF (Simulation Mode)");
+                _logger.Warning("Running with motors OFF (Simulation Mode)");
             }
             else
             {
                 //This is real hardware mode.
-                logger.Warning("Running with motors ON");
+                _logger.Warning("Running with motors ON");
                 try
                 {
                     InitializeHexapod();
@@ -347,7 +396,7 @@ namespace UaaSolutionWpf
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(ex, "Failed to initialize motors");
+                    _logger.Error(ex, "Failed to initialize motors");
                     MessageBox.Show(
                         $"Failed to initialize motors: {ex.Message}\nSwitching to simulation mode.",
                         "Initialization Error",
@@ -359,12 +408,12 @@ namespace UaaSolutionWpf
                 }
             }
             string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
-            positionRegistry = new PositionRegistry(workingPositionsPath, logger);
-            devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, logger, positionRegistry, simulationMode);
+            positionRegistry = new PositionRegistry(workingPositionsPath, _logger);
+            devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, _logger, positionRegistry, simulationMode);
 
             string configPath = Path.Combine("Config", "motionSystem.json");
 
-            motionGraphManager = new MotionGraphManager(devicePositionMonitor, positionRegistry, configPath, logger);
+            motionGraphManager = new MotionGraphManager(devicePositionMonitor, positionRegistry, configPath, _logger);
 
 
 
@@ -388,7 +437,7 @@ namespace UaaSolutionWpf
                     cameraDisplayViewControl.LiveViewStarted += OnLiveViewStarted;
                     cameraDisplayViewControl.LiveViewStopped += OnLiveViewStopped;
 
-                    logger.Information("Attempting to connect to camera...");
+                    _logger.Information("Attempting to connect to camera...");
 
                     // Simulate clicking the connect button
                     var connectButton = cameraDisplayViewControl.FindName("btnConnect") as Button;
@@ -404,26 +453,26 @@ namespace UaaSolutionWpf
                         if (startLiveButton != null && startLiveButton.IsEnabled)
                         {
                             startLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                            logger.Information("Started camera live view");
+                            _logger.Information("Started camera live view");
                         }
                         else
                         {
-                            logger.Warning("Could not start live view - camera may not be connected");
+                            _logger.Warning("Could not start live view - camera may not be connected");
                         }
                     }
                     else
                     {
-                        logger.Error("Could not find camera connect button");
+                        _logger.Error("Could not find camera connect button");
                     }
                 }
                 else
                 {
-                    logger.Error("Camera control not initialized");
+                    _logger.Error("Camera control not initialized");
                 }
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Error initializing camera");
+                _logger.Error(ex, "Error initializing camera");
                 MessageBox.Show($"Error initializing camera: {ex.Message}", "Camera Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -436,12 +485,12 @@ namespace UaaSolutionWpf
                 if (startLiveButton != null && startLiveButton.IsEnabled)
                 {
                     startLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    logger.Information("Started camera live view");
+                    _logger.Information("Started camera live view");
                 }
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Error starting camera live view");
+                _logger.Error(ex, "Error starting camera live view");
                 throw;
             }
         }
@@ -454,12 +503,12 @@ namespace UaaSolutionWpf
                 if (stopLiveButton != null && stopLiveButton.IsEnabled)
                 {
                     stopLiveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    logger.Information("Stopped camera live view");
+                    _logger.Information("Stopped camera live view");
                 }
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Error stopping camera live view");
+                _logger.Error(ex, "Error stopping camera live view");
                 throw;
             }
         }
@@ -478,67 +527,28 @@ namespace UaaSolutionWpf
         //test graph manager
         private async void TestGraph_Click(object sender, RoutedEventArgs e)
         {
-            // Test case 1: Position exactly at Home
-            var exactHomePosition = new DevicePosition(3)
-            {
-                X = 3.0,
-                Y = 3.0,
-                Z = 12.0
-            };
 
-            logger.Information("Test Case 1: Exactly at Home position");
-            var analysis1 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", exactHomePosition);
-            LogPathAnalysis(analysis1);
-
-            // Test case 2: Position slightly off from Home (1.5mm in X)
-            var offHomePosition = new DevicePosition(3)
-            {
-                X = 4.5,  // 1.5mm off from Home X
-                Y = 3.0,
-                Z = 12.0
-            };
-
-            logger.Information("\nTest Case 2: 1.5mm off from Home position");
-            var analysis2 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", offHomePosition);
-            LogPathAnalysis(analysis2);
-
-            // Test case 3: Position way off from any known position
-            var arbitraryPosition = new DevicePosition(3)
-            {
-                X = 50.0,
-                Y = 50.0,
-                Z = 20.0
-            };
-
-            logger.Information("\nTest Case 3: Arbitrary position far from known positions");
-            var analysis3 = await motionGraphManager.AnalyzeMovementPath("gantry-main", "SeeSLED", arbitraryPosition);
-            LogPathAnalysis(analysis3);
         }
 
         private void LogPathAnalysis(PathAnalysis analysis)
         {
             if (analysis.IsValid)
             {
-                logger.Information($"Device: {analysis.DeviceName} ({analysis.DeviceType})");
-                logger.Information($"Starting at: X={analysis.InitialPosition.X:F3}, Y={analysis.InitialPosition.Y:F3}, Z={analysis.InitialPosition.Z:F3}");
-                logger.Information($"Closest Known Position: {analysis.CurrentPosition}");
-                logger.Information($"Requires Initial Move: {analysis.RequiresInitialMove}");
-                logger.Information($"Target Position: {analysis.TargetPosition}");
-                logger.Information($"Path: {string.Join(" -> ", analysis.Path)}");
-                logger.Information($"Number of steps: {analysis.NumberOfSteps}");
+                _logger.Information($"Device: {analysis.DeviceName} ({analysis.DeviceType})");
+                _logger.Information($"Starting at: X={analysis.InitialPosition.X:F3}, Y={analysis.InitialPosition.Y:F3}, Z={analysis.InitialPosition.Z:F3}");
+                _logger.Information($"Closest Known Position: {analysis.CurrentPosition}");
+                _logger.Information($"Requires Initial Move: {analysis.RequiresInitialMove}");
+                _logger.Information($"Target Position: {analysis.TargetPosition}");
+                _logger.Information($"Path: {string.Join(" -> ", analysis.Path)}");
+                _logger.Information($"Number of steps: {analysis.NumberOfSteps}");
             }
             else
             {
-                logger.Error($"Error: {analysis.Error}");
+                _logger.Error($"Error: {analysis.Error}");
             }
         }
 
-        private void LoadChannelConfigurations()
-        {
-            
-            var configurations = ChannelConfigurationManager.LoadConfiguration();
-            ChannelsItemsControl.ItemsSource = configurations;
-        }
+
 
         protected override void OnClosed(EventArgs e)
         {
@@ -548,6 +558,13 @@ namespace UaaSolutionWpf
             hexapodConnectionManager?.Dispose();
             gantryConnectionManager?.Dispose();
             cameraDisplayViewControl?.Dispose();
+            _KeithleyCurrentControl?.Dispose();  // Add this line to ensure proper cleanup
+        }
+
+        //when main window closing.
+        private async void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            //TODO add closing procedure
         }
     }
 }

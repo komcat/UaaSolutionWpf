@@ -1,0 +1,85 @@
+﻿<UserControl x:Class="UaaSolutionWpf.Controls.KeithleyCurrentControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="300">
+    <Border BorderBrush="Gray" BorderThickness="1" Margin="5" Padding="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header with title and connection status -->
+            <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,10">
+                <TextBlock Text="Keithley Current Measurement" 
+                         FontSize="14" 
+                         FontWeight="SemiBold"
+                         VerticalAlignment="Center"/>
+                <Rectangle Width="15" 
+                         Height="15" 
+                         Margin="10,0,0,0" 
+                         DockPanel.Dock="Right">
+                    <Rectangle.Style>
+                        <Style TargetType="Rectangle">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                    <Setter Property="Fill" Value="LimeGreen"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                    <Setter Property="Fill" Value="Red"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Rectangle.Style>
+                </Rectangle>
+            </DockPanel>
+
+            <!-- Connection controls -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                <Button x:Name="ConnectButton" 
+                        Content="Connect" 
+                        Width="80" 
+                        Height="25" 
+                        Margin="0,0,10,0"
+                        Click="ConnectButton_Click"/>
+                <Button x:Name="StartButton" 
+                        Content="Start" 
+                        Width="40" 
+                        Height="25" 
+                        Margin="0,0,10,0"
+                        IsEnabled="{Binding IsConnected}"
+                        Click="StartButton_Click"/>
+                <Button x:Name="StopButton" 
+                        Content="Stop" 
+                        Width="40" 
+                        Height="25"
+                         Margin="0,0,10,0"
+                        IsEnabled="False"
+                        Click="StopButton_Click"/>
+                <ComboBox ItemsSource="{Binding AvailableChannels}"
+                      SelectedItem="{Binding SelectedChannel}"
+                      Width="60"
+                      Margin="0,0,10,0"/>
+            </StackPanel>
+
+            <!-- Measurement display -->
+            <Border Grid.Row="2" 
+                    BorderBrush="LightGray" 
+                    BorderThickness="1" 
+                    Padding="10"
+                    Background="#F5F5F5">
+                <StackPanel>
+                    <TextBlock Text="Current Measurement:"
+                             Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding CurrentValue, StringFormat={}{0:E3} A}"
+                             FontSize="16"
+                             FontWeight="Bold"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

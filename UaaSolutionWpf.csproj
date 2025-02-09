@@ -28,6 +28,15 @@
     <Reference Include="Basler.Pylon">
       <HintPath>Basler.Pylon.dll</HintPath>
     </Reference>
+    <Reference Include="Ivi.Visa">
+      <HintPath>Ivi.Visa.dll</HintPath>
+    </Reference>
+    <Reference Include="NationalInstruments.Common">
+      <HintPath>NationalInstruments.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="NationalInstruments.Visa">
+      <HintPath>NationalInstruments.Visa.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -86,6 +95,15 @@
     </None>
     <None Update="IO\OutputPinMapping.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Ivi.Visa.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="NationalInstruments.Common.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="NationalInstruments.Visa.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="PI_GCS2_DLL.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

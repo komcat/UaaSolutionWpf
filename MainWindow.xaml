@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:UaaSolutionWpf"
         xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"        
         mc:Ignorable="d"
-        Title="MainWindow" Height="1024" Width="2200" Loaded="Window_Loaded">
+        Title="MainWindow" Height="1024" Width="2200" Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -147,25 +147,26 @@
                 <TabItem Header="I/O">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="156*"/>
+                            <ColumnDefinition Width="101*"/>
+                            <ColumnDefinition Width="257*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Left side - Bottom IO Control -->
                         <ScrollViewer Grid.Column="0" 
                      VerticalScrollBarVisibility="Auto" 
                      HorizontalScrollBarVisibility="Disabled"
-                     Margin="10">
+                     Margin="10,10,10,10" Grid.ColumnSpan="2">
                             <controls:EziioControl x:Name="EziioControlBottom"
                                  DataContext="{Binding BottomEziioViewModel}">
                             </controls:EziioControl>
                         </ScrollViewer>
 
                         <!-- Right side - Top IO Control -->
-                        <ScrollViewer Grid.Column="1" 
+                        <ScrollViewer Grid.Column="2" 
                      VerticalScrollBarVisibility="Auto" 
                      HorizontalScrollBarVisibility="Disabled"
-                     Margin="10">
+                     Margin="10,10,10,10">
                             <controls:EziioControl x:Name="EziioControlTop"
                                  DataContext="{Binding TopEziioViewModel}">
                             </controls:EziioControl>
@@ -174,30 +175,22 @@
                 </TabItem>
                 <TabItem Header="Measurements">
                     <Grid>
-                        <!-- Content for Tab 3 -->
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <!-- Left side - Bottom IO Control -->
-                        <ScrollViewer Grid.Row="0" Grid.Column="0">
-                            <ItemsControl x:Name="ChannelsItemsControl">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <controls:MeasurementChannelControl 
-                                            ChannelNumber="{Binding ChannelNumber}"
-                                            ChannelName="{Binding ChannelName}"
-                                            ResourceName="{Binding ResourceName}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                        <!-- Add the ChannelMonitorControl here -->
+                        <controls:KeithleyCurrentControl x:Name="_KeithleyCurrentControl" 
+                                      Grid.Row="0" 
+                                      Grid.Column="0" 
+                                      Width="350"
+                                      Height="600"
+                                      VerticalAlignment="Top"/>
                     </Grid>
                 </TabItem>
             </TabControl>

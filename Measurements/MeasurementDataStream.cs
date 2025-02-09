@@ -40,14 +40,17 @@ namespace UaaSolutionWpf.Measurements
         public event EventHandler BufferOverflow;
 
         private Task _processingTask;
-
+        public int BufferSize
+        {
+            get { return _dataBuffer.Count; }
+        }
         public MeasurementDataStream(DataStreamConfig config = null, ILogger logger = null)
         {
             _config = config ?? new DataStreamConfig();
             _logger = logger?.ForContext<MeasurementDataStream>() ?? Log.Logger;
             _dataBuffer = new ConcurrentQueue<MeasurementPoint>();
             _cancellationTokenSource = new CancellationTokenSource();
-
+            _config.EnableDataLogging = false;
             StartProcessing();
         }
 
@@ -121,37 +124,10 @@ namespace UaaSolutionWpf.Measurements
 
         private async Task ProcessDataBatchAsync()
         {
-            if (_dataBuffer.IsEmpty) return;
-
-            try
-            {
-                var batch = new List<MeasurementPoint>();
-                var count = Math.Min(_dataBuffer.Count, _config.BatchSize);
-
-                for (int i = 0; i < count; i++)
-                {
-                    if (_dataBuffer.TryDequeue(out var point))
-                    {
-                        batch.Add(point);
-                    }
-                }
-
-                if (batch.Count > 0)
-                {
-                    BatchProcessed?.Invoke(this, batch);
-
-                    if (_config.EnableDataLogging)
-                    {
-                        _logger.Debug("Processed batch of {Count} points", batch.Count);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error processing data batch");
-                ErrorOccurred?.Invoke(this, ex);
-            }
+            // Do nothing - this allows data to keep accumulating in the buffer
+            await Task.CompletedTask;
         }
+        private readonly object _snapshotLock = new object();
 
         public async Task<List<MeasurementPoint>> GetLatestDataAsync(int count)
         {
@@ -162,15 +138,21 @@ namespace UaaSolutionWpf.Measurements
 
             try
             {
-                var snapshot = _dataBuffer.ToArray();
-                var result = new List<MeasurementPoint>();
-
-                for (int i = Math.Max(0, snapshot.Length - count); i < snapshot.Length; i++)
+                // Use a lock to ensure a consistent snapshot
+                lock (_snapshotLock)
                 {
-                    result.Add(snapshot[i]);
-                }
+                    // Convert to array using a more controlled method
+                    var snapshotArray = _dataBuffer.ToArray();
 
-                return result;
+                    // Calculate the starting index
+                    int startIndex = Math.Max(0, snapshotArray.Length - count);
+
+                    // Return the last 'count' elements
+                    return snapshotArray
+                        .Skip(startIndex)
+                        .Take(count)
+                        .ToList();
+                }
             }
             catch (Exception ex)
             {
@@ -179,7 +161,6 @@ namespace UaaSolutionWpf.Measurements
                 throw;
             }
         }
-
         public void ClearBuffer()
         {
             if (_disposed)

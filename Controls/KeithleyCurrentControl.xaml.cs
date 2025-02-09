@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using GPIBKeithleyCurrentMeasurement;
 using Serilog;
+using UaaSolutionWpf.Measurements;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -19,6 +20,7 @@ namespace UaaSolutionWpf.Controls
     {
         private ILogger _logger;
         private GpibService _gpibService;
+        private  MeasurementDataStream _dataStream;
         private bool _isConnected;
         private double _currentValue;
         private bool _isMeasuring;
@@ -70,7 +72,7 @@ namespace UaaSolutionWpf.Controls
                 }
             }
         }
-
+        public MeasurementDataStream DataStream => _dataStream;
         public KeithleyCurrentControl()
         {
             InitializeComponent();
@@ -90,11 +92,47 @@ namespace UaaSolutionWpf.Controls
             _logger = Log.ForContext<KeithleyCurrentControl>();
             _gpibService = new GpibService("GPIB0::1::INSTR");
 
+            // Initialize data stream with configuration
+            var config = new DataStreamConfig
+            {
+                MaxBufferSize = 1000,  // Store up to 100k points
+                BatchSize = 100,         // Process in batches of 100
+                FlushInterval = TimeSpan.FromMilliseconds(10000),  // Process every 100ms
+                EnableDataLogging = false // Disable detailed logging for performance
+            };
+            _dataStream = new MeasurementDataStream(config, _logger);
+            // Wire up data stream events
+            _dataStream.BatchProcessed += OnBatchProcessed;
+            _dataStream.BufferOverflow += OnBufferOverflow;
+            _dataStream.ErrorOccurred += OnStreamError;
+
+
             // Wire up GPIB service events
             _gpibService.MeasurementReceived += OnMeasurementReceived;
             _gpibService.ErrorOccurred += OnErrorOccurred;
             _logger.Information("KeithleyCurrentControl constructor executed");
         }
+
+        private void OnBatchProcessed(object sender, List<MeasurementPoint> batch)
+        {
+            // Handle batch processing - you can add visualization updates here
+            
+            _logger.Debug("Processed batch of {Count} measurements", batch.Count);
+        }
+
+        private void OnBufferOverflow(object sender, EventArgs e)
+        {
+            //Do nothign allow to over flow
+            
+
+        }
+
+        private void OnStreamError(object sender, Exception ex)
+        {
+            _logger.Error(ex, "Data stream error occurred");
+        }
+
+
         private async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (!IsConnected)
@@ -206,12 +244,34 @@ namespace UaaSolutionWpf.Controls
         {
             try
             {
-                count++;
+                //count++;   
+                //_logger.Debug($"Count data received : {count}, value: {channel1} / {channel2}");
+
                 var (channel1, channel2) = ParseMeasurement(measurement);
+
+                // Add data points to stream for both channels if valid
+                if (channel1.HasValue)
+                {
+                    _dataStream.AddDataPoint(
+                        value: channel1.Value,
+                        channelNumber: 1,
+                        unit: "A",
+                        channelName: "Current Ch1"
+                    );
+                }
+
+                if (channel2.HasValue)
+                {
+                    _dataStream.AddDataPoint(
+                        value: channel2.Value,
+                        channelNumber: 2,
+                        unit: "A",
+                        channelName: "Current Ch2"
+                    );
+                }
 
                 Dispatcher.Invoke(() =>
                 {
-                    //_logger.Debug($"Count data received : {count}, value: {channel1} / {channel2}");
 
                     switch (SelectedChannel)
                     {
@@ -229,6 +289,9 @@ namespace UaaSolutionWpf.Controls
                                 _logger.Warning("Failed to parse Channel 2 value from: {Measurement}", measurement);
                             break;
                     }
+
+
+
                 });
             }
             catch (Exception ex)

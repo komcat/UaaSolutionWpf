@@ -527,9 +527,29 @@ namespace UaaSolutionWpf
         //test graph manager
         private async void TestGraph_Click(object sender, RoutedEventArgs e)
         {
-
+            SetupKeithleyDataHandling();
         }
+        // In your MainWindow.xaml.cs
+        private async void SetupKeithleyDataHandling()
+        {
+            // Access the data stream
+            var dataStream = _KeithleyCurrentControl.DataStream;
 
+            // Subscribe to batch processing events for real-time updates
+            //dataStream.BatchProcessed += (sender, batch) =>
+            //{
+            //    // Handle the batch of measurements
+            //    // For example, update charts or perform analysis
+            //    foreach (var point in batch)
+            //    {
+            //        Console.WriteLine($"Channel {point.ChannelNumber}: {point.Value} {point.Unit} at {point.Timestamp}");
+            //    }
+            //};
+
+            // You can also get the latest data at any time
+            int currentSize = dataStream.BufferSize;
+            Console.WriteLine($"Current buffer size: {currentSize}");
+        }
         private void LogPathAnalysis(PathAnalysis analysis)
         {
             if (analysis.IsValid)

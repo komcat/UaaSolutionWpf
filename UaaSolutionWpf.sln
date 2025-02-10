@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UaaSolutionWpf", "UaaSoluti
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GPIBKeithleyCurrentMeasurement", "..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj", "{B9DF7C73-B812-4C94-8531-A12E89A6076B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WpfLiveChart", "..\WpfLiveChart\WpfLiveChart.csproj", "{88BCEFEA-74C8-4F50-AEC7-5F03E036943B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9DF7C73-B812-4C94-8531-A12E89A6076B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88BCEFEA-74C8-4F50-AEC7-5F03E036943B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88BCEFEA-74C8-4F50-AEC7-5F03E036943B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88BCEFEA-74C8-4F50-AEC7-5F03E036943B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88BCEFEA-74C8-4F50-AEC7-5F03E036943B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

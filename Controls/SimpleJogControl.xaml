@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="209.25" d:DesignWidth="1156.318">
+             d:DesignHeight="209.25" d:DesignWidth="1156.318" FontSize="16">
     <Border BorderBrush="Gray" BorderThickness="1" Margin="5" Padding="5">
         <Grid>
             <Grid.ColumnDefinitions>

@@ -29,6 +29,10 @@ namespace UaaSolutionWpf.Controls
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        private WpfLiveChart.LiveChartWindow chartWindow;
+        private CancellationTokenSource cts = new CancellationTokenSource();
+
+
         // Channel selection properties
         public DisplayChannel[] AvailableChannels { get; } =
             (DisplayChannel[])Enum.GetValues(typeof(DisplayChannel));
@@ -77,6 +81,7 @@ namespace UaaSolutionWpf.Controls
         {
             InitializeComponent();
             Init();
+            ShowChart();
         }
         public void SetLogger(ILogger logger)
         {
@@ -84,6 +89,16 @@ namespace UaaSolutionWpf.Controls
 
         }
 
+        private void ShowChart()
+        {
+            // Create and show the chart window
+            if (chartWindow == null || !chartWindow.IsVisible)
+            {
+                chartWindow = new WpfLiveChart.LiveChartWindow();  // 800 data points
+                chartWindow.SetTitle("Current Measurement");
+                chartWindow.Show();
+            }
+        }
         public void Init()
         {
             DataContext = this;
@@ -179,6 +194,8 @@ namespace UaaSolutionWpf.Controls
                     StopButton.IsEnabled = true;
                     _isMeasuring = true;
 
+                    chartWindow.ClearData();
+
                     // Start continuous measurement
                     _gpibService.StartContinuousReadAsync();
                     _logger.Information("Started continuous measurement");
@@ -205,6 +222,8 @@ namespace UaaSolutionWpf.Controls
                 _isMeasuring = false;
                 StartButton.IsEnabled = true;
                 StopButton.IsEnabled = false;
+
+                chartWindow.ClearData();
                 _logger.Information("Stopped continuous measurement");
             }
             catch (Exception ex)
@@ -239,6 +258,35 @@ namespace UaaSolutionWpf.Controls
                 return (null, null);
             }
         }
+        private string FormatCurrentValue(double value)
+        {
+            // Define SI prefixes and their corresponding exponents
+            var siPrefixes = new[]
+            {
+        ("p", -12), // pico
+        ("n", -9),  // nano
+        ("µ", -6),  // micro
+        ("m", -3),  // milli
+        ("", 0),    // base
+        ("k", 3),   // kilo
+        ("M", 6),   // mega
+        ("G", 9)    // giga
+    };
+
+            // Find appropriate prefix
+            var prefix = siPrefixes
+                .Where(p => Math.Abs(value) >= Math.Pow(10, p.Item2))
+                .LastOrDefault(("", 0));
+
+            // Calculate the scaled value
+            double scaledValue = value / Math.Pow(10, prefix.Item2);
+
+            // Format with 1 decimal place
+            string formattedValue = scaledValue.ToString("F1");
+
+            // Return formatted string with unit
+            return $"{formattedValue}{prefix.Item1}A";
+        }
 
         private void OnMeasurementReceived(object sender, string measurement)
         {
@@ -258,6 +306,7 @@ namespace UaaSolutionWpf.Controls
                         unit: "A",
                         channelName: "Current Ch1"
                     );
+                    
                 }
 
                 if (channel2.HasValue)
@@ -268,6 +317,7 @@ namespace UaaSolutionWpf.Controls
                         unit: "A",
                         channelName: "Current Ch2"
                     );
+                    
                 }
 
                 Dispatcher.Invoke(() =>
@@ -277,14 +327,22 @@ namespace UaaSolutionWpf.Controls
                     {
                         case DisplayChannel.Channel1:
                             if (channel1.HasValue)
+                            {
                                 CurrentValue = channel1.Value;
+                                chartWindow.UpdateChart(channel1.Value);
+                                chartWindow.SetTitle(FormatCurrentValue(channel1.Value));
+                            }
                             else
                                 _logger.Warning("Failed to parse Channel 1 value from: {Measurement}", measurement);
                             break;
 
                         case DisplayChannel.Channel2:
                             if (channel2.HasValue)
+                            {
                                 CurrentValue = channel2.Value;
+                                chartWindow.UpdateChart(channel2.Value);
+                                chartWindow.SetTitle(FormatCurrentValue(channel2.Value));
+                            }
                             else
                                 _logger.Warning("Failed to parse Channel 2 value from: {Measurement}", measurement);
                             break;
@@ -331,22 +389,26 @@ namespace UaaSolutionWpf.Controls
         {
             if (!_disposed)
             {
+                _logger.Information("Start diposing..");
                 if (disposing)
                 {
                     // Stop measurement if running
                     if (_isMeasuring)
                     {
                         _gpibService.StopMeasurement();
+                        _logger.Information("Stop measurement.");
                     }
 
                     // Disconnect if connected
                     if (IsConnected)
                     {
                         _gpibService.Disconnect();
+                        _logger.Information("disconnect from the device.");
                     }
 
                     // Dispose GPIB service
                     _gpibService?.Dispose();
+                    _logger.Information("_gpibService is disposed.");
                 }
 
                 _disposed = true;

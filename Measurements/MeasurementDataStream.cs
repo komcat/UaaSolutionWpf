@@ -99,8 +99,8 @@ namespace UaaSolutionWpf.Measurements
 
                 if (_dataBuffer.Count >= _config.MaxBufferSize)
                 {
-                    _logger.Warning("Buffer overflow detected. Buffer size: {Count}", _dataBuffer.Count);
-                    BufferOverflow?.Invoke(this, EventArgs.Empty);
+                    //_logger.Warning("Buffer overflow detected. Buffer size: {Count}", _dataBuffer.Count);
+                    //BufferOverflow?.Invoke(this, EventArgs.Empty);
 
                     // Remove oldest items if buffer is full
                     while (_dataBuffer.Count >= _config.MaxBufferSize && _dataBuffer.TryDequeue(out _)) { }

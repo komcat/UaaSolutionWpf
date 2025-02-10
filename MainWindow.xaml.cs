@@ -52,6 +52,8 @@ namespace UaaSolutionWpf
 
         private ILogger _logger;
         private CameraManagerWpf cameraManagerWpf;
+        // Add this field at the class level
+        private TECControllerV2 _tecController;
         public MainWindow()
         {
             InitializeComponent();
@@ -393,6 +395,7 @@ namespace UaaSolutionWpf
                     IntiailizeAcsGantry();
                     InitializeJogControl();  // Global Jog control
                     InitializePositionManagers();
+
                 }
                 catch (Exception ex)
                 {
@@ -420,6 +423,7 @@ namespace UaaSolutionWpf
             //await InitializeIOMonitorControlsAsync();
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
+            InitializeTECController(); // Add this line
         }
 
 
@@ -569,7 +573,63 @@ namespace UaaSolutionWpf
         }
 
 
+        // Add this method alongside other initialization methods
+        private void InitializeTECController()
+        {
 
+            try
+            {
+                // Find the TEC controller in the XAML
+                _tecController = this.FindName("tecControllerV2") as TECControllerV2;
+                if (_tecController == null)
+                {
+                    _logger.Warning("Could not find TECControllerV2 in XAML");
+                }
+                if (_tecController != null)
+                {
+                    _tecController.SetLogger(_logger);
+                    _tecController.InitializeServices();
+                    _logger.Information("Initializing TEC Controller");
+
+                    if (!simulationMode)
+                    {
+                        try
+                        {
+                            // Optionally attempt auto-connect
+                            //_tecController.ConnectButton_Click(null, null);
+                            
+                            _logger.Information("TEC Controller initialized");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "Failed to initialize TEC Controller");
+                            MessageBox.Show(
+                                "Failed to initialize TEC Controller: " + ex.Message,
+                                "Connection Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
+                    else
+                    {
+                        _logger.Information("TEC Controller in simulation mode - skipping initialization");
+                    }
+                }
+                else
+                {
+                    _logger.Warning("TECController reference is null");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to initialize TEC Controller");
+                MessageBox.Show(
+                    "Failed to initialize TEC Controller: " + ex.Message,
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
@@ -579,12 +639,19 @@ namespace UaaSolutionWpf
             gantryConnectionManager?.Dispose();
             cameraDisplayViewControl?.Dispose();
             _KeithleyCurrentControl?.Dispose();  // Add this line to ensure proper cleanup
+            _tecController?.Dispose();  // Add this line
         }
 
         //when main window closing.
         private async void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            //TODO add closing procedure
+
+        }
+
+        // Optional: Add method to access TEC controller from other parts of the application
+        public TECControllerV2 GetTECController()
+        {
+            return _tecController;
         }
     }
 }

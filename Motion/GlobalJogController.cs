@@ -40,18 +40,18 @@ namespace UaaSolutionWpf.Motion
             // Left Hexapod: Global to Local
             // Global (X,Y,Z) -> Local (Z,X,Y)
             _leftHexapodTransform = new Matrix4x4(
-                0, 0, 1, 0,  // X -> Z
-                1, 0, 0, 0,  // Y -> X
-                0, 1, 0, 0,  // Z -> Y
+                0, 0, 1, 0,  // X -> Z, correct X->Z
+                0, -1, 0, 0,  // Y -> X , correct  Y-> -Y
+                1, 0, 0, 0,  // Z -> Y , correct  Z->X
                 0, 0, 0, 1
             );
 
             // Right Hexapod: Global to Local
             // Global (X,Y,Z) -> Local (Z,-X,-Y)
             _rightHexapodTransform = new Matrix4x4(
-                0, 0, 1, 0,   // X -> Z
-                -1, 0, 0, 0,  // Y -> -X
-                0, -1, 0, 0,  // Z -> -Y
+                0, 0, -1, 0,   // X -> -Z
+                0, 1, 0, 0,  // Y -> -X correct Y -> Y
+                1, 0, 0, 0,  // Z -> -Y correct Z -> X
                 0, 0, 0, 1
             );
 

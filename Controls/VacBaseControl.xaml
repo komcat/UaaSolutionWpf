@@ -5,19 +5,138 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="100" d:DesignWidth="200" FontSize="20">
-    <StackPanel>
-        <Button x:Name="VacBaseOnButton" 
-                Height="40" 
-                Margin="2"
-                Background="#007ACC"
-                Foreground="White"
-                Content="Vac Base ON"/>
+             d:DesignHeight="163.818" d:DesignWidth="300">
+    <UserControl.Resources>
+        <!-- Animation for button press -->
+        <Storyboard x:Key="PressAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(ScaleTransform.ScaleX)"
+                             To="0.95" Duration="0:0:0.1"/>
+            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(ScaleTransform.ScaleY)"
+                             To="0.95" Duration="0:0:0.1"/>
+        </Storyboard>
 
-        <Button x:Name="VacBaseOffButton" 
-                Height="40" 
-                Margin="2"
-                Background="LightGray"
-                Content="Vac Base Off"/>
-    </StackPanel>
+        <!-- Animation for button release -->
+        <Storyboard x:Key="ReleaseAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(ScaleTransform.ScaleX)"
+                             To="1" Duration="0:0:0.1"/>
+            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(ScaleTransform.ScaleY)"
+                             To="1" Duration="0:0:0.1"/>
+        </Storyboard>
+
+        <!-- Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                CornerRadius="8"
+                                Background="{TemplateBinding Background}">
+                            <Grid>
+                                <Border x:Name="glow"
+                                        CornerRadius="8"
+                                        Opacity="0">
+                                    <Border.Background>
+                                        <RadialGradientBrush>
+                                            <GradientStop Color="#40FFFFFF" Offset="0"/>
+                                            <GradientStop Color="Transparent" Offset="1"/>
+                                        </RadialGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="glow" Property="Opacity" Value="0.3"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="glow" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="#f8f9fa" 
+            CornerRadius="12" 
+            Padding="10"
+            BorderThickness="1"
+            BorderBrush="#e9ecef">
+        <StackPanel>
+            <TextBlock Text="Vacuum Base Control" 
+                       FontSize="18" 
+                       FontWeight="SemiBold" 
+                       Margin="0,0,0,10"
+                       Foreground="#343a40"/>
+
+            <Button x:Name="VacBaseOnButton" 
+                    Style="{StaticResource ModernButton}">
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#4361ee" Offset="0"/>
+                        <GradientStop Color="#3a0ca3" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,19A7,7 0 0,1 5,12A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19M12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15Z"
+                          Fill="White"
+                          Width="20"
+                          Height="20"
+                          Margin="0,0,8,0"/>
+                    <TextBlock Text="Activate Vacuum"/>
+                </StackPanel>
+            </Button>
+
+            <Button x:Name="VacBaseOffButton" 
+                    Style="{StaticResource ModernButton}">
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#ef476f" Offset="0"/>
+                        <GradientStop Color="#d90429" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,19A7,7 0 0,1 5,12A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19M12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15Z"
+                          Fill="White"
+                          Width="20"
+                          Height="20"
+                          Margin="0,0,8,0"/>
+                    <TextBlock Text="Deactivate Vacuum"/>
+                </StackPanel>
+            </Button>
+
+            <Border x:Name="StatusIndicator"
+                    Height="4"
+                    Margin="0,10,0,0"
+                    CornerRadius="2">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#e9ecef" Offset="0"/>
+                        <GradientStop Color="#e9ecef" Offset="0.5"/>
+                        <GradientStop Color="#e9ecef" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+        </StackPanel>
+    </Border>
 </UserControl>

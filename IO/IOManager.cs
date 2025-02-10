@@ -42,6 +42,22 @@ namespace UaaSolutionWpf.IO
         public string Name { get; set; }
     }
 
+    public class IOStateEventArgs : EventArgs
+    {
+        public string DeviceName { get; }
+        public string PinName { get; }
+        public bool State { get; }
+        public bool IsInput { get; }
+
+        public IOStateEventArgs(string deviceName, string pinName, bool state, bool isInput)
+        {
+            DeviceName = deviceName;
+            PinName = pinName;
+            State = state;
+            IsInput = isInput;
+        }
+    }
+
     public class IOManager
     {
         private readonly ILogger _logger;
@@ -52,7 +68,8 @@ namespace UaaSolutionWpf.IO
         private EziioViewModel _bottomViewModel;
         private EziioViewModel _topViewModel;
         private IOConfiguration _ioConfig;
-
+        // Add the IOStateChanged event
+        public event EventHandler<IOStateEventArgs> IOStateChanged;
         public IOManager(EziioControl bottomControl, EziioControl topControl, ILogger logger)
         {
             _bottomControl = bottomControl;
@@ -251,6 +268,7 @@ namespace UaaSolutionWpf.IO
             }
         }
 
+        // Modify SetupControllerEvents to raise the IOStateChanged event
         private void SetupControllerEvents(EziioController2 controller, EziioViewModel viewModel)
         {
             if (controller == null) throw new ArgumentNullException(nameof(controller));
@@ -270,7 +288,16 @@ namespace UaaSolutionWpf.IO
                 var pin = viewModel.InputPins?.FirstOrDefault(p => p.Name == state.Name);
                 if (pin != null)
                 {
-                    Application.Current.Dispatcher.Invoke(() => pin.State = state.State);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        pin.State = state.State;
+                        // Raise the IOStateChanged event for inputs
+                        IOStateChanged?.Invoke(this, new IOStateEventArgs(
+                            viewModel.DeviceName,
+                            state.Name,
+                            state.State,
+                            true));
+                    });
                 }
             };
 
@@ -279,7 +306,16 @@ namespace UaaSolutionWpf.IO
                 var pin = viewModel.OutputPins?.FirstOrDefault(p => p.Name == state.Name);
                 if (pin != null)
                 {
-                    Application.Current.Dispatcher.Invoke(() => pin.State = state.State);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        pin.State = state.State;
+                        // Raise the IOStateChanged event for outputs
+                        IOStateChanged?.Invoke(this, new IOStateEventArgs(
+                            viewModel.DeviceName,
+                            state.Name,
+                            state.State,
+                            false));
+                    });
                 }
             };
 
@@ -291,6 +327,26 @@ namespace UaaSolutionWpf.IO
                 });
             };
         }
+
+        // Add method to get current pin state
+        public bool? GetPinState(string deviceName, string pinName, bool isInput)
+        {
+            EziioViewModel viewModel = null;
+            if (_bottomViewModel.DeviceName == deviceName)
+                viewModel = _bottomViewModel;
+            else if (_topViewModel.DeviceName == deviceName)
+                viewModel = _topViewModel;
+
+            if (viewModel == null)
+                return null;
+
+            var pin = isInput ?
+                viewModel.InputPins.FirstOrDefault(p => p.Name == pinName) :
+                viewModel.OutputPins.FirstOrDefault(p => p.Name == pinName);
+
+            return pin?.State;
+        }
+
         public void Dispose()
         {
             _bottomController?.Disconnect();

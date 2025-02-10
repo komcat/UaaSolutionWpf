@@ -424,6 +424,7 @@ namespace UaaSolutionWpf
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
             InitializeTECController(); // Add this line
+            InitializePneumaticSlideControl();
         }
 
 
@@ -571,6 +572,59 @@ namespace UaaSolutionWpf
                 _logger.Error($"Error: {analysis.Error}");
             }
         }
+
+        private void InitializePneumaticSlideControl()
+        {
+            
+            if (PneumaticSlideControl != null && _ioManager != null)
+            {
+                // Subscribe to IO state changes
+                _ioManager.IOStateChanged += (s, e) =>
+                {
+                    // Only handle input state changes for pneumatic sensors
+                    if (e.IsInput)
+                    {
+                        switch (e.PinName)
+                        {
+                            case "UV_Head_Up":
+                            case "UV_Head_Down":
+                            case "Dispenser_Head_Up":
+                            case "Dispenser_Head_Down":
+                            case "Pick_Up_Tool_Up":
+                            case "Pick_Up_Tool_Down":
+                                PneumaticSlideControl.UpdateSensorState(e.PinName, e.State);
+                                break;
+                        }
+                    }
+                };
+
+                // Initialize initial states
+                InitializePneumaticStates();
+            }
+        }
+
+        private void InitializePneumaticStates()
+        {
+            var sensorNames = new[]
+            {
+                "UV_Head_Up",
+                "UV_Head_Down",
+                "Dispenser_Head_Up",
+                "Dispenser_Head_Down",
+                "Pick_Up_Tool_Up",
+                "Pick_Up_Tool_Down"
+            };
+
+            foreach (var sensorName in sensorNames)
+            {
+                var state = _ioManager.GetPinState("IOTop", sensorName, true);
+                if (state.HasValue)
+                {
+                    PneumaticSlideControl.UpdateSensorState(sensorName, state.Value);
+                }
+            }
+        }
+
 
 
         // Add this method alongside other initialization methods

@@ -34,6 +34,7 @@
             Background="LightGray">
             <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2"/>
             <controls:VacBaseControl Margin="2"/>
+            <controls:PneumaticSlideControl x:Name="PneumaticSlideControl"/>
         </StackPanel>
         <StackPanel x:Name="SensorPanel" Grid.Column="1" Grid.Row="1">
             <controls:AlignSensorControl  Margin="5"/>
@@ -165,6 +166,21 @@
                                  DataContext="{Binding TopEziioViewModel}">
                             </controls:EziioControl>
                         </ScrollViewer>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Pneumatic Slides">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
                     </Grid>
                 </TabItem>
                 <TabItem Header="Measurements">

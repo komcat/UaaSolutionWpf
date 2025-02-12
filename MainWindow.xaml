@@ -33,7 +33,7 @@
             Width="300" 
             Background="LightGray">
             <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2"/>
-            <controls:VacBaseControl Margin="2"/>
+            <controls:VacBaseControl x:Name="VacBaseControl" Margin="2"/>
             <controls:PneumaticSlideControl x:Name="PneumaticSlideControl"/>
         </StackPanel>
         <StackPanel x:Name="SensorPanel" Grid.Column="1" Grid.Row="1">

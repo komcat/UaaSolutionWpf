@@ -56,6 +56,8 @@ namespace UaaSolutionWpf
         private TECControllerV2 _tecController;
         // Add to your existing fields
         private TeachManagerControl teachManagerControl;
+       
+
         public MainWindow()
         {
             InitializeComponent();
@@ -86,6 +88,7 @@ namespace UaaSolutionWpf
 
             InitializeIOMonitorControls();
 
+
             // Initialize the camera control
             // Initialize the camera control
             if (cameraDisplayViewControl != null)
@@ -98,6 +101,8 @@ namespace UaaSolutionWpf
 
             //load sensors channel
             InitializeKeithleyControl();
+
+            
         }
         private async void InitializeKeithleyControl()
         {
@@ -193,9 +198,15 @@ namespace UaaSolutionWpf
         {
             _ioManager = new IOManager(EziioControlBottom, EziioControlTop, _logger);
             _ioManager.Initialize();
+
+            //All related IO after this line
+            InitVacBaseControlIO(_ioManager);
         }
 
-
+        private void InitVacBaseControlIO(IOManager ioman)
+        {
+            VacBaseControl.Initialize(ioman);
+        }
 
         #endregion
 

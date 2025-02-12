@@ -352,5 +352,101 @@ namespace UaaSolutionWpf.IO
             _bottomController?.Disconnect();
             _topController?.Disconnect();
         }
+
+
+        /// <summary>
+        /// Sets a specific output to high by device name and pin name
+        /// </summary>
+        /// <param name="deviceName">Name of the device (e.g., "IOBottom", "IOTop")</param>
+        /// <param name="pinName">Name of the pin as configured in IOConfig.json</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetOutput(string deviceName, string pinName)
+        {
+            try
+            {
+                var controller = GetControllerByName(deviceName);
+                if (controller == null)
+                {
+                    _logger.Error("Controller not found for device {DeviceName}", deviceName);
+                    return false;
+                }
+
+                bool success = controller.SetOutput(pinName, true);
+                if (success)
+                {
+                    _logger.Information("Successfully set output {PinName} on {DeviceName}", pinName, deviceName);
+                }
+                else
+                {
+                    _logger.Error("Failed to set output {PinName} on {DeviceName}", pinName, deviceName);
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error setting output {PinName} on {DeviceName}", pinName, deviceName);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Clears a specific output (sets to low) by device name and pin name
+        /// </summary>
+        /// <param name="deviceName">Name of the device (e.g., "IOBottom", "IOTop")</param>
+        /// <param name="pinName">Name of the pin as configured in IOConfig.json</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClearOutput(string deviceName, string pinName)
+        {
+            try
+            {
+                var controller = GetControllerByName(deviceName);
+                if (controller == null)
+                {
+                    _logger.Error("Controller not found for device {DeviceName}", deviceName);
+                    return false;
+                }
+
+                bool success = controller.ClearOutputByName(pinName);
+                if (success)
+                {
+                    _logger.Information("Successfully cleared output {PinName} on {DeviceName}", pinName, deviceName);
+                }
+                else
+                {
+                    _logger.Error("Failed to clear output {PinName} on {DeviceName}", pinName, deviceName);
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error clearing output {PinName} on {DeviceName}", pinName, deviceName);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Sets the state of an output pin
+        /// </summary>
+        /// <param name="deviceName">Name of the device (e.g., "IOBottom", "IOTop")</param>
+        /// <param name="pinName">Name of the pin as configured in IOConfig.json</param>
+        /// <param name="state">True to set high, false to set low</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetOutputState(string deviceName, string pinName, bool state)
+        {
+            return state ? SetOutput(deviceName, pinName) : ClearOutput(deviceName, pinName);
+        }
+
+        private EziioController2 GetControllerByName(string deviceName)
+        {
+            return deviceName.ToLower() switch
+            {
+                "iobottom" => _bottomController,
+                "iotop" => _topController,
+                _ => null
+            };
+        }
+
     }
 }

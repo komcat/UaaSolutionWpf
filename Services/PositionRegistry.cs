@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Newtonsoft.Json;
 using Serilog;
 using UaaSolutionWpf.Motion;
 
@@ -25,7 +26,7 @@ namespace UaaSolutionWpf.Services
             try
             {
                 string jsonContent = File.ReadAllText(_configPath);
-                return JsonSerializer.Deserialize<WorkingPositions>(jsonContent)
+                return System.Text.Json.JsonSerializer.Deserialize<WorkingPositions>(jsonContent)
                     ?? throw new InvalidOperationException("Failed to deserialize positions");
             }
             catch (Exception ex)
@@ -110,6 +111,106 @@ namespace UaaSolutionWpf.Services
                 return false;
             }
             return true;
+        }
+
+        public bool UpdateHexapodPosition(int hexapodId, string positionName, Position position)
+        {
+            try
+            {
+                var hexapod = _positions.Hexapods.FirstOrDefault(h => h.HexapodId == hexapodId);
+                if (hexapod == null)
+                {
+                    _logger.Error("No hexapod found with ID {HexapodId}", hexapodId);
+                    return false;
+                }
+
+                if (!hexapod.Positions.ContainsKey(positionName))
+                {
+                    _logger.Error("Position {PositionName} not found for hexapod {HexapodId}", positionName, hexapodId);
+                    return false;
+                }
+
+                // Update the position
+                hexapod.Positions[positionName] = position;
+                _logger.Information(
+                    "Updated position {PositionName} for hexapod {HexapodId}: {@Position}",
+                    positionName,
+                    hexapodId,
+                    position
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex,
+                    "Error updating position {PositionName} for hexapod {HexapodId}",
+                    positionName,
+                    hexapodId
+                );
+                return false;
+            }
+        }
+
+        public bool UpdateGantryPosition(int gantryId, string positionName, Position position)
+        {
+            try
+            {
+                var gantry = _positions.Gantries.FirstOrDefault(g => g.GantryId == gantryId);
+                if (gantry == null)
+                {
+                    _logger.Error("No gantry found with ID {GantryId}", gantryId);
+                    return false;
+                }
+
+                if (!gantry.Positions.ContainsKey(positionName))
+                {
+                    _logger.Error("Position {PositionName} not found for gantry {GantryId}", positionName, gantryId);
+                    return false;
+                }
+
+                // Update the position
+                gantry.Positions[positionName] = position;
+                _logger.Information(
+                    "Updated position {PositionName} for gantry {GantryId}: {@Position}",
+                    positionName,
+                    gantryId,
+                    position
+                );
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex,
+                    "Error updating position {PositionName} for gantry {GantryId}",
+                    positionName,
+                    gantryId
+                );
+                return false;
+            }
+        }
+
+        public void SaveToFile(string filePath)
+        {
+            try
+            {
+                // Serialize the positions with formatting
+                var settings = new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented
+                };
+
+                string json = JsonConvert.SerializeObject(_positions, settings);
+
+                // Write directly to the file, overwriting if it exists
+                File.WriteAllText(filePath, json);
+
+                _logger.Information("Successfully saved positions to {FilePath}", filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error saving positions to {FilePath}", filePath);
+                throw;
+            }
         }
     }
 }

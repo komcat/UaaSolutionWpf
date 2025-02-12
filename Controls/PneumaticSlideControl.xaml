@@ -7,7 +7,7 @@
              xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
              xmlns:viewModels="clr-namespace:UaaSolutionWpf.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="400">
+             d:DesignHeight="269.628" d:DesignWidth="400">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
@@ -23,7 +23,7 @@
         <Border Grid.Row="0" 
                 Background="#f3f4f6" 
                 CornerRadius="4" 
-                Padding="10" 
+                Padding="2" 
                 Margin="0,0,0,10">
             <TextBlock Text="Pneumatic Slides Control" 
                        FontSize="16" 
@@ -38,7 +38,7 @@
                         BorderBrush="#e5e7eb" 
                         BorderThickness="1" 
                         CornerRadius="4" 
-                        Padding="15" 
+                        Padding="2" 
                         Margin="0,0,0,10">
                     <Grid DataContext="{Binding UVSlide}">
                         <Grid.RowDefinitions>
@@ -85,7 +85,7 @@
                         BorderBrush="#e5e7eb" 
                         BorderThickness="1" 
                         CornerRadius="4" 
-                        Padding="15" 
+                        Padding="2" 
                         Margin="0,0,0,10">
                     <Grid DataContext="{Binding DispenserSlide}">
                         <Grid.RowDefinitions>
@@ -132,7 +132,7 @@
                         BorderBrush="#e5e7eb" 
                         BorderThickness="1" 
                         CornerRadius="4" 
-                        Padding="15" 
+                        Padding="2" 
                         Margin="0,0,0,10">
                     <Grid DataContext="{Binding PickUpToolSlide}">
                         <Grid.RowDefinitions>

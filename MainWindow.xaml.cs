@@ -54,6 +54,8 @@ namespace UaaSolutionWpf
         private CameraManagerWpf cameraManagerWpf;
         // Add this field at the class level
         private TECControllerV2 _tecController;
+        // Add to your existing fields
+        private TeachManagerControl teachManagerControl;
         public MainWindow()
         {
             InitializeComponent();
@@ -395,7 +397,8 @@ namespace UaaSolutionWpf
                     IntiailizeAcsGantry();
                     InitializeJogControl();  // Global Jog control
                     InitializePositionManagers();
-
+                    // Initialize TeachManagerControl
+                    InitializeTeachManagerControl();
                 }
                 catch (Exception ex)
                 {
@@ -427,7 +430,42 @@ namespace UaaSolutionWpf
             InitializePneumaticSlideControl();
         }
 
+        private void InitializeTeachManagerControl()
+        {
+            try
+            {
+                if (TeachManagerControl != null)
+                {
+                    if (positionRegistry == null || devicePositionMonitor == null)
+                    {
+                        _logger.Error("Position registry or device monitor not initialized");
+                        return;
+                    }
 
+                    TeachManagerControl.Initialize(
+                        positionRegistry,
+                        devicePositionMonitor,
+                        _logger
+                    );
+
+                    _logger.Information("TeachManagerControl initialized successfully");
+                }
+                else
+                {
+                    _logger.Warning("TeachManagerControl reference is null");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to initialize TeachManagerControl");
+                MessageBox.Show(
+                    $"Failed to initialize teach manager control: {ex.Message}",
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
+        }
 
 
         private async Task InitializeCameraAsync()
@@ -694,6 +732,7 @@ namespace UaaSolutionWpf
             cameraDisplayViewControl?.Dispose();
             _KeithleyCurrentControl?.Dispose();  // Add this line to ensure proper cleanup
             _tecController?.Dispose();  // Add this line
+            TeachManagerControl?.Dispose();  // Add this line
         }
 
         //when main window closing.

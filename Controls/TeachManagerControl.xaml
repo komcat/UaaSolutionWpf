@@ -1,0 +1,68 @@
+﻿<!-- TeachManagerControl.xaml -->
+<UserControl x:Class="UaaSolutionWpf.Controls.TeachManagerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="400">
+    <Border BorderBrush="Gray" BorderThickness="1" Margin="5" Padding="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0" 
+                       Text="Teach Position Manager" 
+                       FontSize="16" 
+                       FontWeight="SemiBold" 
+                       Margin="0,0,0,10"/>
+
+            <!-- Device Selection -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="Device:" 
+                          VerticalAlignment="Center" 
+                          Margin="0,0,10,0"/>
+                <ComboBox x:Name="DeviceComboBox" 
+                         Width="150" 
+                         SelectionChanged="DeviceComboBox_SelectionChanged">
+                    <ComboBoxItem Content="Left Hexapod"/>
+                    <ComboBoxItem Content="Bottom Hexapod"/>
+                    <ComboBoxItem Content="Right Hexapod"/>
+                    <ComboBoxItem Content="Gantry"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Position Selection -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="Position:" 
+                          VerticalAlignment="Center" 
+                          Margin="0,0,10,0"/>
+                <ComboBox x:Name="PositionComboBox" 
+                          Width="150"
+                          ItemsSource="{Binding PositionsList}"
+                          SelectedItem="{Binding SelectedPosition}"
+                          SelectionChanged="PositionComboBox_SelectionChanged"/>
+            </StackPanel>
+
+            <!-- Control Buttons -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
+                <Button x:Name="TeachButton" 
+                        Content="Teach Current Position" 
+                        Width="120" Height="30" 
+                        Margin="0,0,10,0" 
+                        Click="TeachButton_Click"/>
+
+                <Button x:Name="RefreshButton" 
+                        Content="Refresh" 
+                        Width="80" Height="30" 
+                        Margin="0,0,10,0" 
+                        Click="RefreshButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

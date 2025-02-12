@@ -165,6 +165,7 @@
                             <controls:EziioControl x:Name="EziioControlTop"
                                  DataContext="{Binding TopEziioViewModel}">
                             </controls:EziioControl>
+                            
                         </ScrollViewer>
                     </Grid>
                 </TabItem>
@@ -201,6 +202,22 @@
                                       Width="350"
                                       Height="600"
                                       VerticalAlignment="Top"/>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Teach">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <controls:TeachManagerControl x:Name="TeachManagerControl" Grid.Row="0" Grid.Column="0"/>
                     </Grid>
                 </TabItem>
             </TabControl>

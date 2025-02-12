@@ -20,6 +20,7 @@ using UaaSolutionWpf.IO;
 using UaaSolutionWpf.Motion;
 using Newtonsoft.Json;
 using UaaSolutionWpf.Config;
+using UaaSolutionWpf.Data;
 
 
 
@@ -56,7 +57,8 @@ namespace UaaSolutionWpf
         private TECControllerV2 _tecController;
         // Add to your existing fields
         private TeachManagerControl teachManagerControl;
-       
+
+        private RealTimeDataManager _realTimeDataManager;
 
         public MainWindow()
         {
@@ -98,12 +100,31 @@ namespace UaaSolutionWpf
                 cameraDisplayViewControl.LiveViewStarted += OnLiveViewStarted;
                 cameraDisplayViewControl.LiveViewStopped += OnLiveViewStopped;
             }
-
+            // Initialize RealTimeDataManager with config
+            string realTimeConfigPath = Path.Combine("Config", "RealTimeData.json");
+            _realTimeDataManager = new RealTimeDataManager(realTimeConfigPath, _logger);
+            _realTimeDataManager.Data.PropertyChanged += Data_PropertyChanged;
             //load sensors channel
             InitializeKeithleyControl();
 
-            
+
         }
+
+        private void Data_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName.StartsWith("Measurement_"))
+            {
+                string channelName = e.PropertyName.Substring("Measurement_".Length);
+                if (_realTimeDataManager.TryGetChannelValue(channelName, out var measurement))
+                {
+                    //_logger.Debug("Updated measurement for {Channel}: {Value} {Unit}",
+                    //    channelName, measurement.Value, measurement.Unit);
+
+                    // You can update UI elements or notify other components here
+                }
+            }
+        }
+
         private async void InitializeKeithleyControl()
         {
 
@@ -114,7 +135,7 @@ namespace UaaSolutionWpf
                 
                 if (_KeithleyCurrentControl != null)
                 {
-                    _KeithleyCurrentControl.SetLogger(_logger);
+                    _KeithleyCurrentControl.SetDependencies(_logger, _realTimeDataManager);
                     _KeithleyCurrentControl.Init();
                     _logger.Information("Initializing Keithley Current Control");
 

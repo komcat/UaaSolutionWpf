@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using GPIBKeithleyCurrentMeasurement;
 using Serilog;
+using UaaSolutionWpf.Data;
 using UaaSolutionWpf.Measurements;
 
 namespace UaaSolutionWpf.Controls
@@ -20,7 +21,9 @@ namespace UaaSolutionWpf.Controls
     {
         private ILogger _logger;
         private GpibService _gpibService;
-        private  MeasurementDataStream _dataStream;
+        private MeasurementDataStream _dataStream;
+        private RealTimeDataManager _dataManager;
+
         private bool _isConnected;
         private double _currentValue;
         private bool _isMeasuring;
@@ -83,10 +86,10 @@ namespace UaaSolutionWpf.Controls
             Init();
             ShowChart();
         }
-        public void SetLogger(ILogger logger)
+        public void SetDependencies(ILogger logger, RealTimeDataManager dataManager)
         {
-            _logger =logger.ForContext<KeithleyCurrentControl>();
-
+            _logger = logger.ForContext<KeithleyCurrentControl>();
+            _dataManager = dataManager;
         }
 
         private void ShowChart()
@@ -103,7 +106,7 @@ namespace UaaSolutionWpf.Controls
         {
             DataContext = this;
 
-
+            
             _logger = Log.ForContext<KeithleyCurrentControl>();
             _gpibService = new GpibService("GPIB0::1::INSTR");
 
@@ -131,14 +134,14 @@ namespace UaaSolutionWpf.Controls
         private void OnBatchProcessed(object sender, List<MeasurementPoint> batch)
         {
             // Handle batch processing - you can add visualization updates here
-            
+
             _logger.Debug("Processed batch of {Count} measurements", batch.Count);
         }
 
         private void OnBufferOverflow(object sender, EventArgs e)
         {
             //Do nothign allow to over flow
-            
+
 
         }
 
@@ -306,7 +309,7 @@ namespace UaaSolutionWpf.Controls
                         unit: "A",
                         channelName: "Current Ch1"
                     );
-                    
+
                 }
 
                 if (channel2.HasValue)
@@ -317,7 +320,7 @@ namespace UaaSolutionWpf.Controls
                         unit: "A",
                         channelName: "Current Ch2"
                     );
-                    
+
                 }
 
                 Dispatcher.Invoke(() =>
@@ -331,6 +334,9 @@ namespace UaaSolutionWpf.Controls
                                 CurrentValue = channel1.Value;
                                 chartWindow.UpdateChart(channel1.Value);
                                 chartWindow.SetTitle(FormatCurrentValue(channel1.Value));
+                                // Update real-time data manager
+                                _dataManager.UpdateChannelValue("Keithley Current", channel1.Value);
+
                             }
                             else
                                 _logger.Warning("Failed to parse Channel 1 value from: {Measurement}", measurement);
@@ -342,6 +348,9 @@ namespace UaaSolutionWpf.Controls
                                 CurrentValue = channel2.Value;
                                 chartWindow.UpdateChart(channel2.Value);
                                 chartWindow.SetTitle(FormatCurrentValue(channel2.Value));
+                                // Update real-time data manager
+                                _dataManager.UpdateChannelValue("Keithley Voltage", channel2.Value);
+
                             }
                             else
                                 _logger.Warning("Failed to parse Channel 2 value from: {Measurement}", measurement);

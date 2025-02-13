@@ -59,7 +59,7 @@ namespace UaaSolutionWpf
         private TeachManagerControl teachManagerControl;
 
         private RealTimeDataManager _realTimeDataManager;
-        private AlignSensorControl alignSensorControl;
+       
         public MainWindow()
         {
             InitializeComponent();
@@ -463,8 +463,6 @@ namespace UaaSolutionWpf
             InitializeTECController(); // Add this line
             InitializePneumaticSlideControl();
 
-            _logger.Information("init the AlignSensorControl");
-            alignSensorControl = new AlignSensorControl(_realTimeDataManager);
 
         }
 

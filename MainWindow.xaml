@@ -37,8 +37,8 @@
             <controls:PneumaticSlideControl x:Name="PneumaticSlideControl"/>
         </StackPanel>
         <StackPanel x:Name="SensorPanel" Grid.Column="1" Grid.Row="1">
+            <controls:SingleSensorDisplayControl x:Name="SensorDisplay" />
             
-
         </StackPanel>
 
 

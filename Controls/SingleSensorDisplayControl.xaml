@@ -1,0 +1,56 @@
+﻿<UserControl x:Class="UaaSolutionWpf.Controls.SingleSensorDisplayControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:UaaSolutionWpf.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="300">
+    <UserControl.Resources>
+        <converters:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <Border BorderBrush="Gray" BorderThickness="1" Margin="5">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Channel Selection -->
+            <ComboBox x:Name="ChannelSelector"
+                      ItemsSource="{Binding Channels, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                      Width="200"
+                      HorizontalAlignment="Left"
+                      Margin="0,0,0,10"/>
+
+            <!-- Value Display -->
+            <StackPanel Grid.Row="1" 
+                        Background="#F5F5F5"                        
+                        Margin="0,0,0,5">
+                <TextBlock>
+                    <Run Text="{Binding DisplayValue, Mode=OneWay}"/>
+                    <Run Text="{Binding Unit, Mode=OneWay}"/>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Target Display -->
+            <StackPanel Grid.Row="2" 
+                       Visibility="{Binding HasTarget, Converter={StaticResource BoolToVis}}">
+                <TextBlock Margin="0,5,0,2">
+                    <Run Text="Target: "/>
+                    <Run Text="{Binding TargetValue, Mode=OneWay, StringFormat={}{0:G4}}"/>
+                    <Run Text="{Binding Unit, Mode=OneWay}"/>
+                </TextBlock>
+                <ProgressBar Height="3" 
+                           Minimum="0"
+                           Maximum="{Binding TargetValue, Mode=OneWay}"
+                           Value="{Binding CurrentValue, Mode=OneWay}"
+                           Background="#E5E7EB"
+                           Foreground="#3B82F6"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

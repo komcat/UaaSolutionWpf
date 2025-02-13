@@ -462,8 +462,16 @@ namespace UaaSolutionWpf
             await InitializeCameraAsync();
             InitializeTECController(); // Add this line
             InitializePneumaticSlideControl();
+            InitializeSensorChannel();
 
+        }
 
+        private void InitializeSensorChannel()
+        {
+            if (SensorDisplay != null)
+            {
+                SensorDisplay.Initialize(_realTimeDataManager, _logger);
+            }
         }
 
         private void InitializeTeachManagerControl()

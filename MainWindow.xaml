@@ -239,6 +239,7 @@
                     </Grid>
                 </TabItem>
             </TabControl>
+            <Button Content="Button" Click="Button_Click"/>
 
 
         </StackPanel>

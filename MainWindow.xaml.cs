@@ -21,7 +21,7 @@ using UaaSolutionWpf.Motion;
 using Newtonsoft.Json;
 using UaaSolutionWpf.Config;
 using UaaSolutionWpf.Data;
-
+using UaaSolutionWpf.Sequence;
 
 
 namespace UaaSolutionWpf
@@ -484,10 +484,7 @@ namespace UaaSolutionWpf
             );
         }
 
-        private async void HandleHome()
-        {
-            await _motionCoordinator.ExecuteCoordinatedMove(MotionCoordinator.Sequences.HomeSequence());
-        }
+
 
         private void InitializeDirectMovementControl()
         {
@@ -824,6 +821,20 @@ namespace UaaSolutionWpf
         public TECControllerV2 GetTECController()
         {
             return _tecController;
+        }
+
+
+        private async void HandleHome()
+        {
+            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.HomeSequence());
+        }
+        private async void HandleLeftLensPlace()
+        {
+            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.LeftLensPlace());
+        }
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            HandleLeftLensPlace();
         }
     }
 }

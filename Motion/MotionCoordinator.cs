@@ -17,9 +17,11 @@ namespace UaaSolutionWpf.Motion
 
     public class MotionCoordinator
     {
+
         private readonly MotionGraphManager _motionGraphManager;
         private readonly Dictionary<string, Func<string, Task>> _moveExecutors;
         private readonly ILogger _logger;
+        private readonly SemaphoreSlim _hexapodSemaphore = new SemaphoreSlim(1, 1);
 
         public MotionCoordinator(
             MotionGraphManager motionGraphManager,
@@ -32,7 +34,6 @@ namespace UaaSolutionWpf.Motion
             _motionGraphManager = motionGraphManager;
             _logger = logger.ForContext<MotionCoordinator>();
 
-            // Initialize movement executors for each device
             _moveExecutors = new Dictionary<string, Func<string, Task>>
             {
                 { "hex-left", async (position) => await ExecuteHexapodMove(leftHexapod, 0, position) },
@@ -46,7 +47,7 @@ namespace UaaSolutionWpf.Motion
         {
             try
             {
-                // Validate and analyze all movements first
+                // Validate all movements first
                 var analysisResults = new Dictionary<string, PathAnalysis>();
                 foreach (var movement in movements)
                 {
@@ -68,37 +69,39 @@ namespace UaaSolutionWpf.Motion
                     .GroupBy(m => m.ExecutionOrder)
                     .OrderBy(g => g.Key);
 
-                // Execute movements in order
                 foreach (var group in orderedMovements)
                 {
-                    var tasks = new List<Task>();
+                    // Separate hexapod and gantry movements
+                    var hexapodMoves = group.Where(m => m.DeviceId.StartsWith("hex-")).ToList();
+                    var gantryMoves = group.Where(m => m.DeviceId.StartsWith("gantry-")).ToList();
 
-                    foreach (var movement in group)
+                    // Execute hexapod movements sequentially
+                    foreach (var hexMove in hexapodMoves)
                     {
-                        if (_moveExecutors.TryGetValue(movement.DeviceId, out var executor))
+                        await _hexapodSemaphore.WaitAsync();
+                        try
                         {
-                            var task = executor(movement.TargetPosition);
-
-                            if (movement.WaitForCompletion)
+                            if (_moveExecutors.TryGetValue(hexMove.DeviceId, out var executor))
                             {
-                                // Wait for this movement to complete before continuing
-                                await task;
-                            }
-                            else
-                            {
-                                tasks.Add(task);
+                                await executor(hexMove.TargetPosition);
                             }
                         }
-                        else
+                        finally
                         {
-                            _logger.Error("No executor found for device {DeviceId}", movement.DeviceId);
+                            _hexapodSemaphore.Release();
                         }
                     }
 
-                    // Wait for all parallel movements in this group to complete
-                    if (tasks.Count > 0)
+                    // Execute gantry movements in parallel with hexapods
+                    var gantryTasks = gantryMoves
+                        .Where(m => _moveExecutors.ContainsKey(m.DeviceId))
+                        .Select(m => _moveExecutors[m.DeviceId](m.TargetPosition))
+                        .ToList();
+
+                    // Wait for all gantry movements to complete
+                    if (gantryTasks.Any())
                     {
-                        await Task.WhenAll(tasks);
+                        await Task.WhenAll(gantryTasks);
                     }
                 }
             }
@@ -113,11 +116,7 @@ namespace UaaSolutionWpf.Motion
         {
             try
             {
-                // Implementation for hexapod movement
-                // You'll need to implement this based on your existing hexapod movement code
                 _logger.Information("Moving hexapod {HexapodId} to position {Position}", hexapodId, targetPosition);
-
-                // Example implementation:
                 await service.MoveToPositionAsync(targetPosition);
             }
             catch (Exception ex)
@@ -131,11 +130,7 @@ namespace UaaSolutionWpf.Motion
         {
             try
             {
-                // Implementation for gantry movement
-                // You'll need to implement this based on your existing gantry movement code
                 _logger.Information("Moving gantry to position {Position}", targetPosition);
-
-                // Example implementation:
                 await service.MoveToPositionAsync(targetPosition);
             }
             catch (Exception ex)
@@ -146,41 +141,6 @@ namespace UaaSolutionWpf.Motion
         }
 
         // Predefined movement sequences
-        public static class Sequences
-        {
-            public static List<CoordinatedMovement> HomeSequence()
-            {
-                return new List<CoordinatedMovement>
-                {
-                    // Move gantry to safe position first
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "gantry-main",
-                        TargetPosition = "Home",
-                        ExecutionOrder = 1,
-                        WaitForCompletion = true
-                    },
-                    
-                    // Move hexapods to approach positions in parallel
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "hex-left",
-                        TargetPosition = "Home",
-                        ExecutionOrder = 2,
-                        WaitForCompletion = false
-                    },
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "hex-right",
-                        TargetPosition = "Home",
-                        ExecutionOrder = 2,
-                        WaitForCompletion = false
-                    },                   
-                   
-                };
-            }
-
-            // Add more predefined sequences as needed
-        }
+       
     }
 }

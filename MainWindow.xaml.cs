@@ -463,9 +463,20 @@ namespace UaaSolutionWpf
             InitializeTECController(); // Add this line
             InitializePneumaticSlideControl();
             InitializeSensorChannel();
+            InitializeDirectMovementControl();
 
         }
-
+        private void InitializeDirectMovementControl()
+        {
+            Log.Information("Intiailizing Direct Movement Control");
+            // In your MainWindow.xaml.cs
+            DirectMovementControl.Initialize(
+                positionRegistry,
+                hexapodConnectionManager,
+                gantryConnectionManager,
+                _logger
+            );
+        }
         private void InitializeSensorChannel()
         {
             if (SensorDisplay != null)

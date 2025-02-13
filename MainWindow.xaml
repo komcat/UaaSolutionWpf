@@ -213,6 +213,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <controls:TeachManagerControl x:Name="TeachManagerControl" Grid.Row="0" Grid.Column="0"/>
+                        <controls:DirectMovementControl x:Name="DirectMovementControl" Grid.Row="0" Grid.Column="1"/>
                         <!--gantry move-->
                         <StackPanel Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Width="200">
                             <StackPanel x:Name="GantryManualMoveControl"  Orientation="Vertical" Margin="5">

@@ -59,7 +59,7 @@ namespace UaaSolutionWpf
         private TeachManagerControl teachManagerControl;
 
         private RealTimeDataManager _realTimeDataManager;
-
+        private AlignSensorControl alignSensorControl;
         public MainWindow()
         {
             InitializeComponent();
@@ -106,6 +106,8 @@ namespace UaaSolutionWpf
             _realTimeDataManager.Data.PropertyChanged += Data_PropertyChanged;
             //load sensors channel
             InitializeKeithleyControl();
+
+
 
 
         }
@@ -460,6 +462,10 @@ namespace UaaSolutionWpf
             await InitializeCameraAsync();
             InitializeTECController(); // Add this line
             InitializePneumaticSlideControl();
+
+            _logger.Information("init the AlignSensorControl");
+            alignSensorControl = new AlignSensorControl(_realTimeDataManager);
+
         }
 
         private void InitializeTeachManagerControl()

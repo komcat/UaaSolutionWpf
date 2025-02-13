@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Serilog;
 using UaaSolutionWpf.Data;
 
@@ -11,6 +12,13 @@ namespace UaaSolutionWpf.Controls
 {
     public partial class SingleSensorDisplayControl : UserControl, INotifyPropertyChanged, IDisposable
     {
+        public enum TrendDirection
+        {
+            Increasing,
+            Decreasing,
+            Stable
+        }
+        private readonly DispatcherTimer _updateTimer;
         private ILogger _logger;
         private RealTimeDataManager _realTimeDataManager;
         private bool _disposed;
@@ -19,7 +27,10 @@ namespace UaaSolutionWpf.Controls
         private string _unit;
         private double _targetValue;
         private bool _hasTarget;
-
+        private DateTime _lastUpdateTime;
+        private double _previousValue;
+        private bool _isConnected;
+        private double _percentageComplete;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ObservableCollection<string> Channels { get; } = new ObservableCollection<string>();
@@ -45,9 +56,30 @@ namespace UaaSolutionWpf.Controls
             {
                 if (_currentValue != value)
                 {
+                    _previousValue = _currentValue;
                     _currentValue = value;
+
+                    // Calculate trend
+                    if (Math.Abs(_currentValue - _previousValue) < 0.000001)
+                        CurrentTrend = TrendDirection.Stable;
+                    else
+                        CurrentTrend = _currentValue > _previousValue ? TrendDirection.Increasing : TrendDirection.Decreasing;
+
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(DisplayValue));
+                    UpdateProgressPercentage();
+                }
+            }
+        }
+        public double PercentageComplete
+        {
+            get => _percentageComplete;
+            private set
+            {
+                if (_percentageComplete != value)
+                {
+                    _percentageComplete = value;
+                    OnPropertyChanged();
                 }
             }
         }
@@ -56,33 +88,31 @@ namespace UaaSolutionWpf.Controls
         {
             get
             {
-                // Helper function to format with SI prefix
-                string FormatWithPrefix(double value)
-                {
-                    if (Math.Abs(value) >= 1e-3)
-                        return $"{value * 1e3:F1} m{Unit}"; // milli
-                    else if (Math.Abs(value) >= 1e-6)
-                        return $"{value * 1e6:F1} µ{Unit}"; // micro
-                    else if (Math.Abs(value) >= 1e-9)
-                        return $"{value * 1e9:F1} n{Unit}"; // nano
-                    else
-                        return $"{value * 1e12:F1} p{Unit}"; // pico
-                }
-
-                // Format based on unit type
-                switch (Unit?.ToUpper())
-                {
-                    case "A": // For current
-                        return FormatWithPrefix(CurrentValue);
-                    case "V": // For voltage
-                        return FormatWithPrefix(CurrentValue);
-                    case "W": // For power
-                        return $"{CurrentValue * 1000:F1} mW"; // Always show in milliwatts
-                    default:
-                        return $"{CurrentValue:F1} {Unit}";
-                }
+                return FormatValueWithUnit(CurrentValue, Unit);
             }
         }
+
+        private string FormatValueWithUnit(double value, string unit)
+        {
+            var (scaledValue, prefix) = GetScaledValueAndPrefix(value);
+            return unit?.ToUpper() switch
+            {
+                "A" or "V" or "W" => $"{scaledValue:F2} {prefix}{unit}",
+                _ => $"{value:F2} {unit}"
+            };
+        }
+
+        private (double value, string prefix) GetScaledValueAndPrefix(double value)
+        {
+            var absValue = Math.Abs(value);
+            if (absValue >= 1000) return (value / 1000, "k");
+            if (absValue >= 1) return (value, "");
+            if (absValue >= 0.001) return (value * 1000, "m");
+            if (absValue >= 0.000001) return (value * 1000000, "µ");
+            if (absValue >= 0.000000001) return (value * 1000000000, "n");
+            return (value * 1000000000000, "p");
+        }
+
         public string Unit
         {
             get => _unit;
@@ -92,6 +122,7 @@ namespace UaaSolutionWpf.Controls
                 {
                     _unit = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayValue));
                 }
             }
         }
@@ -105,6 +136,7 @@ namespace UaaSolutionWpf.Controls
                 {
                     _targetValue = value;
                     OnPropertyChanged();
+                    UpdateProgressPercentage();
                 }
             }
         }
@@ -122,10 +154,58 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
+        public DateTime LastUpdateTime
+        {
+            get => _lastUpdateTime;
+            private set
+            {
+                if (_lastUpdateTime != value)
+                {
+                    _lastUpdateTime = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LastUpdateDisplay));
+                }
+            }
+        }
+
+        public string LastUpdateDisplay
+        {
+            get
+            {
+                var timeDiff = DateTime.Now - LastUpdateTime;
+                if (timeDiff.TotalMinutes < 1) return "Just now";
+                if (timeDiff.TotalMinutes < 60) return $"{(int)timeDiff.TotalMinutes}m ago";
+                if (timeDiff.TotalHours < 24) return $"{(int)timeDiff.TotalHours}h ago";
+                return $"{(int)timeDiff.TotalDays}d ago";
+            }
+        }
+        private TrendDirection _currentTrend = TrendDirection.Stable;
+
+        public TrendDirection CurrentTrend
+        {
+            get => _currentTrend;
+            private set
+            {
+                if (_currentTrend != value)
+                {
+                    _currentTrend = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public SingleSensorDisplayControl()
         {
             InitializeComponent();
             DataContext = this;
+            LastUpdateTime = DateTime.Now;
+
+            _updateTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _updateTimer.Tick += (s, e) => OnPropertyChanged(nameof(LastUpdateDisplay));
+            _updateTimer.Start();
         }
 
         public void Initialize(RealTimeDataManager realTimeDataManager, ILogger logger)
@@ -136,27 +216,10 @@ namespace UaaSolutionWpf.Controls
                 _logger = logger?.ForContext<SingleSensorDisplayControl>() ?? throw new ArgumentNullException(nameof(logger));
 
                 _logger.Information("Initializing SingleSensorDisplayControl...");
-
-                // Log the configuration we're working with
-                var channelConfigs = _realTimeDataManager.GetConfiguredChannels();
-                _logger.Information("Found {Count} configured channels", channelConfigs?.Count() ?? 0);
-
-                foreach (var channel in channelConfigs ?? Enumerable.Empty<string>())
-                {
-                    var config = _realTimeDataManager.GetChannelConfig(channel);
-                    _logger.Debug("Channel: {Name}, Unit: {Unit}, Target: {Target}",
-                        channel,
-                        config?.Unit ?? "none",
-                        config?.Target ?? 0);
-                }
-
-                // Load channel names from RealTimeDataManager
                 LoadChannels();
-
-                // Subscribe to real-time data updates
                 _realTimeDataManager.Data.PropertyChanged += OnDataUpdated;
 
-                _logger.Information("SingleSensorDisplayControl initialized successfully with {Count} channels", Channels.Count);
+                _logger.Information("SingleSensorDisplayControl initialized with {Count} channels", Channels.Count);
             }
             catch (Exception ex)
             {
@@ -170,52 +233,35 @@ namespace UaaSolutionWpf.Controls
             try
             {
                 Channels.Clear();
-
-                // Get all configured channels that are valid (not reserved)
                 var configuredChannels = _realTimeDataManager.GetConfiguredChannels()
                     .Where(ch => !string.IsNullOrEmpty(ch) && ch.ToLower() != "reserved");
 
                 foreach (var channel in configuredChannels)
                 {
-                    _logger.Debug("Adding channel to ComboBox: {Channel}", channel);
                     Channels.Add(channel);
                 }
 
-                // Select first channel if available
                 if (Channels.Any())
                 {
                     SelectedChannel = Channels[0];
-                    _logger.Information("Selected initial channel: {Channel}", SelectedChannel);
                 }
-                else
-                {
-                    _logger.Warning("No channels available to display");
-                }
-
-                _logger.Information("Loaded {Count} channels into ComboBox", Channels.Count);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error loading channels into ComboBox");
+                _logger.Error(ex, "Error loading channels");
                 throw;
             }
         }
+
         private void OnDataUpdated(object sender, PropertyChangedEventArgs e)
         {
-            try
+            if (e.PropertyName.StartsWith("Measurement_"))
             {
-                if (e.PropertyName.StartsWith("Measurement_"))
+                string channelName = e.PropertyName.Substring("Measurement_".Length);
+                if (channelName == SelectedChannel)
                 {
-                    string channelName = e.PropertyName.Substring("Measurement_".Length);
-                    if (channelName == SelectedChannel)
-                    {
-                        UpdateDisplayedValue();
-                    }
+                    UpdateDisplayedValue();
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error handling data update");
             }
         }
 
@@ -230,6 +276,7 @@ namespace UaaSolutionWpf.Controls
                 {
                     CurrentValue = measurement.Value;
                     Unit = measurement.Unit;
+                    LastUpdateTime = DateTime.Now;
 
                     var config = _realTimeDataManager.GetChannelConfig(SelectedChannel);
                     if (config != null)
@@ -245,12 +292,20 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
-
+        private void UpdateProgressPercentage()
+        {
+            if (HasTarget && TargetValue > 0)
+            {
+                PercentageComplete = Math.Min((CurrentValue / TargetValue) * 100, 100);
+            }
+        }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+
 
         public void Dispose()
         {
@@ -264,6 +319,7 @@ namespace UaaSolutionWpf.Controls
             {
                 if (disposing)
                 {
+                    _updateTimer.Stop();
                     if (_realTimeDataManager?.Data != null)
                     {
                         _realTimeDataManager.Data.PropertyChanged -= OnDataUpdated;

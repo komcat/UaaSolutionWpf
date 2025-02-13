@@ -51,6 +51,8 @@ namespace UaaSolutionWpf.Motion
         private readonly AcsGantryConnectionManager _gantryConnectionManager;
         private const string DEVICE_ID = "gantry-main";
 
+        public bool isSafetyMode=false;
+
         // Default positions to show
         private static readonly HashSet<string> DefaultAllowedPositions = new HashSet<string>
         {
@@ -146,17 +148,28 @@ namespace UaaSolutionWpf.Motion
                     message += $"\n\nInitial move required: {pathAnalysis.InitialMoveDistance:F3}mm";
                 }
 
-                // Ask for confirmation
-                var result = MessageBox.Show(
-                    message,
-                    "Confirm Movement",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
 
-                if (result == MessageBoxResult.Yes)
+                if (isSafetyMode)
+                {
+                    // Ask for confirmation
+                    var result = MessageBox.Show(
+                        message,
+                        "Confirm Movement",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await ExecuteMovement(pathAnalysis);
+                    }
+                }
+                else
                 {
                     await ExecuteMovement(pathAnalysis);
+
                 }
+
+                
             }
             catch (Exception ex)
             {

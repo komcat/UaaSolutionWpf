@@ -26,6 +26,7 @@ namespace UaaSolutionWpf.Motion
         private readonly int hexapodId;
         private readonly string deviceId;
 
+        public bool isSafetyMode=false;
         // Default allowed positions
         private static readonly HashSet<string> DefaultAllowedPositions = new HashSet<string>
         {
@@ -159,11 +160,28 @@ namespace UaaSolutionWpf.Motion
                 message.AppendLine($"Path: {string.Join(" → ", pathAnalysis.Path)}");
                 message.AppendLine($"Number of steps: {pathAnalysis.NumberOfSteps}");
 
-                var result = MessageBox.Show(
+                MessageBoxResult result;
+                if (isSafetyMode)
+                {
+                    result = MessageBox.Show(
                     message.ToString(),
                     "Confirm Movement",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.No)
+                    {
+                        Log.Information("User confimr no movement.");
+                        return;
+                    }
+
+                }
+                else
+                {
+                    result = MessageBoxResult.Yes;
+                }
+
+                
 
                 if (result == MessageBoxResult.Yes)
                 {

@@ -59,7 +59,7 @@ namespace UaaSolutionWpf
         private TeachManagerControl teachManagerControl;
 
         private RealTimeDataManager _realTimeDataManager;
-       
+        private MotionCoordinator _motionCoordinator;
         public MainWindow()
         {
             InitializeComponent();
@@ -76,6 +76,9 @@ namespace UaaSolutionWpf
                 .CreateLogger();
             Log.Logger = _logger;
 
+            //positions regsitry
+            string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
+            positionRegistry = new PositionRegistry(workingPositionsPath, _logger);
 
             // Set names for each Hexapod
             if (LeftHexapodControl != null)
@@ -134,7 +137,7 @@ namespace UaaSolutionWpf
 
             try
             {
-                
+
                 if (_KeithleyCurrentControl != null)
                 {
                     _KeithleyCurrentControl.SetDependencies(_logger, _realTimeDataManager);
@@ -361,6 +364,7 @@ namespace UaaSolutionWpf
                     var movementService = new HexapodMovementService(
                         hexapodConnectionManager,
                         kvp.Key,
+                        positionRegistry,
                         _logger
                     );
                     _hexapodMovementServices[kvp.Key] = movementService;
@@ -388,7 +392,7 @@ namespace UaaSolutionWpf
         {
             // Create the manager with just a _logger
             gantryConnectionManager = new AcsGantryConnectionManager(GantryControl, _logger);
-            gantryMovementService = new GantryMovementService(gantryConnectionManager, _logger);
+            gantryMovementService = new GantryMovementService(gantryConnectionManager, positionRegistry, _logger);
 
             // Initialize controls with dependencies
             GantryControl.SetDependencies(gantryMovementService);
@@ -447,8 +451,7 @@ namespace UaaSolutionWpf
                     noMotorModeCheckBox.IsChecked = true;
                 }
             }
-            string workingPositionsPath = Path.Combine("Config", "WorkingPositions.json");
-            positionRegistry = new PositionRegistry(workingPositionsPath, _logger);
+
             devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, _logger, positionRegistry, simulationMode);
 
             string configPath = Path.Combine("Config", "motionSystem.json");
@@ -464,8 +467,28 @@ namespace UaaSolutionWpf
             InitializePneumaticSlideControl();
             InitializeSensorChannel();
             InitializeDirectMovementControl();
+            InitializeMotionCoordinator();
 
         }
+
+        private void InitializeMotionCoordinator()
+        {
+            // In your initialization code:
+            _motionCoordinator = new MotionCoordinator(
+                motionGraphManager,
+                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
+                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
+                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                gantryMovementService,
+                _logger
+            );
+        }
+
+        private async void HandleHome()
+        {
+            await _motionCoordinator.ExecuteCoordinatedMove(MotionCoordinator.Sequences.HomeSequence());
+        }
+
         private void InitializeDirectMovementControl()
         {
             Log.Information("Intiailizing Direct Movement Control");
@@ -625,7 +648,8 @@ namespace UaaSolutionWpf
         //test graph manager
         private async void TestGraph_Click(object sender, RoutedEventArgs e)
         {
-            SetupKeithleyDataHandling();
+            //SetupKeithleyDataHandling();
+            HandleHome();
         }
         // In your MainWindow.xaml.cs
         private async void SetupKeithleyDataHandling()
@@ -668,7 +692,7 @@ namespace UaaSolutionWpf
 
         private void InitializePneumaticSlideControl()
         {
-            
+
             if (PneumaticSlideControl != null && _ioManager != null)
             {
                 // Subscribe to IO state changes
@@ -744,7 +768,7 @@ namespace UaaSolutionWpf
                         {
                             // Optionally attempt auto-connect
                             //_tecController.ConnectButton_Click(null, null);
-                            
+
                             _logger.Information("TEC Controller initialized");
                         }
                         catch (Exception ex)

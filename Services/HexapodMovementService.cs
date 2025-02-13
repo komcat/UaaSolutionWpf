@@ -9,15 +9,74 @@ namespace UaaSolutionWpf.Services
         private readonly HexapodConnectionManager _connectionManager;
         private readonly ILogger _logger;
         private readonly HexapodConnectionManager.HexapodType _hexapodType;
+        private readonly PositionRegistry _positionRegistry;
 
+        
+        // Add to constructor
         public HexapodMovementService(
             HexapodConnectionManager connectionManager,
             HexapodConnectionManager.HexapodType hexapodType,
+            PositionRegistry positionRegistry,
             ILogger logger)
         {
             _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
             _hexapodType = hexapodType;
+            _positionRegistry = positionRegistry ?? throw new ArgumentNullException(nameof(positionRegistry));
             _logger = logger.ForContext<HexapodMovementService>();
+        }
+        public async Task MoveToPositionAsync(string positionName)
+        {
+            try
+            {
+                _logger.Information("Moving {HexapodType} to position {Position}", _hexapodType, positionName);
+
+                // Get hexapod ID from type
+                int hexapodId = _hexapodType switch
+                {
+                    HexapodConnectionManager.HexapodType.Left => 0,
+                    HexapodConnectionManager.HexapodType.Bottom => 1,
+                    HexapodConnectionManager.HexapodType.Right => 2,
+                    _ => throw new ArgumentException($"Invalid hexapod type: {_hexapodType}")
+                };
+
+                // Get target position coordinates
+                if (!_positionRegistry.TryGetHexapodPosition(hexapodId, positionName, out var targetPos))
+                {
+                    throw new InvalidOperationException($"Position {positionName} not found for hexapod {_hexapodType}");
+                }
+
+                var controller = _connectionManager.GetHexapodController(_hexapodType);
+                if (controller == null)
+                {
+                    throw new InvalidOperationException($"Controller not found for hexapod {_hexapodType}");
+                }
+
+                if (!controller.IsConnected())
+                {
+                    throw new InvalidOperationException($"Hexapod {_hexapodType} is not connected");
+                }
+
+                // Convert to position array
+                double[] position = new double[]
+                {
+                    targetPos.X,
+                    targetPos.Y,
+                    targetPos.Z,
+                    targetPos.U,
+                    targetPos.V,
+                    targetPos.W
+                };
+
+                // Move to absolute position
+                await Task.Run(() => controller.MoveToAbsoluteTarget(position));
+
+                _logger.Information("Successfully moved {HexapodType} to position {Position}", _hexapodType, positionName);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move {HexapodType} to position {Position}", _hexapodType, positionName);
+                throw;
+            }
         }
 
         public async Task MoveRelativeAsync(Axis axis, double distance)

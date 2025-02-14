@@ -135,6 +135,71 @@ namespace UaaSolutionWpf.Services
             }
         }
 
+        public async Task MoveToAbsolutePosition(double[] coordinates)
+        {
+            try
+            {
+                if (coordinates == null || coordinates.Length != 6)
+                {
+                    throw new ArgumentException("Coordinates array must contain exactly 6 values (X,Y,Z,U,V,W)");
+                }
+
+                _logger.Debug("Moving {HexapodType} to absolute position: X={X:F6}, Y={Y:F6}, Z={Z:F6}, U={U:F6}, V={V:F6}, W={W:F6}",
+                    _hexapodType, coordinates[0], coordinates[1], coordinates[2],
+                    coordinates[3], coordinates[4], coordinates[5]);
+
+                var controller = _connectionManager.GetHexapodController(_hexapodType);
+                if (controller == null)
+                {
+                    throw new InvalidOperationException($"Controller not found for hexapod {_hexapodType}");
+                }
+
+                if (!controller.IsConnected())
+                {
+                    throw new InvalidOperationException($"Hexapod {_hexapodType} is not connected");
+                }
+
+                // Validate coordinates are within safe limits
+                await ValidateCoordinates(coordinates);
+
+                // Move to absolute position
+                await Task.Run(() => controller.MoveToAbsoluteTarget(coordinates));
+
+                _logger.Information("Successfully moved {HexapodType} to absolute position", _hexapodType);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to move {HexapodType} to absolute position", _hexapodType);
+                throw;
+            }
+        }
+
+        private async Task ValidateCoordinates(double[] coordinates)
+        {
+            // Get current position for reference
+            var currentPosition = await GetCurrentPositionAsync();
+
+            // Maximum allowed movement distance in mm
+            const double MAX_SINGLE_MOVE = 5.0;
+
+            // Calculate total distance of movement
+            double totalDistance = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                double delta = Math.Abs(coordinates[i] - currentPosition[i]);
+                totalDistance += delta * delta;
+            }
+            totalDistance = Math.Sqrt(totalDistance);
+
+            if (totalDistance > MAX_SINGLE_MOVE)
+            {
+                throw new InvalidOperationException(
+                    $"Requested movement distance ({totalDistance:F3}mm) exceeds safety limit ({MAX_SINGLE_MOVE}mm)");
+            }
+
+            // Additional axis-specific limits could be added here
+            // For example, checking Z height limits, rotation limits, etc.
+        }
         public enum Axis
         {
             X = 0,

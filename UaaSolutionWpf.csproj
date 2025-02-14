@@ -124,6 +124,9 @@
 
   <ItemGroup>
     <Folder Include="Charts\" />
+    <Folder Include="Scanning\Data\" />
+    <Folder Include="Scanning\Movement\" />
+    <Folder Include="Scanning\Monitoring\" />
   </ItemGroup>
 
   <ItemGroup>

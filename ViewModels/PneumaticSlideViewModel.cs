@@ -1,127 +1,209 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using UaaSolutionWpf.IO;
 
 namespace UaaSolutionWpf.ViewModels
 {
     public enum SlideState
     {
+        Unknown,
         Up,
-        Down,
-        Unknown
+        Down
     }
 
-    public class PneumaticSlideViewModel : INotifyPropertyChanged
+    public class RelayCommand : ICommand
+    {
+        private readonly Action _execute;
+        private readonly Func<bool> _canExecute;
+
+        public RelayCommand(Action execute, Func<bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public event EventHandler CanExecuteChanged
+        {
+            add { CommandManager.RequerySuggested += value; }
+            remove { CommandManager.RequerySuggested -= value; }
+        }
+
+        public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
+
+        public void Execute(object parameter) => _execute();
+    }
+
+    public class PneumaticSlidesViewModel : ViewModelBase
+    {
+        public PneumaticSlideViewModel UVSlide { get; set; }
+        public PneumaticSlideViewModel DispenserSlide { get; set; }
+        public PneumaticSlideViewModel PickUpToolSlide { get; set; }
+
+        private readonly ILogger _logger;
+        private readonly IOManager _ioManager;
+
+        public PneumaticSlidesViewModel()
+        {
+            // Default constructor for design-time support
+        }
+
+        public PneumaticSlidesViewModel(IOManager ioManager, ILogger logger)
+        {
+            _ioManager = ioManager;
+            _logger = logger;
+
+            // Initialize slides with proper IO mappings
+            InitializeSlides();
+        }
+
+        private void InitializeSlides()
+        {
+            // UV Head slide configuration
+            UVSlide = new PneumaticSlideViewModel(
+                "UV Head",
+                _ioManager,
+                _logger,
+                "IOBottom",           // Device name from IOConfig.json
+                "UV_Head",            // Output name for the head
+                "",                   // No down output needed
+                "UV_Head_Up",         // Input sensor name for up position
+                "UV_Head_Down"        // Input sensor name for down position
+            );
+
+            // Dispenser slide configuration
+            DispenserSlide = new PneumaticSlideViewModel(
+                "Dispenser Head",
+                _ioManager,
+                _logger,
+                "IOBottom",
+                "Dispenser_Head",
+                "",
+                "Dispenser_Head_Up",
+                "Dispenser_Head_Down"
+            );
+
+            // Pick Up Tool slide configuration
+            PickUpToolSlide = new PneumaticSlideViewModel(
+                "Pick Up Tool",
+                _ioManager,
+                _logger,
+                "IOBottom",
+                "Pick_Up_Tool",
+                "",
+                "Pick_Up_Tool_Up",
+                "Pick_Up_Tool_Down"
+            );
+        }
+    }
+
+    public class PneumaticSlideViewModel : ViewModelBase
     {
         private string _name;
         private SlideState _state;
-        private bool _isUpSensorActive;
-        private bool _isDownSensorActive;
+        private readonly IOManager _ioManager;
+        private readonly ILogger _logger;
+        private readonly string _deviceName;
+        private readonly string _upOutputName;
+        private readonly string _downOutputName;
+        private readonly string _upSensorName;
+        private readonly string _downSensorName;
+
+        public ICommand MoveUpCommand { get; }
+        public ICommand MoveDownCommand { get; }
 
         public string Name
         {
             get => _name;
-            set
-            {
-                _name = value;
-                OnPropertyChanged();
-            }
+            set => SetProperty(ref _name, value);
         }
 
         public SlideState State
         {
             get => _state;
-            private set
+            set => SetProperty(ref _state, value);
+        }
+
+        public PneumaticSlideViewModel(
+            string name,
+            IOManager ioManager,
+            ILogger logger,
+            string deviceName,
+            string upOutputName,
+            string downOutputName,
+            string upSensorName,
+            string downSensorName)
+        {
+            _name = name;
+            _ioManager = ioManager;
+            _logger = logger;
+            _deviceName = deviceName;
+            _upOutputName = upOutputName;
+            _downOutputName = downOutputName;
+            _upSensorName = upSensorName;
+            _downSensorName = downSensorName;
+            _state = SlideState.Unknown;
+
+            MoveUpCommand = new RelayCommand(() => MoveSlide(true));
+            MoveDownCommand = new RelayCommand(() => MoveSlide(false));
+
+            // Subscribe to IO state changes
+            _ioManager.IOStateChanged += OnIOStateChanged;
+        }
+
+        private void MoveSlide(bool up)
+        {
+            try
             {
-                _state = value;
-                OnPropertyChanged();
+                // Clear both outputs first if we're using two outputs
+                if (!string.IsNullOrEmpty(_downOutputName))
+                {
+                    _ioManager.ClearOutput(_deviceName, _upOutputName);
+                    _ioManager.ClearOutput(_deviceName, _downOutputName);
+                }
+
+                // For single output control, true = up, false = down
+                bool targetState = up;
+                var outputName = !string.IsNullOrEmpty(_downOutputName) ?
+                    (up ? _upOutputName : _downOutputName) :
+                    _upOutputName;
+
+                if (targetState)
+                {
+                    _ioManager.ClearOutput(_deviceName, outputName);
+                }
+                else
+                {
+                    _ioManager.SetOutput(_deviceName, outputName);
+                }
+
+                _logger.Information($"Moving {Name} {(up ? "up" : "down")}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"Error moving {Name} {(up ? "up" : "down")}");
             }
         }
 
-        public bool IsUpSensorActive
+        // This is the method we'll use to update sensor states
+        private void OnIOStateChanged(object sender, IOStateEventArgs e)
         {
-            get => _isUpSensorActive;
-            set
-            {
-                _isUpSensorActive = value;
-                UpdateState();
-                OnPropertyChanged();
-            }
-        }
+            if (e.DeviceName != _deviceName || !e.IsInput) return;
 
-        public bool IsDownSensorActive
-        {
-            get => _isDownSensorActive;
-            set
+            if (e.PinName == _upSensorName && e.State)
             {
-                _isDownSensorActive = value;
-                UpdateState();
-                OnPropertyChanged();
-            }
-        }
-
-        private void UpdateState()
-        {
-            if (IsUpSensorActive && !IsDownSensorActive)
                 State = SlideState.Up;
-            else if (!IsUpSensorActive && IsDownSensorActive)
-                State = SlideState.Down;
-            else
-                State = SlideState.Unknown;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
-    public class PneumaticSlidesViewModel : INotifyPropertyChanged
-    {
-        public PneumaticSlideViewModel UVSlide { get; }
-        public PneumaticSlideViewModel DispenserSlide { get; }
-        public PneumaticSlideViewModel PickUpToolSlide { get; }
-
-        public PneumaticSlidesViewModel()
-        {
-            UVSlide = new PneumaticSlideViewModel { Name = "UV Head" };
-            DispenserSlide = new PneumaticSlideViewModel { Name = "Dispenser Head" };
-            PickUpToolSlide = new PneumaticSlideViewModel { Name = "Pick Up Tool" };
-        }
-
-        public void UpdateSensorState(string sensorName, bool state)
-        {
-            switch (sensorName)
-            {
-                case "UV_Head_Up":
-                    UVSlide.IsUpSensorActive = state;
-                    break;
-                case "UV_Head_Down":
-                    UVSlide.IsDownSensorActive = state;
-                    break;
-                case "Dispenser_Head_Up":
-                    DispenserSlide.IsUpSensorActive = state;
-                    break;
-                case "Dispenser_Head_Down":
-                    DispenserSlide.IsDownSensorActive = state;
-                    break;
-                case "Pick_Up_Tool_Up":
-                    PickUpToolSlide.IsUpSensorActive = state;
-                    break;
-                case "Pick_Up_Tool_Down":
-                    PickUpToolSlide.IsDownSensorActive = state;
-                    break;
             }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            else if (e.PinName == _downSensorName && e.State)
+            {
+                State = SlideState.Down;
+            }
+            else if (!e.State && (e.PinName == _upSensorName || e.PinName == _downSensorName))
+            {
+                State = SlideState.Unknown;
+            }
         }
     }
 }

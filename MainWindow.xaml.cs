@@ -643,11 +643,7 @@ namespace UaaSolutionWpf
             return false;
         }
         //test graph manager
-        private async void TestGraph_Click(object sender, RoutedEventArgs e)
-        {
-            //SetupKeithleyDataHandling();
-            HandleHome();
-        }
+
         // In your MainWindow.xaml.cs
         private async void SetupKeithleyDataHandling()
         {
@@ -689,9 +685,11 @@ namespace UaaSolutionWpf
 
         private void InitializePneumaticSlideControl()
         {
-
             if (PneumaticSlideControl != null && _ioManager != null)
             {
+                // Initialize the control with IOManager and logger
+                PneumaticSlideControl.Initialize(_ioManager, _logger);
+
                 // Subscribe to IO state changes
                 _ioManager.IOStateChanged += (s, e) =>
                 {
@@ -721,16 +719,17 @@ namespace UaaSolutionWpf
         {
             var sensorNames = new[]
             {
-                "UV_Head_Up",
-                "UV_Head_Down",
-                "Dispenser_Head_Up",
-                "Dispenser_Head_Down",
-                "Pick_Up_Tool_Up",
-                "Pick_Up_Tool_Down"
-            };
+        "UV_Head_Up",
+        "UV_Head_Down",
+        "Dispenser_Head_Up",
+        "Dispenser_Head_Down",
+        "Pick_Up_Tool_Up",
+        "Pick_Up_Tool_Down"
+    };
 
             foreach (var sensorName in sensorNames)
             {
+                // Make sure this device name matches your IOConfig.json
                 var state = _ioManager.GetPinState("IOTop", sensorName, true);
                 if (state.HasValue)
                 {
@@ -832,9 +831,6 @@ namespace UaaSolutionWpf
         {
             await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.LeftLensPlace());
         }
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            HandleLeftLensPlace();
-        }
+
     }
 }

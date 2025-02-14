@@ -7,7 +7,7 @@
              xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
              xmlns:viewModels="clr-namespace:UaaSolutionWpf.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="269.628" d:DesignWidth="400">
+             d:DesignHeight="395.95" d:DesignWidth="400">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
@@ -44,6 +44,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Text="{Binding Name}" 
@@ -76,6 +77,20 @@
                                 <TextBlock Text="{Binding State}" 
                                          Foreground="White"/>
                             </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" 
+                                  Orientation="Horizontal" 
+                                  Margin="0,10,0,0">
+                            <Button Content="Move Up" 
+                                    Width="80"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    Command="{Binding MoveUpCommand}"/>
+                            <Button Content="Move Down"
+                                    Width="80"
+                                    Height="30"
+                                    Command="{Binding MoveDownCommand}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -91,6 +106,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Text="{Binding Name}" 
@@ -124,6 +140,20 @@
                                          Foreground="White"/>
                             </Border>
                         </StackPanel>
+
+                        <StackPanel Grid.Row="2" 
+                                  Orientation="Horizontal" 
+                                  Margin="0,10,0,0">
+                            <Button Content="Move Up" 
+                                    Width="80"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    Command="{Binding MoveUpCommand}"/>
+                            <Button Content="Move Down"
+                                    Width="80"
+                                    Height="30"
+                                    Command="{Binding MoveDownCommand}"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -136,6 +166,7 @@
                         Margin="0,0,0,10">
                     <Grid DataContext="{Binding PickUpToolSlide}">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -170,6 +201,20 @@
                                 <TextBlock Text="{Binding State}" 
                                          Foreground="White"/>
                             </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" 
+                                  Orientation="Horizontal" 
+                                  Margin="0,10,0,0">
+                            <Button Content="Move Up" 
+                                    Width="80"
+                                    Height="30"
+                                    Margin="0,0,10,0"
+                                    Command="{Binding MoveUpCommand}"/>
+                            <Button Content="Move Down"
+                                    Width="80"
+                                    Height="30"
+                                    Command="{Binding MoveDownCommand}"/>
                         </StackPanel>
                     </Grid>
                 </Border>

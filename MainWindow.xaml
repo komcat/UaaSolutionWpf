@@ -12,9 +12,13 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -25,48 +29,32 @@
         <StackPanel x:Name="TopRowPanel" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0">
             <TextBlock FontSize="20">UAA Solution</TextBlock>
         </StackPanel>
+        <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2" Grid.Column="0" Grid.Row="1" Grid.RowSpan="3"/>
 
-        <StackPanel x:Name="LeftStackPanel"
-            Grid.Column="0" 
-            Grid.Row="1" 
-            Grid.RowSpan="3" 
-            Width="300" 
-            Background="LightGray">
-            <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2"/>
-            <controls:VacBaseControl x:Name="VacBaseControl" Margin="2"/>
-            <controls:PneumaticSlideControl x:Name="PneumaticSlideControl"/>
-        </StackPanel>
-        <StackPanel x:Name="SensorPanel" Grid.Column="1" Grid.Row="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <controls:SingleSensorDisplayControl x:Name="SensorDisplay" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"/>
-            </Grid>
-            
-            
-            
+        <controls:PneumaticSlideControl x:Name="PneumaticSlideControl" Grid.Column="0" Grid.Row="4"/>
+
+
+        <controls:SingleSensorDisplayControl x:Name="SensorDisplay" Grid.Column="1" Grid.Row="1"/>
+
+
+        <controls:VacBaseControl x:Name="VacBaseControl" Margin="2" Grid.Column="2" Grid.Row="1"/>
+        <controls:SimpleJogControl x:Name="SimpleJogControl"  Margin="5" Grid.Column="3" Grid.ColumnSpan="3" Grid.Row="1" Grid.RowSpan="1"/>
+
+        <StackPanel x:Name="DisplayPanel" Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="2" Grid.RowSpan="3">
+            <controls:BaslerDisplayViewControl x:Name="cameraDisplayViewControl" />
         </StackPanel>
 
-
-        <StackPanel x:Name="MiddlePanel" Grid.Column="2" Grid.Row="1" Grid.RowSpan="2" Width="200">
-
+        <StackPanel x:Name="MiddlePanel" Grid.Column="2" Grid.Row="1" Grid.ColumnSpan="2">
+            
         </StackPanel>
 
         <StackPanel x:Name="BottomRowPanel" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" >
-            <controls:SimpleJogControl x:Name="SimpleJogControl"  Margin="5"/>
+            
         </StackPanel>
 
 
         <!--Main tab controls-->
-        <StackPanel x:Name="TabControllerPanel" Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="1" Grid.RowSpan="4">
+        <StackPanel x:Name="TabControllerPanel" Grid.Column="4" Grid.ColumnSpan="2" Grid.Row="2" Grid.RowSpan="4">
             <!-- Add controls for tab management here -->
             <TabControl  FontSize="18">
                 <TabItem Header="Run">
@@ -239,19 +227,16 @@
                     </Grid>
                 </TabItem>
             </TabControl>
-            <Button Content="Button" Click="Button_Click"/>
+
 
 
         </StackPanel>
 
-        <StackPanel x:Name="DisplayPanel" Grid.Column="1" Grid.Row="2" Grid.RowSpan="2">
-            <controls:BaslerDisplayViewControl x:Name="cameraDisplayViewControl" />
-        </StackPanel>
+
 
         <CheckBox x:Name="noMotorModeCheckBox" Grid.Column="3" Content="No motors mode" HorizontalAlignment="Right" Margin="3" VerticalAlignment="Top" 
                   IsChecked="False"/>
-        <Button x:Name="TestGraph" Grid.Column="3" Content="Button" HorizontalAlignment="Left" Margin="136,107,0,0" Grid.Row="4" VerticalAlignment="Top" Height="55" Width="123" Click="TestGraph_Click"/>
-
+        
 
     </Grid>
 </Window>

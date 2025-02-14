@@ -130,6 +130,8 @@ namespace UaaSolutionWpf.IO
                 _logger.Error("[{DeviceName}] Pin name {PinName} not found in config.", _deviceName, pinName);
                 return false;
             }
+            Task.Delay(35);
+            MonitorOutputs();
 
             // Use the appropriate method based on desired state
             if (state)
@@ -172,7 +174,7 @@ namespace UaaSolutionWpf.IO
 
             return verified;
         }
-
+        
         public bool ClearOutput(int pinNum)
         {
             if (pinNum < 0 || pinNum >= OUTPUT_PIN_COUNT)

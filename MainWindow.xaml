@@ -9,7 +9,7 @@
         Title="MainWindow" Height="1024" Width="2200" Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
@@ -96,7 +96,7 @@
 
                     </Grid>
                 </TabItem>
-                <TabItem Header="Robots" >
+                <TabItem Header="Axises" >
                     <Grid>
                         <!-- Content for Tab 3 -->
                         <Grid.ColumnDefinitions>
@@ -112,16 +112,35 @@
                         <StackPanel x:Name="LeftHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
                             <controls:HexapodControl x:Name="LeftHexapodControl" Margin="2"/>
                         </StackPanel>
-                        <StackPanel x:Name="BottomHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
-                            <controls:HexapodControl x:Name="BottomHexapodControl" Margin="2"/>
-                        </StackPanel>
-                        <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="2">
+                        
+                        <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
                             <controls:HexapodControl x:Name="RightHexapodControl" Margin="2"/>
                         </StackPanel>
                         <controls:GantryControl x:Name="GantryControl" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="23" />
                     </Grid>
                 </TabItem>
-                <TabItem Header="I/O">
+                <TabItem Header="hex-bottom">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel x:Name="BottomHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
+                            <controls:HexapodControl x:Name="BottomHexapodControl" Margin="2"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200">
+                            <StackPanel x:Name="BottomHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
+                                <TextBlock>Bottom Hexapod</TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                    
+                </TabItem>
+                    <TabItem Header="I/O">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="156*"/>
@@ -214,12 +233,8 @@
 
                             </StackPanel>
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Grid.Row="1" Grid.RowSpan="2" Width="200">
-                            <StackPanel x:Name="BottomHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
-                                <TextBlock>Bottom Hexapod</TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Grid.Column="3" Grid.Row="1" Grid.RowSpan="2" Width="250">
+                        
+                        <StackPanel Grid.Column="3" Grid.Row="1" Grid.RowSpan="2" Width="200">
                             <StackPanel x:Name="RightHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
                                 <TextBlock>Right Hexapod</TextBlock>
                             </StackPanel>

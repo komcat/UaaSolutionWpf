@@ -204,7 +204,22 @@ namespace UaaSolutionWpf.Scanning.Core
                 {
                     if (_dataManager.TryGetChannelValue(_dataChannel, out var measurement))
                     {
-                        return measurement.Value;
+                        // Add explicit parsing with error handling
+                        if (measurement == null)
+                        {
+                            _logger?.Warning("Measurement is null for channel {Channel}", _dataChannel);
+                            await Task.Delay(10, linkedCts.Token);
+                            continue;
+                        }
+
+                        // Ensure the value can be parsed
+                        if (!double.TryParse(measurement.Value.ToString(), out double parsedValue))
+                        {
+                            _logger?.Error("Cannot parse measurement value: {Value}", measurement.Value);
+                            throw new FormatException($"Cannot convert measurement value '{measurement.Value}' to number");
+                        }
+
+                        return parsedValue;
                     }
                     await Task.Delay(10, linkedCts.Token);
                 }
@@ -216,7 +231,6 @@ namespace UaaSolutionWpf.Scanning.Core
                 throw new TimeoutException($"Measurement timeout after {_parameters.MeasurementTimeout.TotalSeconds} seconds");
             }
         }
-
         private async Task MoveSingleStep(string axis, double step, CancellationToken token)
         {
             switch (axis.ToUpper())
@@ -297,33 +311,89 @@ namespace UaaSolutionWpf.Scanning.Core
 
         private string GenerateScanReport()
         {
-            var results = _dataCollector.GetResults();
-            var stats = results.Statistics;
+            try
+            {
+                var results = _dataCollector.GetResults();
 
-            return $"""
-        Scan Report:
-        =============
-        Device: {_deviceId}
-        Duration: {stats.TotalDuration:hh\\:mm\\:ss}
-        Total Measurements: {stats.TotalMeasurements}
+                // Add null checks
+                if (results == null)
+                {
+                    _logger.Warning("Scan results are null");
+                    return "No scan results available";
+                }
+
+                var stats = results.Statistics;
+
+                // Add null checks for statistics
+                if (stats == null)
+                {
+                    _logger.Warning("Scan statistics are null");
+                    return "No scan statistics available";
+                }
+
+                // Use string interpolation with null checks and default values
+                return $"""
+                Scan Report:
+                =============
+                Device: {results.DeviceId ?? "Unknown"}
+                Duration: {(stats.TotalDuration != null ? stats.TotalDuration.ToString(@"hh\:mm\:ss") : "N/A")}
+                Total Measurements: {stats.TotalMeasurements}
         
-        Results:
-        --------
-        Baseline Value: {results.Baseline.Value:E3}
-        Peak Value: {results.Peak.Value:E3}
-        Improvement: {((results.Peak.Value - results.Baseline.Value) / results.Baseline.Value):P2}
+                Results:
+                --------
+                Baseline Value: {(results.Baseline?.Value.ToString("E3") ?? "N/A")}
+                Peak Value: {(results.Peak?.Value.ToString("E3") ?? "N/A")}
+                Improvement: {SafeCalculateImprovement(results)}
         
-        Statistics:
-        -----------
-        Min Value: {stats.MinValue:E3}
-        Max Value: {stats.MaxValue:E3}
-        Average: {stats.AverageValue:E3}
-        Std Dev: {stats.StandardDeviation:E3}
+                Statistics:
+                -----------
+                Min Value: {stats.MinValue.ToString("E3")}
+                Max Value: {stats.MaxValue.ToString("E3")}
+                Average: {stats.AverageValue.ToString("E3")}
+                Std Dev: {stats.StandardDeviation.ToString("E3")}
         
-        Measurements per Axis:
-        --------------------
-        {string.Join("\n", stats.MeasurementsPerAxis.Select(x => $"{x.Key}: {x.Value}"))}
+                Measurements per Axis:
+                --------------------
+                {(stats.MeasurementsPerAxis != null ?
+                            string.Join("\n", stats.MeasurementsPerAxis.Select(x => $"{x.Key}: {x.Value}")) :
+                            "No axis measurements")}
+                """;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error generating scan report");
+
+                // Provide a fallback report with minimal information
+                return $"""
+        Scan Report Generation Failed
+        =============================
+        Error: {ex.Message}
+        
+        Additional Details:
+        -------------------
+        Exception Type: {ex.GetType().Name}
+        Stack Trace: {ex.StackTrace}
         """;
+            }
+        }
+
+        private string SafeCalculateImprovement(ScanResults results)
+        {
+            try
+            {
+                if (results?.Baseline == null || results.Peak == null || results.Baseline.Value == 0)
+                {
+                    return "N/A";
+                }
+
+                double improvement = (results.Peak.Value - results.Baseline.Value) / results.Baseline.Value;
+                return improvement.ToString("P2");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error calculating improvement percentage");
+                return "N/A";
+            }
         }
         private async Task HandleScanCancellation()
         {

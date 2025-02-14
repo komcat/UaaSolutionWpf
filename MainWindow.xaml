@@ -70,12 +70,12 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <controls:AutoAlignmentControl Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"/>
-                        <ScrollViewer Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" >
-                            <StackPanel Width="400">
-
-                            </StackPanel>
-                        </ScrollViewer>
+                        <!--<controls:AutoAlignmentControl Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"/>-->
+                        <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Grid.ColumnSpan="2" 
+                                    Height="400">
+                            <controls:AutoAlignmentControlWpf x:Name="autoAlignmentControlWpf" />
+                        </StackPanel>
+                        
                     </Grid>
                 </TabItem>
                 <TabItem Header="Manual" Height="28" VerticalAlignment="Top">

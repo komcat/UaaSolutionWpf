@@ -468,9 +468,40 @@ namespace UaaSolutionWpf
             InitializeSensorChannel();
             InitializeDirectMovementControl();
             InitializeMotionCoordinator();
-
+            InitializeAutoAlignmentControl();
         }
+        private void InitializeAutoAlignmentControl()
+        {
+            if (autoAlignmentControlWpf != null)
+            {
+                try
+                {
+                    // Get the movement services for left and right hexapods
+                    var leftHexapodService = _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left];
+                    var rightHexapodService = _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right];
 
+                    autoAlignmentControlWpf.Initialize(
+                        leftHexapodService,
+                        rightHexapodService,
+                        devicePositionMonitor,
+                        _realTimeDataManager,
+                        _logger
+                    );
+
+                    _logger.Information("AutoAlignmentControlWpf initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to initialize AutoAlignmentControlWpf");
+                    MessageBox.Show(
+                        $"Failed to initialize alignment control: {ex.Message}",
+                        "Initialization Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+                }
+            }
+        }
         private void InitializeMotionCoordinator()
         {
             // In your initialization code:
@@ -719,13 +750,13 @@ namespace UaaSolutionWpf
         {
             var sensorNames = new[]
             {
-        "UV_Head_Up",
-        "UV_Head_Down",
-        "Dispenser_Head_Up",
-        "Dispenser_Head_Down",
-        "Pick_Up_Tool_Up",
-        "Pick_Up_Tool_Down"
-    };
+                "UV_Head_Up",
+                "UV_Head_Down",
+                "Dispenser_Head_Up",
+                "Dispenser_Head_Down",
+                "Pick_Up_Tool_Up",
+                "Pick_Up_Tool_Down"
+            };
 
             foreach (var sensorName in sensorNames)
             {

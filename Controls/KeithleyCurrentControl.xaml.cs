@@ -83,6 +83,8 @@ namespace UaaSolutionWpf.Controls
         public KeithleyCurrentControl()
         {
             InitializeComponent();
+
+            // add app resource settings -"GPIB0::1::INSTR"
             Init();
             ShowChart();
         }
@@ -99,16 +101,23 @@ namespace UaaSolutionWpf.Controls
             {
                 chartWindow = new WpfLiveChart.LiveChartWindow();  // 800 data points
                 chartWindow.SetTitle("Current Measurement");
+                chartWindow.Topmost = true;  // Make window always on top
                 chartWindow.Show();
             }
+            else
+            {
+                // Ensure the window stays on top even if it already exists
+                chartWindow.Topmost = true;
+            }
         }
-        public void Init()
+        public void Init(string resourceGpib= "GPIB0::1::INSTR")
         {
             DataContext = this;
 
             
             _logger = Log.ForContext<KeithleyCurrentControl>();
-            _gpibService = new GpibService("GPIB0::1::INSTR");
+            //resourceGpib="GPIB0::1::INSTR";
+            _gpibService = new GpibService(resourceGpib);
 
             // Initialize data stream with configuration
             var config = new DataStreamConfig

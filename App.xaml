@@ -10,7 +10,14 @@
         <SolidColorBrush x:Key="DisconnectedBrush" Color="#ef4444"/>
         <SolidColorBrush x:Key="PinOnBrush" Color="#10b981"/>
         <SolidColorBrush x:Key="PinOffBrush" Color="#9ca3af"/>
-
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter">
+            <converters:BoolToColorConverter.TrueValue>
+                <SolidColorBrush Color="Green"/>
+            </converters:BoolToColorConverter.TrueValue>
+            <converters:BoolToColorConverter.FalseValue>
+                <SolidColorBrush Color="Red"/>
+            </converters:BoolToColorConverter.FalseValue>
+        </converters:BoolToColorConverter>
         <!-- Converters -->
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         <converters:BoolToConnectionColorConverter x:Key="BoolToConnectionColorConverter"

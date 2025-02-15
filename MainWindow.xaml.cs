@@ -541,6 +541,8 @@ namespace UaaSolutionWpf
             {
                 SensorDisplay.Initialize(_realTimeDataManager, _logger);
             }
+
+
         }
 
         private void InitializeTeachManagerControl()

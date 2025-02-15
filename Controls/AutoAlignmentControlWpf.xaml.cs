@@ -13,7 +13,7 @@ namespace UaaSolutionWpf.Controls
 {
     public partial class AutoAlignmentControlWpf : UserControl
     {
-        private readonly double[] coarseStepSizes = { 0.0020, 0.0010, 0.0005, 0.0003 };
+        private readonly double[] coarseStepSizes = { 0.0020, 0.0010, 0.0003, 0.0001 };
         private readonly double[] fineStepSizes = { 0.0002, 0.0001 };
 
         private ILogger _logger;

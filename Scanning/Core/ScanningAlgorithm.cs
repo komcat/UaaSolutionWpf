@@ -144,15 +144,16 @@ namespace UaaSolutionWpf.Scanning.Core
             {
                 if (!_isScanningActive || token.IsCancellationRequested) break;
 
-                foreach (var axis in SCAN_AXES)
+                // Use AxesToScan from parameters instead of hardcoded SCAN_AXES
+                foreach (var axis in _parameters.AxesToScan)  // This now follows Z, X, Y order
                 {
                     if (!_isScanningActive || token.IsCancellationRequested) break;
 
                     _logger.Information($"Starting {axis} axis scan with step size {stepSize * 1000:F3} microns");
 
-                    var currentStep = Array.IndexOf(SCAN_AXES, axis) +
-                                    Array.IndexOf(_parameters.StepSizes, stepSize) * SCAN_AXES.Length;
-                    var progress = (double)currentStep / (SCAN_AXES.Length * _parameters.StepSizes.Length);
+                    var currentStep = Array.IndexOf(_parameters.AxesToScan, axis) +
+                                    Array.IndexOf(_parameters.StepSizes, stepSize) * _parameters.AxesToScan.Length;
+                    var progress = (double)currentStep / (_parameters.AxesToScan.Length * _parameters.StepSizes.Length);
 
                     OnProgressUpdated(new ScanProgressEventArgs(
                         progress,
@@ -164,7 +165,6 @@ namespace UaaSolutionWpf.Scanning.Core
                 }
             }
         }
-
         // Add this helper method to get position value for specific axis
         private double GetAxisPosition(DevicePosition position, string axis)
         {

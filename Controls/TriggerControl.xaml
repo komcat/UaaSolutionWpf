@@ -1,0 +1,22 @@
+﻿<UserControl x:Class="UaaSolutionWpf.Controls.TriggerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:UaaSolutionWpf.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="80" d:DesignWidth="200" FontSize="20">
+    <StackPanel>
+        <TextBlock x:Name="TriggerName" 
+                   Text="Trigger" 
+                   FontSize="16" 
+                   Margin="2"/>
+        <Button x:Name="TriggerButton" 
+                Height="40" 
+                Margin="2"
+                Background="#007ACC"
+                Foreground="White"
+                Content="Trigger"
+                Click="TriggerButton_Click"/>
+    </StackPanel>
+</UserControl>

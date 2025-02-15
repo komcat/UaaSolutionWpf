@@ -469,6 +469,13 @@ namespace UaaSolutionWpf
             InitializeDirectMovementControl();
             InitializeMotionCoordinator();
             InitializeAutoAlignmentControl();
+
+            //set up gripper controls
+            LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
+            RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
+
+            // For example, to use it with the dispenser shot
+            UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
         }
         private void InitializeAutoAlignmentControl()
         {

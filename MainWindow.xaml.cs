@@ -477,9 +477,17 @@ namespace UaaSolutionWpf
 
             // For example, to use it with the dispenser shot
             UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
+
+            InitializeDevicePositionMonitorControl();
         }
 
-
+        private void InitializeDevicePositionMonitorControl()
+        {
+            DevicePositionMonitor.Initialize(
+            devicePositionMonitor,  // Your existing DevicePositionMonitor instance
+            _logger                // Your ILogger instance
+        );
+        }
         private void InitializeSequenceControl()
         {
             if (SequenceControl != null)

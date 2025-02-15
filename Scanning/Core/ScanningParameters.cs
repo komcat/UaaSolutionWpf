@@ -5,12 +5,12 @@ namespace UaaSolutionWpf.Scanning.Core
     public class ScanningParameters
     {
         // Motion control parameters
-        public int MotionSettleTimeMs { get; set; } = 250;
-        public int ConsecutiveDecreasesLimit { get; set; } = 3;
-        public double ImprovementThreshold { get; set; } = 0.02; // 2%
+        public int MotionSettleTimeMs { get; set; } = 400;
+        public int ConsecutiveDecreasesLimit { get; set; } = 1;
+        public double ImprovementThreshold { get; set; } = 0.01; // 2%
 
         // Scan range parameters
-        public string[] AxesToScan { get; set; } = { "X", "Y", "Z" };
+        public string[] AxesToScan { get; set; } = {  "Z", "X", "Y" };
         public double[] StepSizes { get; set; }
 
         // Safety parameters

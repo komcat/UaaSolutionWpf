@@ -165,29 +165,6 @@ namespace UaaSolutionWpf.Scanning.Core
             }
         }
 
-        private async Task ScanAxis(string axis, double stepSize, CancellationToken token)
-        {
-            // Scan in positive direction
-            var (positiveMaxValue, positiveMaxPosition) = await ScanDirection(axis, stepSize, 1, token);
-
-            if (token.IsCancellationRequested) return;
-
-            // Return to start position
-            var startPosition = _dataCollector.GetBaselinePosition();
-            await MoveToPosition(startPosition, token);
-
-            if (token.IsCancellationRequested) return;
-
-            // Scan in negative direction
-            var (negativeMaxValue, negativeMaxPosition) = await ScanDirection(axis, stepSize, -1, token);
-
-            // Update global peak if necessary
-            UpdateGlobalPeak(
-                Math.Max(positiveMaxValue, negativeMaxValue),
-                positiveMaxValue > negativeMaxValue ? positiveMaxPosition : negativeMaxPosition,
-                $"{axis} axis scan with {stepSize * 1000:F3} micron steps"
-            );
-        }
         // Add this helper method to get position value for specific axis
         private double GetAxisPosition(DevicePosition position, string axis)
         {
@@ -208,6 +185,7 @@ namespace UaaSolutionWpf.Scanning.Core
             var previousValue = maxValue;
             int consecutiveDecreases = 0;
             double totalDistance = 0;
+            bool hasMovedFromMax = false;
 
             while (!token.IsCancellationRequested &&
                    _isScanningActive &&
@@ -233,7 +211,7 @@ namespace UaaSolutionWpf.Scanning.Core
                 }
 
                 await MoveToPosition(newPosition, token);
-                await Task.Delay(MOTION_SETTLE_TIME_MS, token);
+                await Task.Delay(_parameters.MotionSettleTimeMs, token);
 
                 currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
                 var currentValue = await GetMeasurement(token);
@@ -246,7 +224,7 @@ namespace UaaSolutionWpf.Scanning.Core
                 DataPointAcquired?.Invoke(this, (currentValue, ConvertToPosition(currentPosition)));
 
                 string logMessage = $"{axis} {(direction > 0 ? "+" : "-")}: " +
-                $"Pos={GetAxisPosition(currentPosition, axis):F6}mm, Value={currentValue:F6}";
+                    $"Pos={GetAxisPosition(currentPosition, axis):F6}mm, Value={currentValue:F6}";
 
                 _logger.Information(logMessage);
 
@@ -255,17 +233,84 @@ namespace UaaSolutionWpf.Scanning.Core
                     maxValue = currentValue;
                     maxPosition = ConvertToPosition(currentPosition);
                     consecutiveDecreases = 0;
+                    hasMovedFromMax = false;
                     _logger.Information($"{logMessage} - New Local Maximum");
                 }
                 else
                 {
                     consecutiveDecreases++;
+                    hasMovedFromMax = true;
+
+                    // Check if we should return to local max
+                    if (consecutiveDecreases >= MAX_CONSECUTIVE_DECREASES)
+                    {
+                        _logger.Information($"Consecutive decreases limit reached. Returning to local maximum.");
+                        break;
+                    }
                 }
 
                 previousValue = currentValue;
             }
 
+            // Return to local maximum position if we've moved away from it
+            if (hasMovedFromMax)
+            {
+                _logger.Information($"Returning to local maximum position in {axis} axis");
+                await MoveToPosition(maxPosition, token);
+                await Task.Delay(_parameters.MotionSettleTimeMs, token);
+
+                // Verify we're at the maximum
+                var verificationValue = await GetMeasurement(token);
+                _logger.Information($"Local maximum position verified: {verificationValue:F6}");
+
+                // Update maxValue in case there was any drift
+                if (verificationValue > maxValue)
+                {
+                    maxValue = verificationValue;
+                }
+            }
+
             return (maxValue, maxPosition);
+        }
+
+        private async Task ScanAxis(string axis, double stepSize, CancellationToken token)
+        {
+            _logger.Information($"Starting {axis} axis scan with step size {stepSize * 1000:F3} microns");
+
+            // Store initial position
+            var startPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            var initialValue = await GetMeasurement(token);
+
+            // Scan in positive direction
+            var (positiveMaxValue, positiveMaxPosition) = await ScanDirection(axis, stepSize, 1, token);
+
+            if (token.IsCancellationRequested) return;
+
+            // Return to start position after positive scan
+            _logger.Information($"Returning to start position for negative {axis} axis scan");
+            await MoveToPosition(ConvertToPosition(startPosition), token);
+            await Task.Delay(_parameters.MotionSettleTimeMs, token);
+
+            if (token.IsCancellationRequested) return;
+
+            // Scan in negative direction
+            var (negativeMaxValue, negativeMaxPosition) = await ScanDirection(axis, stepSize, -1, token);
+
+            // Determine the best position between positive and negative scans
+            var bestValue = Math.Max(positiveMaxValue, negativeMaxValue);
+            var bestPosition = positiveMaxValue > negativeMaxValue ? positiveMaxPosition : negativeMaxPosition;
+
+            // Update global peak
+            UpdateGlobalPeak(
+                bestValue,
+                bestPosition,
+                $"{axis} axis scan with {stepSize * 1000:F3} micron steps"
+            );
+
+            // Move to the best position found in this axis scan
+            _logger.Information($"Moving to best position found in {axis} axis scan");
+            await MoveToPosition(bestPosition, token);
+            await Task.Delay(_parameters.MotionSettleTimeMs, token);
         }
         private async Task ReturnToGlobalPeakIfBetter(CancellationToken token)
         {

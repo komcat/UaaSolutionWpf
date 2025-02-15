@@ -469,6 +469,7 @@ namespace UaaSolutionWpf
             InitializeDirectMovementControl();
             InitializeMotionCoordinator();
             InitializeAutoAlignmentControl();
+            InitializeSequenceControl();
 
             //set up gripper controls
             LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
@@ -477,6 +478,16 @@ namespace UaaSolutionWpf
             // For example, to use it with the dispenser shot
             UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
         }
+
+
+        private void InitializeSequenceControl()
+        {
+            if (SequenceControl != null)
+            {
+                SequenceControl.Initialize(_motionCoordinator, _logger);
+            }
+        }
+
         private void InitializeAutoAlignmentControl()
         {
             if (autoAlignmentControlWpf != null)
@@ -869,7 +880,7 @@ namespace UaaSolutionWpf
         }
         private async void HandleLeftLensPlace()
         {
-            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.LeftLensPlace());
+            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.LeftPlace());
         }
 
     }

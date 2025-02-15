@@ -22,6 +22,7 @@ namespace UaaSolutionWpf.Services
             _positionRegistry = positionRegistry ?? throw new ArgumentNullException(nameof(positionRegistry));
             _logger = logger.ForContext<GantryMovementService>();
         }
+        // Similarly for GantryMovementService
         public async Task MoveToPositionAsync(string positionName)
         {
             try
@@ -33,27 +34,23 @@ namespace UaaSolutionWpf.Services
                     throw new InvalidOperationException("Gantry is not connected");
                 }
 
-                // Get target position coordinates
                 if (!_positionRegistry.TryGetGantryPosition(4, positionName, out var targetPos))
                 {
                     throw new InvalidOperationException($"Position {positionName} not found for gantry");
                 }
 
-                // Move each axis to its target position
-                var tasks = new[]
-                {
+                // Move each axis to target position and wait for completion
+                await Task.WhenAll(
                     _connectionManager.MoveToAbsolutePositionAsync(0, targetPos.X),
                     _connectionManager.MoveToAbsolutePositionAsync(1, targetPos.Y),
                     _connectionManager.MoveToAbsolutePositionAsync(2, targetPos.Z)
-                };
+                );
 
-                await Task.WhenAll(tasks);
-
-                _logger.Information("Successfully moved gantry to position {Position}", positionName);
+                _logger.Information("Completed move of gantry to {Position}", positionName);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to move gantry to position {Position}", positionName);
+                _logger.Error(ex, "Error moving gantry to {Position}", positionName);
                 throw;
             }
         }

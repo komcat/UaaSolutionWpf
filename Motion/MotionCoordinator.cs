@@ -47,8 +47,8 @@ namespace UaaSolutionWpf.Motion
         {
             try
             {
-                // Validate all movements first
-                var analysisResults = new Dictionary<string, PathAnalysis>();
+                // First analyze and validate all paths
+                var pathAnalyses = new Dictionary<string, PathAnalysis>();
                 foreach (var movement in movements)
                 {
                     var analysis = await _motionGraphManager.AnalyzeMovementPath(
@@ -61,7 +61,12 @@ namespace UaaSolutionWpf.Motion
                             $"Invalid movement path for {movement.DeviceId} to {movement.TargetPosition}: {analysis.Error}");
                     }
 
-                    analysisResults[movement.DeviceId] = analysis;
+                    // Store the validated path for this movement
+                    pathAnalyses[movement.DeviceId] = analysis;
+                    _logger.Information("Validated path for {DeviceId} to {Position}: {Path}",
+                        movement.DeviceId,
+                        movement.TargetPosition,
+                        string.Join(" -> ", analysis.Path));
                 }
 
                 // Group movements by execution order
@@ -83,7 +88,13 @@ namespace UaaSolutionWpf.Motion
                         {
                             if (_moveExecutors.TryGetValue(hexMove.DeviceId, out var executor))
                             {
-                                await executor(hexMove.TargetPosition);
+                                var analysis = pathAnalyses[hexMove.DeviceId];
+                                foreach (var intermediatePosition in analysis.Path)
+                                {
+                                    _logger.Information("Moving {Device} to intermediate position: {Position}",
+                                        hexMove.DeviceId, intermediatePosition);
+                                    await executor(intermediatePosition);
+                                }
                             }
                         }
                         finally
@@ -93,12 +104,20 @@ namespace UaaSolutionWpf.Motion
                     }
 
                     // Execute gantry movements in parallel with hexapods
-                    var gantryTasks = gantryMoves
-                        .Where(m => _moveExecutors.ContainsKey(m.DeviceId))
-                        .Select(m => _moveExecutors[m.DeviceId](m.TargetPosition))
-                        .ToList();
+                    var gantryTasks = gantryMoves.Select(async gantryMove =>
+                    {
+                        if (_moveExecutors.TryGetValue(gantryMove.DeviceId, out var executor))
+                        {
+                            var analysis = pathAnalyses[gantryMove.DeviceId];
+                            foreach (var intermediatePosition in analysis.Path)
+                            {
+                                _logger.Information("Moving {Device} to intermediate position: {Position}",
+                                    gantryMove.DeviceId, intermediatePosition);
+                                await executor(intermediatePosition);
+                            }
+                        }
+                    }).ToList();
 
-                    // Wait for all gantry movements to complete
                     if (gantryTasks.Any())
                     {
                         await Task.WhenAll(gantryTasks);
@@ -111,7 +130,6 @@ namespace UaaSolutionWpf.Motion
                 throw;
             }
         }
-
         private async Task ExecuteHexapodMove(HexapodMovementService service, int hexapodId, string targetPosition)
         {
             try

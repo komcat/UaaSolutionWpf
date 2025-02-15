@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using System;
 using System.Threading.Tasks;
+using UaaSolutionWpf.Motion;
 
 namespace UaaSolutionWpf.Services
 {
@@ -30,55 +31,44 @@ namespace UaaSolutionWpf.Services
             {
                 _logger.Information("Moving {HexapodType} to position {Position}", _hexapodType, positionName);
 
-                // Get hexapod ID from type
-                int hexapodId = _hexapodType switch
-                {
-                    HexapodConnectionManager.HexapodType.Left => 0,
-                    HexapodConnectionManager.HexapodType.Bottom => 1,
-                    HexapodConnectionManager.HexapodType.Right => 2,
-                    _ => throw new ArgumentException($"Invalid hexapod type: {_hexapodType}")
-                };
-
                 // Get target position coordinates
-                if (!_positionRegistry.TryGetHexapodPosition(hexapodId, positionName, out var targetPos))
+                if (!_positionRegistry.TryGetHexapodPosition(GetHexapodId(), positionName, out var targetPos))
                 {
                     throw new InvalidOperationException($"Position {positionName} not found for hexapod {_hexapodType}");
                 }
 
                 var controller = _connectionManager.GetHexapodController(_hexapodType);
-                if (controller == null)
-                {
-                    throw new InvalidOperationException($"Controller not found for hexapod {_hexapodType}");
-                }
-
-                if (!controller.IsConnected())
+                if (controller == null || !controller.IsConnected())
                 {
                     throw new InvalidOperationException($"Hexapod {_hexapodType} is not connected");
                 }
 
-                // Convert to position array
-                double[] position = new double[]
+                // Convert position to array
+                double[] targetArray = new double[]
                 {
-                    targetPos.X,
-                    targetPos.Y,
-                    targetPos.Z,
-                    targetPos.U,
-                    targetPos.V,
-                    targetPos.W
+            targetPos.X,
+            targetPos.Y,
+            targetPos.Z,
+            targetPos.U,
+            targetPos.V,
+            targetPos.W
                 };
 
-                // Move to absolute position
-                await Task.Run(() => controller.MoveToAbsoluteTarget(position));
+                // Move to position and wait for completion
+                await Task.Run(async () =>
+                {
+                    await controller.MoveToAbsoluteTarget(targetArray);
+                    await controller.WaitForMotionDone();
+                });
 
-                _logger.Information("Successfully moved {HexapodType} to position {Position}", _hexapodType, positionName);
+                _logger.Information("Completed move of {HexapodType} to {Position}", _hexapodType, positionName);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to move {HexapodType} to position {Position}", _hexapodType, positionName);
+                _logger.Error(ex, "Error moving {HexapodType} to {Position}", _hexapodType, positionName);
                 throw;
             }
         }
-
         public async Task MoveRelativeAsync(Axis axis, double distance)
         {
             try
@@ -114,7 +104,16 @@ namespace UaaSolutionWpf.Services
                 throw;
             }
         }
-
+        private int GetHexapodId()
+        {
+            return _hexapodType switch
+            {
+                HexapodConnectionManager.HexapodType.Left => 0,
+                HexapodConnectionManager.HexapodType.Bottom => 1,
+                HexapodConnectionManager.HexapodType.Right => 2,
+                _ => throw new ArgumentException($"Invalid hexapod type: {_hexapodType}")
+            };
+        }
         public async Task<double[]> GetCurrentPositionAsync()
         {
             try
@@ -208,6 +207,21 @@ namespace UaaSolutionWpf.Services
             U = 3,
             V = 4,
             W = 5
+        }
+    }
+    public static class PositionExtensions
+    {
+        public static double[] ToDoubleArray(this Position position)
+        {
+            return new double[]
+            {
+            position.X,
+            position.Y,
+            position.Z,
+            position.U,
+            position.V,
+            position.W
+            };
         }
     }
 }

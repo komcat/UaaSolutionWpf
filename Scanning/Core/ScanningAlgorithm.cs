@@ -22,10 +22,19 @@ namespace UaaSolutionWpf.Scanning.Core
         private bool _isHaltRequested;
         private CancellationTokenSource _cancellationSource;
         private ScanDataCollector _dataCollector;
+        private GlobalPeakData _globalPeak;
+        private BaselineData _baseline;
+
+        // Constants
+        private const int MOTION_SETTLE_TIME_MS = 250;
+        private const int MAX_CONSECUTIVE_DECREASES = 3;
+        private readonly string[] SCAN_AXES = { "X", "Y", "Z" };
 
         public event EventHandler<ScanProgressEventArgs> ProgressUpdated;
         public event EventHandler<ScanCompletedEventArgs> ScanCompleted;
         public event EventHandler<ScanErrorEventArgs> ErrorOccurred;
+        public event EventHandler<(double Value, Position Position)> DataPointAcquired;
+        public event EventHandler<GlobalPeakData> GlobalPeakUpdated;
 
         public ScanningAlgorithm(
             HexapodMovementService movementService,
@@ -59,9 +68,15 @@ namespace UaaSolutionWpf.Scanning.Core
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken, _cancellationSource.Token);
 
-                await InitializeScan(linkedTokenSource.Token);
+                await RecordBaseline(linkedTokenSource.Token);
                 await ExecuteScanSequence(linkedTokenSource.Token);
-                await FinalizeScan(linkedTokenSource.Token);
+
+                // Final return to global peak position
+                if (_globalPeak != null && !_isHaltRequested)
+                {
+                    await MoveToPosition(_globalPeak.Position, linkedTokenSource.Token);
+                    _logger.Information($"Scan completed. Returned to global peak position with value: {_globalPeak.Value:F6}");
+                }
 
                 OnScanCompleted(new ScanCompletedEventArgs(_dataCollector.GetResults()));
             }
@@ -82,53 +97,78 @@ namespace UaaSolutionWpf.Scanning.Core
                 await Cleanup();
             }
         }
-
-        private async Task InitializeScan(CancellationToken token)
+        // Add this helper method to the class
+        private Position ConvertToPosition(DevicePosition devicePosition)
         {
-            _logger.Information("Initializing scan for device {DeviceId}", _deviceId);
+            return new Position
+            {
+                X = devicePosition.X,
+                Y = devicePosition.Y,
+                Z = devicePosition.Z,
+                U = devicePosition.U,
+                V = devicePosition.V,
+                W = devicePosition.W
+            };
+        }
+        private async Task RecordBaseline(CancellationToken token)
+        {
+            _logger.Information("Recording baseline for device {DeviceId}", _deviceId);
 
-            // Record baseline measurement
-            var baselinePosition = await _positionMonitor.GetCurrentPosition(_deviceId);
-            var baselineValue = await GetMeasurement(token);
+            var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            var currentValue = await GetMeasurement(token);
 
-            _dataCollector.RecordBaseline(baselineValue, baselinePosition);
+            _baseline = new BaselineData
+            {
+                Value = currentValue,
+                Position = ConvertToPosition(currentPosition),  // Convert DevicePosition to Position
+                Timestamp = DateTime.Now
+            };
 
-            OnProgressUpdated(new ScanProgressEventArgs(0, "Scan initialized"));
+            // Initialize global peak with baseline
+            _globalPeak = new GlobalPeakData
+            {
+                Value = currentValue,
+                Position = ConvertToPosition(currentPosition),  // Convert DevicePosition to Position
+                Timestamp = DateTime.Now,
+                Context = "Initial Position"
+            };
+
+            _dataCollector.RecordBaseline(currentValue, currentPosition);
+            _logger.Information($"Baseline recorded: Value={currentValue:F6} at position {currentPosition}");
+            OnProgressUpdated(new ScanProgressEventArgs(0, "Baseline recorded"));
         }
 
         private async Task ExecuteScanSequence(CancellationToken token)
         {
-            int totalSteps = _parameters.AxesToScan.Length * _parameters.StepSizes.Length;
-            int currentStep = 0;
-
             foreach (var stepSize in _parameters.StepSizes)
             {
                 if (!_isScanningActive || token.IsCancellationRequested) break;
 
-                foreach (var axis in _parameters.AxesToScan)
+                foreach (var axis in SCAN_AXES)
                 {
                     if (!_isScanningActive || token.IsCancellationRequested) break;
 
-                    await ScanAxis(axis, stepSize, token);
-                    currentStep++;
+                    _logger.Information($"Starting {axis} axis scan with step size {stepSize * 1000:F3} microns");
 
-                    double progress = (double)currentStep / totalSteps;
+                    var currentStep = Array.IndexOf(SCAN_AXES, axis) +
+                                    Array.IndexOf(_parameters.StepSizes, stepSize) * SCAN_AXES.Length;
+                    var progress = (double)currentStep / (SCAN_AXES.Length * _parameters.StepSizes.Length);
+
                     OnProgressUpdated(new ScanProgressEventArgs(
                         progress,
-                        $"Completed {axis} axis scan with {stepSize * 1000:F3} micron steps"));
+                        $"Scanning {axis} axis with {stepSize * 1000:F3} micron steps"));
 
-                    await ReturnToOptimalPosition(token);
+                    await ScanAxis(axis, stepSize, token);
+                    await Task.Delay(100, token);
+                    await ReturnToGlobalPeakIfBetter(token);
                 }
             }
         }
 
         private async Task ScanAxis(string axis, double stepSize, CancellationToken token)
         {
-            _logger.Information("Starting {Axis} axis scan with step size {StepSize:F3} microns",
-                axis, stepSize * 1000);
-
             // Scan in positive direction
-            await ScanDirection(axis, stepSize, 1, token);
+            var (positiveMaxValue, positiveMaxPosition) = await ScanDirection(axis, stepSize, 1, token);
 
             if (token.IsCancellationRequested) return;
 
@@ -139,34 +179,83 @@ namespace UaaSolutionWpf.Scanning.Core
             if (token.IsCancellationRequested) return;
 
             // Scan in negative direction
-            await ScanDirection(axis, stepSize, -1, token);
-        }
+            var (negativeMaxValue, negativeMaxPosition) = await ScanDirection(axis, stepSize, -1, token);
 
-        private async Task ScanDirection(string axis, double stepSize, int direction, CancellationToken token)
+            // Update global peak if necessary
+            UpdateGlobalPeak(
+                Math.Max(positiveMaxValue, negativeMaxValue),
+                positiveMaxValue > negativeMaxValue ? positiveMaxPosition : negativeMaxPosition,
+                $"{axis} axis scan with {stepSize * 1000:F3} micron steps"
+            );
+        }
+        // Add this helper method to get position value for specific axis
+        private double GetAxisPosition(DevicePosition position, string axis)
         {
+            return axis.ToUpper() switch
+            {
+                "X" => position.X,
+                "Y" => position.Y,
+                "Z" => position.Z,
+                _ => throw new ArgumentException($"Invalid axis: {axis}")
+            };
+        }
+        private async Task<(double maxValue, Position maxPosition)> ScanDirection(
+            string axis, double stepSize, int direction, CancellationToken token)
+        {
+            var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            var maxValue = await GetMeasurement(token);
+            var maxPosition = ConvertToPosition(currentPosition);
+            var previousValue = maxValue;
             int consecutiveDecreases = 0;
-            double previousValue = await GetMeasurement(token);
             double totalDistance = 0;
 
             while (!token.IsCancellationRequested &&
                    _isScanningActive &&
-                   consecutiveDecreases < _parameters.ConsecutiveDecreasesLimit &&
+                   consecutiveDecreases < MAX_CONSECUTIVE_DECREASES &&
                    totalDistance < _parameters.MaxTotalDistance)
             {
-                await MoveSingleStep(axis, stepSize * direction, token);
+                var newPosition = ConvertToPosition(currentPosition);
+
+                // Update specific axis
+                switch (axis.ToUpper())
+                {
+                    case "X":
+                        newPosition.X += direction * stepSize;
+                        break;
+                    case "Y":
+                        newPosition.Y += direction * stepSize;
+                        break;
+                    case "Z":
+                        newPosition.Z += direction * stepSize;
+                        break;
+                    default:
+                        throw new ArgumentException($"Invalid axis: {axis}");
+                }
+
+                await MoveToPosition(newPosition, token);
+                await Task.Delay(MOTION_SETTLE_TIME_MS, token);
+
+                currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+                var currentValue = await GetMeasurement(token);
                 totalDistance += stepSize;
 
-                await Task.Delay(_parameters.MotionSettleTimeMs, token);
-
-                var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
-                var currentValue = await GetMeasurement(token);
+                // Calculate gradient for monitoring
+                double gradient = (currentValue - previousValue) / stepSize;
 
                 _dataCollector.RecordMeasurement(currentValue, currentPosition, axis, stepSize, direction);
+                DataPointAcquired?.Invoke(this, (currentValue, ConvertToPosition(currentPosition)));
 
-                if (currentValue > _dataCollector.GetPeakValue())
+                string logMessage = $"{axis} {(direction > 0 ? "+" : "-")}: " +
+                $"Pos={GetAxisPosition(currentPosition, axis):F6}mm, Value={currentValue:F6}";
+
+                _logger.Information(logMessage);
+
+                if (currentValue > maxValue)
                 {
+                    maxValue = currentValue;
+                    maxPosition = ConvertToPosition(currentPosition);
                     consecutiveDecreases = 0;
-                    _logger.Information("New peak found: {Value:F6}", currentValue);
+                    _logger.Information($"{logMessage} - New Local Maximum");
                 }
                 else
                 {
@@ -175,21 +264,41 @@ namespace UaaSolutionWpf.Scanning.Core
 
                 previousValue = currentValue;
             }
+
+            return (maxValue, maxPosition);
+        }
+        private async Task ReturnToGlobalPeakIfBetter(CancellationToken token)
+        {
+            if (_globalPeak == null) return;
+
+            double currentValue = await GetMeasurement(token);
+            double improvement = _globalPeak.Value - currentValue;
+            double relativeImprovement = improvement / currentValue;
+
+            if (relativeImprovement > _parameters.ImprovementThreshold)
+            {
+                _logger.Information($"Returning to better position (improvement: {relativeImprovement:P2})");
+                await MoveToPosition(_globalPeak.Position, token);
+
+                double verificationValue = await GetMeasurement(token);
+                _logger.Information($"Position verified with value: {verificationValue:F6}");
+            }
         }
 
-        private async Task ReturnToOptimalPosition(CancellationToken token)
+        private void UpdateGlobalPeak(double value, Position position, string context)
         {
-            var optimalPosition = _dataCollector.GetPeakPosition();
-            if (optimalPosition == null) return;
-
-            var currentValue = await GetMeasurement(token);
-            var peakValue = _dataCollector.GetPeakValue();
-
-            double improvement = (peakValue - currentValue) / currentValue;
-            if (improvement > _parameters.ImprovementThreshold)
+            if (_globalPeak == null || value > _globalPeak.Value)
             {
-                _logger.Information("Returning to optimal position (improvement: {Improvement:P2})", improvement);
-                await MoveToPosition(optimalPosition, token);
+                _globalPeak = new GlobalPeakData
+                {
+                    Value = value,
+                    Position = position,
+                    Timestamp = DateTime.Now,
+                    Context = context
+                };
+
+                GlobalPeakUpdated?.Invoke(this, _globalPeak);
+                _logger.Information($"New global peak found: Value={value:F6} at position {position}, Context: {context}");
             }
         }
 
@@ -204,18 +313,16 @@ namespace UaaSolutionWpf.Scanning.Core
                 {
                     if (_dataManager.TryGetChannelValue(_dataChannel, out var measurement))
                     {
-                        // Add explicit parsing with error handling
                         if (measurement == null)
                         {
-                            _logger?.Warning("Measurement is null for channel {Channel}", _dataChannel);
+                            _logger.Warning("Measurement is null for channel {Channel}", _dataChannel);
                             await Task.Delay(10, linkedCts.Token);
                             continue;
                         }
 
-                        // Ensure the value can be parsed
                         if (!double.TryParse(measurement.Value.ToString(), out double parsedValue))
                         {
-                            _logger?.Error("Cannot parse measurement value: {Value}", measurement.Value);
+                            _logger.Error("Cannot parse measurement value: {Value}", measurement.Value);
                             throw new FormatException($"Cannot convert measurement value '{measurement.Value}' to number");
                         }
 
@@ -231,184 +338,37 @@ namespace UaaSolutionWpf.Scanning.Core
                 throw new TimeoutException($"Measurement timeout after {_parameters.MeasurementTimeout.TotalSeconds} seconds");
             }
         }
-        private async Task MoveSingleStep(string axis, double step, CancellationToken token)
-        {
-            switch (axis.ToUpper())
-            {
-                case "X":
-                    await _movementService.MoveRelativeAsync(HexapodMovementService.Axis.X, step);
-                    break;
-                case "Y":
-                    await _movementService.MoveRelativeAsync(HexapodMovementService.Axis.Y, step);
-                    break;
-                case "Z":
-                    await _movementService.MoveRelativeAsync(HexapodMovementService.Axis.Z, step);
-                    break;
-                default:
-                    throw new ArgumentException($"Invalid axis: {axis}");
-            }
-        }
 
         private async Task MoveToPosition(Position position, CancellationToken token)
         {
-            var coordinates = new[]
+            await _movementService.MoveToAbsolutePosition(new[]
             {
                 position.X, position.Y, position.Z,
                 position.U, position.V, position.W
-            };
-
-            await _movementService.MoveToAbsolutePosition(coordinates);
+            });
         }
-        private async Task FinalizeScan(CancellationToken token)
+
+        private int GetAxisIndex(string axis) => axis.ToUpper() switch
         {
-            try
-            {
-                _logger.Information("Finalizing scan for device {DeviceId}", _deviceId);
+            "X" => 0,
+            "Y" => 1,
+            "Z" => 2,
+            _ => throw new ArgumentException($"Invalid axis: {axis}")
+        };
 
-                // Return to best position found during scan
-                var peakPosition = _dataCollector.GetPeakPosition();
-                if (peakPosition != null)
-                {
-                    _logger.Information("Moving to optimal position found during scan");
-                    await MoveToPosition(peakPosition, token);
-                    await Task.Delay(_parameters.MotionSettleTimeMs, token);
-
-                    // Verify final position
-                    var finalValue = await GetMeasurement(token);
-                    var peakValue = _dataCollector.GetPeakValue();
-
-                    double finalImprovement = (finalValue - _dataCollector.GetBaselineValue()) / _dataCollector.GetBaselineValue();
-
-                    _logger.Information(
-                        "Scan completed - Initial: {BaselineValue:E3}, Peak: {PeakValue:E3}, Final: {FinalValue:E3}, " +
-                        "Total Improvement: {Improvement:P2}",
-                        _dataCollector.GetBaselineValue(),
-                        peakValue,
-                        finalValue,
-                        finalImprovement
-                    );
-                }
-                else
-                {
-                    _logger.Warning("No peak position found during scan");
-                }
-
-                // Save scan results
-                _dataCollector.SaveResults();
-
-                // Generate final scan report
-                var report = GenerateScanReport();
-                _logger.Information("Scan Summary:\n{Report}", report);
-
-                OnProgressUpdated(new ScanProgressEventArgs(1.0, "Scan finalized"));
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error during scan finalization");
-                throw;
-            }
-        }
-
-        private string GenerateScanReport()
-        {
-            try
-            {
-                var results = _dataCollector.GetResults();
-
-                // Add null checks
-                if (results == null)
-                {
-                    _logger.Warning("Scan results are null");
-                    return "No scan results available";
-                }
-
-                var stats = results.Statistics;
-
-                // Add null checks for statistics
-                if (stats == null)
-                {
-                    _logger.Warning("Scan statistics are null");
-                    return "No scan statistics available";
-                }
-
-                // Use string interpolation with null checks and default values
-                return $"""
-                Scan Report:
-                =============
-                Device: {results.DeviceId ?? "Unknown"}
-                Duration: {(stats.TotalDuration != null ? stats.TotalDuration.ToString(@"hh\:mm\:ss") : "N/A")}
-                Total Measurements: {stats.TotalMeasurements}
-        
-                Results:
-                --------
-                Baseline Value: {(results.Baseline?.Value.ToString("E3") ?? "N/A")}
-                Peak Value: {(results.Peak?.Value.ToString("E3") ?? "N/A")}
-                Improvement: {SafeCalculateImprovement(results)}
-        
-                Statistics:
-                -----------
-                Min Value: {stats.MinValue.ToString("E3")}
-                Max Value: {stats.MaxValue.ToString("E3")}
-                Average: {stats.AverageValue.ToString("E3")}
-                Std Dev: {stats.StandardDeviation.ToString("E3")}
-        
-                Measurements per Axis:
-                --------------------
-                {(stats.MeasurementsPerAxis != null ?
-                            string.Join("\n", stats.MeasurementsPerAxis.Select(x => $"{x.Key}: {x.Value}")) :
-                            "No axis measurements")}
-                """;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error generating scan report");
-
-                // Provide a fallback report with minimal information
-                return $"""
-        Scan Report Generation Failed
-        =============================
-        Error: {ex.Message}
-        
-        Additional Details:
-        -------------------
-        Exception Type: {ex.GetType().Name}
-        Stack Trace: {ex.StackTrace}
-        """;
-            }
-        }
-
-        private string SafeCalculateImprovement(ScanResults results)
-        {
-            try
-            {
-                if (results?.Baseline == null || results.Peak == null || results.Baseline.Value == 0)
-                {
-                    return "N/A";
-                }
-
-                double improvement = (results.Peak.Value - results.Baseline.Value) / results.Baseline.Value;
-                return improvement.ToString("P2");
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error calculating improvement percentage");
-                return "N/A";
-            }
-        }
         private async Task HandleScanCancellation()
         {
             try
             {
-                var optimalPosition = _dataCollector.GetPeakPosition();
-                if (optimalPosition != null)
+                if (_globalPeak != null)
                 {
-                    _logger.Information("Returning to optimal position after cancellation");
-                    await MoveToPosition(optimalPosition, CancellationToken.None);
+                    _logger.Information("Returning to global peak position after cancellation");
+                    await MoveToPosition(_globalPeak.Position, CancellationToken.None);
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error returning to optimal position after cancellation");
+                _logger.Error(ex, "Error returning to global peak position after cancellation");
             }
         }
 
@@ -454,6 +414,21 @@ namespace UaaSolutionWpf.Scanning.Core
             _cancellationSource?.Dispose();
             _dataCollector?.Dispose();
         }
+    }
+
+    public class GlobalPeakData
+    {
+        public double Value { get; set; }
+        public Position Position { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string Context { get; set; }
+    }
+
+    public class BaselineData
+    {
+        public double Value { get; set; }
+        public Position Position { get; set; }
+        public DateTime Timestamp { get; set; }
     }
 
     public class ScanProgressEventArgs : EventArgs

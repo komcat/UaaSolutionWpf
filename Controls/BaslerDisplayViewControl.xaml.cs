@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Serilog;
 
 namespace UaaSolutionWpf.Controls
@@ -36,10 +37,39 @@ namespace UaaSolutionWpf.Controls
             // Initialize camera manager
             cameraManager = new CameraManagerWpf(cameraDisplay, _logger);
 
+            // Register for image size changes
+            cameraDisplay.SizeChanged += CameraDisplay_SizeChanged;
+
             // Disable controls initially
             btnStartLive.IsEnabled = false;
             btnStopLive.IsEnabled = false;
             zoomSlider.IsEnabled = false;
+        }
+
+        private void CameraDisplay_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (cameraOverlay != null)
+            {
+                // Update overlay to match image size
+                cameraOverlay.Width = cameraDisplay.ActualWidth;
+                cameraOverlay.Height = cameraDisplay.ActualHeight;
+
+                // Update the image container if needed
+                if (cameraDisplay.Source is BitmapSource bitmapSource)
+                {
+                    imageContainer.Width = bitmapSource.PixelWidth;
+                    imageContainer.Height = bitmapSource.PixelHeight;
+                }
+            }
+        }
+
+        public double GetCurrentScaleFactor()
+        {
+            if (cameraDisplay.Source is BitmapSource bitmapSource && bitmapSource.PixelWidth > 0)
+            {
+                return cameraDisplay.ActualWidth / bitmapSource.PixelWidth;
+            }
+            return 1.0;
         }
 
         private void btnConnect_Click(object sender, RoutedEventArgs e)
@@ -134,6 +164,12 @@ namespace UaaSolutionWpf.Controls
             if (cameraManager != null)
             {
                 cameraManager.SetZoom((float)e.NewValue);
+
+                // Update overlay scale to match image zoom
+                if (cameraOverlay != null)
+                {
+                    cameraOverlay.RenderTransform = cameraDisplay.RenderTransform;
+                }
             }
         }
 

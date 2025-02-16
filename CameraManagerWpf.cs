@@ -85,7 +85,7 @@ namespace UaaSolutionWpf
 
         public event EventHandler<Point> ImageClicked;
         public event EventHandler<string> StatsUpdated;
-
+       
         public CameraManagerWpf(Image imageControl, ILogger logger)
         {
             this.imageControl = imageControl ?? throw new ArgumentNullException(nameof(imageControl));

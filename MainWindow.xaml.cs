@@ -472,13 +472,17 @@ namespace UaaSolutionWpf
             InitializeSequenceControl();
 
             //set up gripper controls
-            LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
-            RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
+            //LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
+            //RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
+
+            LeftGripperToggleSwitch.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
+            RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
 
             // For example, to use it with the dispenser shot
             UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
 
             InitializeDeviceMonitors();
+            InitializePneumaticSlideControlItems();
         }
 
         private void InitializeDeviceMonitors()
@@ -753,6 +757,25 @@ namespace UaaSolutionWpf
             else
             {
                 _logger.Error($"Error: {analysis.Error}");
+            }
+        }
+
+        private void InitializePneumaticSlideControlItems()
+        {
+            if (PneumaticSlideControl != null && _ioManager != null)
+            {
+                // Initialize the control with IOManager and logger
+                PneumaticSlideControl.Initialize(_ioManager, _logger);
+
+                // Subscribe to IO state changes
+                _ioManager.IOStateChanged += (s, e) =>
+                {
+                    // Only handle input state changes for pneumatic sensors
+                    if (e.IsInput)
+                    {
+                        PneumaticSlideControl.UpdateSensorState(e.PinName, e.State);
+                    }
+                };
             }
         }
 

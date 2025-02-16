@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-02-15T12:00:00Z"
+  },
+  "slides": [
+    {
+      "id": "uv_head",
+      "name": "UV Head",
+      "device": "IOTop",
+      "controls": {
+        "output": {
+          "device": "IOBottom",
+          "pinName": "UV_Head",
+          "setToMoveUp": true,
+          "clearToMoveDown": true
+        },
+        "sensors": {
+          "device": "IOTop",
+          "upSensor": "UV_Head_Up",
+          "downSensor": "UV_Head_Down"
+        }
+      },
+      "safetyChecks": {
+        "requireSensorConfirmation": true,
+        "timeoutMs": 5000
+      }
+    },
+    {
+      "id": "dispenser_head",
+      "name": "Dispenser Head",
+      "device": "IOTop",
+      "controls": {
+        "output": {
+          "device": "IOBottom",
+          "pinName": "Dispenser_Head",
+          "setToMoveUp": true,
+          "clearToMoveDown": true
+        },
+        "sensors": {
+          "device": "IOTop",
+          "upSensor": "Dispenser_Head_Up",
+          "downSensor": "Dispenser_Head_Down"
+        }
+      },
+      "safetyChecks": {
+        "requireSensorConfirmation": true,
+        "timeoutMs": 5000
+      }
+    },
+    {
+      "id": "pickup_tool",
+      "name": "Pick Up Tool",
+      "device": "IOTop",
+      "controls": {
+        "output": {
+          "device": "IOBottom",
+          "pinName": "Pick_Up_Tool",
+          "setToMoveUp": true,
+          "clearToMoveDown": true
+        },
+        "sensors": {
+          "device": "IOTop",
+          "upSensor": "Pick_Up_Tool_Up",
+          "downSensor": "Pick_Up_Tool_Down"
+        }
+      },
+      "safetyChecks": {
+        "requireSensorConfirmation": true,
+        "timeoutMs": 5000
+      }
+    }
+  ],
+  "globalSettings": {
+    "defaultTimeoutMs": 5000,
+    "retryAttempts": 3,
+    "retryDelayMs": 1000
+  }
+}

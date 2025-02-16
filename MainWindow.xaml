@@ -36,7 +36,8 @@
         <StackPanel Grid.Column="0" Grid.Row="1" Grid.RowSpan="5" Width="250">
 
 
-            <controls:PneumaticSlideControl x:Name="PneumaticSlideControl" />
+            <!--<controls:PneumaticSlideControl x:Name="PneumaticSlideControl" />-->
+            <controls:PneumaticSlideControlItem x:Name="PneumaticSlideControl" />
             <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2" />
         </StackPanel>
 
@@ -56,8 +57,14 @@
                         MaxWidth="250">
                 <!-- Monitors will be added here programmatically -->
             </WrapPanel>
-            <controls:GripperControl x:Name="LeftGripperControl" Margin="2"/>
-            <controls:GripperControl x:Name="RightGripperControl" Margin="2"/>
+
+            <!--<controls:GripperControl x:Name="LeftGripperControl" Margin="2"/>-->
+            <!--<controls:GripperControl x:Name="RightGripperControl" Margin="2"/>-->
+
+            <controls:ToggleSwitch x:Name="LeftGripperToggleSwitch" Margin="2"/>
+            <controls:ToggleSwitch x:Name="RightGripperToggleSwitch" Margin="2"/>
+
+
             <controls:TriggerControl x:Name="UvPlc1TriggerControl"  />
             <controls:VacBaseControl x:Name="VacBaseControl"/>
         </StackPanel>

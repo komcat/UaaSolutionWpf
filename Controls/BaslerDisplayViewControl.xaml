@@ -27,6 +27,11 @@
             <Slider x:Name="zoomSlider" Minimum="1" Maximum="4" Value="1" 
                     TickFrequency="0.1" IsSnapToTickEnabled="True"
                     ValueChanged="zoomSlider_ValueChanged"/>
+            <Separator Margin="0,10"/>
+            <CheckBox x:Name="chkShowOverlay" Content="Show Overlay" 
+                     IsChecked="True" Margin="0,5"
+                     Checked="chkShowOverlay_CheckedChanged"
+                     Unchecked="chkShowOverlay_CheckedChanged"/>
         </StackPanel>
 
         <!-- Camera Display with Overlay -->

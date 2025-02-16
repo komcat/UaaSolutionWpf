@@ -6,7 +6,7 @@ using Serilog;
 
 namespace UaaSolutionWpf.Controls
 {
-    public partial class BaslerDisplayViewControl : UserControl
+    public partial class BaslerDisplayViewControl : UserControl, IDisposable
     {
         private CameraManagerWpf cameraManager;
         private readonly ILogger _logger;
@@ -53,6 +53,13 @@ namespace UaaSolutionWpf.Controls
                 // Update overlay to match image size
                 cameraOverlay.Width = cameraDisplay.ActualWidth;
                 cameraOverlay.Height = cameraDisplay.ActualHeight;
+
+                // Ensure overlay visibility matches checkbox state
+                if (chkShowOverlay != null)
+                {
+                    cameraOverlay.Visibility = chkShowOverlay.IsChecked == true ?
+                        Visibility.Visible : Visibility.Collapsed;
+                }
 
                 // Update the image container if needed
                 if (cameraDisplay.Source is BitmapSource bitmapSource)
@@ -170,6 +177,17 @@ namespace UaaSolutionWpf.Controls
                 {
                     cameraOverlay.RenderTransform = cameraDisplay.RenderTransform;
                 }
+            }
+        }
+
+        private void chkShowOverlay_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (cameraOverlay != null)
+            {
+                cameraOverlay.Visibility = chkShowOverlay.IsChecked == true ?
+                    Visibility.Visible : Visibility.Collapsed;
+                _logger.Information("Overlay visibility changed to: {State}",
+                    chkShowOverlay.IsChecked == true ? "Visible" : "Hidden");
             }
         }
 

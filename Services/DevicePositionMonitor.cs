@@ -78,6 +78,7 @@ namespace UaaSolutionWpf.Services
         private readonly AcsGantryConnectionManager _gantryManager;
         private readonly PositionRegistry _positionRegistry;
         private bool _simulationMode = false;
+        public bool debugMode = false;
 
         private const double POSITION_TOLERANCE = 0.1; // 0.1mm tolerance for position matching
 
@@ -238,10 +239,12 @@ namespace UaaSolutionWpf.Services
                 }
             }
 
-            _logger.Debug(
-                "Hexapod {HexapodId} closest to position {Position} (distance: {Distance:F3}mm)",
-                hexapodId, closestPosition, minDistance
-            );
+
+            if (debugMode)
+                _logger.Debug(
+                    "Hexapod {HexapodId} closest to position {Position} (distance: {Distance:F3}mm)",
+                    hexapodId, closestPosition, minDistance
+                );
 
             return closestPosition;
         }
@@ -266,7 +269,8 @@ namespace UaaSolutionWpf.Services
                 }
             }
 
-            _logger.Debug(
+            if (debugMode)
+                _logger.Debug(
                 "Gantry closest to position {Position} (distance: {Distance:F3}mm)",
                 closestPosition, minDistance
             );

@@ -60,6 +60,7 @@ namespace UaaSolutionWpf
 
         private RealTimeDataManager _realTimeDataManager;
         private MotionCoordinator _motionCoordinator;
+        private CameraGantryService _cameraGantryService;
         public MainWindow()
         {
             InitializeComponent();
@@ -463,28 +464,52 @@ namespace UaaSolutionWpf
             //await InitializeIOMonitorControlsAsync();
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
+            Log.Information("Initialize TEC controller UI");
             InitializeTECController(); // Add this line
+            Log.Information("Initialize Pneumatic Slides UI");
             InitializePneumaticSlideControl();
+            Log.Information("Initialize Sesnor Channel UI");
             InitializeSensorChannel();
+            Log.Information("Initialize Movement Control UI");
             InitializeDirectMovementControl();
+            Log.Information("Initialize Motion Coordiantor UI");
             InitializeMotionCoordinator();
+            Log.Information("Initialize Auto Alignment UI");
             InitializeAutoAlignmentControl();
+            Log.Information("Initialize Sequences motion UI");
             InitializeSequenceControl();
 
             //set up gripper controls
             //LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
             //RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
-
+            Log.Information("Initialize toggle output UI");
             LeftGripperToggleSwitch.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
             RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
 
             // For example, to use it with the dispenser shot
             UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
 
+            Log.Information("Initialize Device Positons Monitor UI");
             InitializeDeviceMonitors();
-            InitializePneumaticSlideControlItems();
-        }
 
+            Log.Information("Initialize Pneumatic Slides Control UI");
+            InitializePneumaticSlideControlItems();
+
+            Log.Information("Initialize Camera Gantry Service UI");
+            InitializeCameraGantryService();
+        }
+        
+
+        private void InitializeCameraGantryService()
+        {
+            _cameraGantryService = new CameraGantryService(gantryMovementService, _logger);
+
+            // Initialize the overlay control with the service
+            if (cameraDisplayViewControl?.cameraOverlay != null)
+            {
+                cameraDisplayViewControl.cameraOverlay.Initialize(_cameraGantryService, _logger);
+            }
+        }
         private void InitializeDeviceMonitors()
         {
             // Read configuration

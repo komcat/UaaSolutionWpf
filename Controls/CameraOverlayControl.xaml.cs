@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using UaaSolutionWpf.Services;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -14,6 +16,10 @@ namespace UaaSolutionWpf.Controls
         private Path _mouseCrosshair;
         private TextBlock _coordinateDisplay;
         private Point _imageCenter;
+        private CameraGantryService _gantryService;
+        private ILogger _logger;
+        private bool _isEnabled = true;
+        public event EventHandler<ClickLocationEventArgs> LocationClicked;
 
         public CameraOverlayControl()
         {
@@ -25,6 +31,88 @@ namespace UaaSolutionWpf.Controls
             _overlayCanvas.MouseLeave += OnMouseLeave;
             _overlayCanvas.MouseDown += OnMouseDown;
             SizeChanged += OnSizeChanged;
+        }
+
+        public void Initialize(CameraGantryService gantryService, ILogger logger)
+        {
+            _gantryService = gantryService ?? throw new ArgumentNullException(nameof(gantryService));
+            _logger = logger?.ForContext<CameraOverlayControl>();
+
+            // Subscribe to gantry service events
+            _gantryService.MovementStarted += OnGantryMovementStarted;
+            _gantryService.MovementCompleted += OnGantryMovementCompleted;
+        }
+
+        private void OnGantryMovementStarted(object sender, MovementStartedEventArgs e)
+        {
+            _isEnabled = false;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Visual feedback that movement is in progress
+                _overlayCanvas.Cursor = Cursors.Wait;
+                _coordinateDisplay.Text = $"Moving...\nX: {e.DeltaXmm:F3}mm\nY: {e.DeltaYmm:F3}mm";
+                _coordinateDisplay.Visibility = Visibility.Visible;
+            });
+        }
+
+        private void OnGantryMovementCompleted(object sender, MovementCompletedEventArgs e)
+        {
+            _isEnabled = true;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _overlayCanvas.Cursor = Cursors.Cross;
+                if (!e.Success)
+                {
+                    _coordinateDisplay.Text = "Movement failed!";
+                    _coordinateDisplay.Foreground = Brushes.Red;
+                    _logger?.Error("Gantry movement failed: {Error}", e.ErrorMessage);
+                }
+                else
+                {
+                    _coordinateDisplay.Visibility = Visibility.Collapsed;
+                    _coordinateDisplay.Foreground = Brushes.White;
+                }
+            });
+        }
+
+        private async void OnMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isEnabled || _gantryService == null) return;
+
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                Point mousePos = e.GetPosition(_overlayCanvas);
+                double deltaX = mousePos.X - _imageCenter.X;
+                double deltaY = _imageCenter.Y - mousePos.Y; // Invert Y for standard coordinate system
+
+                var args = new ClickLocationEventArgs(mousePos, _imageCenter);
+                LocationClicked?.Invoke(this, args);
+
+                try
+                {
+                    // Get scale factor from parent BaslerDisplayViewControl
+                    var parent = this.Parent;
+                    while (parent != null && !(parent is BaslerDisplayViewControl))
+                    {
+                        parent = LogicalTreeHelper.GetParent(parent);
+                    }
+
+                    if (parent is BaslerDisplayViewControl displayControl)
+                    {
+                        double scaleFactor = displayControl.GetCurrentScaleFactor();
+                        await _gantryService.HandleCameraClick(mousePos, _imageCenter, scaleFactor);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Error(ex, "Error handling camera click");
+                    MessageBox.Show(
+                        $"Error processing click: {ex.Message}",
+                        "Click Processing Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
         }
 
         private void SetupOverlayElements()
@@ -110,18 +198,6 @@ namespace UaaSolutionWpf.Controls
             _coordinateDisplay.Visibility = Visibility.Collapsed;
         }
 
-        private void OnMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
-            {
-                Point mousePos = e.GetPosition(_overlayCanvas);
-                double deltaX = mousePos.X - _imageCenter.X;
-                double deltaY = _imageCenter.Y - mousePos.Y; // Invert Y for standard coordinate system
-
-                // Raise event or update display with clicked coordinates
-                ShowClickedCoordinates(deltaX, deltaY);
-            }
-        }
 
         private void UpdateMouseCrosshair(Point position)
         {
@@ -163,6 +239,18 @@ namespace UaaSolutionWpf.Controls
                 "Coordinate Information",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+        }
+    }
+
+    public class ClickLocationEventArgs : EventArgs
+    {
+        public Point ClickPosition { get; }
+        public Point ImageCenter { get; }
+
+        public ClickLocationEventArgs(Point clickPosition, Point imageCenter)
+        {
+            ClickPosition = clickPosition;
+            ImageCenter = imageCenter;
         }
     }
 }

@@ -51,7 +51,11 @@
 
 
         <StackPanel Margin="2" Grid.Column="3" Grid.Row="1" >
-            <controls:DevicePositionMonitorControl x:Name="DevicePositionMonitor" />
+            <WrapPanel x:Name="DeviceMonitorsPanel" 
+                       
+                        MaxWidth="250">
+                <!-- Monitors will be added here programmatically -->
+            </WrapPanel>
             <controls:GripperControl x:Name="LeftGripperControl" Margin="2"/>
             <controls:GripperControl x:Name="RightGripperControl" Margin="2"/>
             <controls:TriggerControl x:Name="UvPlc1TriggerControl"  />

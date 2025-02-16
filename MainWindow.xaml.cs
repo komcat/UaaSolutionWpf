@@ -478,16 +478,30 @@ namespace UaaSolutionWpf
             // For example, to use it with the dispenser shot
             UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
 
-            InitializeDevicePositionMonitorControl();
+            InitializeDeviceMonitors();
         }
 
-        private void InitializeDevicePositionMonitorControl()
+        private void InitializeDeviceMonitors()
         {
-            DevicePositionMonitor.Initialize(
-            devicePositionMonitor,  // Your existing DevicePositionMonitor instance
-            _logger                // Your ILogger instance
-        );
+            // Read configuration
+            string configPath = Path.Combine("Config", "motionSystem.json");
+            string json = File.ReadAllText(configPath);
+            var config = JsonConvert.DeserializeObject<MotionSystemConfig>(json);
+
+            // Create monitor for each configured device
+            foreach (var device in config.Devices)
+            {
+                var monitor = new SingleDeviceMonitorControl();
+                monitor.Initialize(
+                    deviceId: device.Id,
+                    deviceName: device.Name,
+                    positionMonitor: devicePositionMonitor,
+                    logger: _logger
+                );
+                DeviceMonitorsPanel.Children.Add(monitor);
+            }
         }
+        
         private void InitializeSequenceControl()
         {
             if (SequenceControl != null)

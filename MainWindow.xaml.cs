@@ -489,7 +489,7 @@ namespace UaaSolutionWpf
             RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
 
             // For example, to use it with the dispenser shot
-            UvPlc1TriggerControl.Configure(_ioManager, "IOBottom", "UV_PLC1", "UV 1");
+            UvPlc1TriggerControl.Configure(_ioManager, _logger,"IOBottom", "UV_PLC1", "UV 1");
 
             Log.Information("Initialize Device Positons Monitor UI");
             InitializeDeviceMonitors();

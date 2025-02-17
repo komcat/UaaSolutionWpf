@@ -11,7 +11,7 @@
             <TextBlock Text="{Binding DeviceName}" FontWeight="Medium"/>
             <TextBlock Text="{Binding CurrentPosition}" 
                       Foreground="#3B82F6"
-                      FontSize="14"
+                      FontSize="32"
                       Margin="0,5,0,0"/>
         </StackPanel>
     </Border>

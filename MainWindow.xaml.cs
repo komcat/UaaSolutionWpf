@@ -61,6 +61,8 @@ namespace UaaSolutionWpf
         private RealTimeDataManager _realTimeDataManager;
         private MotionCoordinator _motionCoordinator;
         private CameraGantryService _cameraGantryService;
+        private PneumaticSlideService slideService;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -495,13 +497,44 @@ namespace UaaSolutionWpf
             Log.Information("Initialize Pneumatic Slides Control UI");
             InitializePneumaticSlideControlItems();
 
-            Log.Information("Initialize Camera Gantry Service UI");
+            
             InitializeCameraGantryService();
+
+            InitializePneumaticSlideService();
+            InitializeSlideTest();
         }
-        
+
+
+        public void InitializeSlideTest()
+        {
+            Log.Information("Initializing Pneumatic Slide Test panel");
+            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "PneumaticSlides.json");
+            slideService = new PneumaticSlideService(configPath, _ioManager, _logger);
+            SlideTestControl.Initialize(slideService, _logger);
+        }
+
+        private void InitializePneumaticSlideService()
+        {
+            Log.Information("Initializing Pneumatic Slide Service");
+            // Initialize the service
+            string configPath = Path.Combine("Config", "PneumaticSlides.json");
+            slideService = new PneumaticSlideService(configPath, _ioManager, _logger);
+
+            // Subscribe to state changes
+            slideService.SlideStateChanged += (sender, e) => {
+                Log.Information(
+                    "Slide {SlideId} changed from {OldState} to {NewState} in {Duration}ms",
+                    e.SlideId,
+                    e.OldState,
+                    e.NewState,
+                    e.TransitionDuration.TotalMilliseconds);
+            };
+
+        }
 
         private void InitializeCameraGantryService()
         {
+            Log.Information("Initialize Camera Gantry Service UI");
             _cameraGantryService = new CameraGantryService(gantryMovementService, _logger);
 
             // Initialize the overlay control with the service

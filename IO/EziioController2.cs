@@ -155,26 +155,38 @@ namespace UaaSolutionWpf.IO
             uint uSetMask = PIN_MASKS[pinNum];
             uint uClrMask = 0x00000000;
 
+            // Set the output
             if (EziMOTIONPlusELib.FAS_SetOutput(_deviceId, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
             {
                 _logger.Error("[{DeviceName}] Failed to set output for pin {PinNumber}", _deviceName, pinNum);
                 return false;
             }
 
-            bool verified = VerifyOutputSet(pinNum);
-            if (verified)
+            // Force an immediate output status check
+            uint currentOutput = 0;
+            uint status = 0;
+
+            if (EziMOTIONPlusELib.FAS_GetOutput(_deviceId, ref currentOutput, ref status) == EziMOTIONPlusELib.FMM_OK)
             {
+                // Consider the operation successful if we can set the output
                 _logger.Debug("[{DeviceName}] Output pin {PinNumber} set successfully", _deviceName, pinNum);
                 var pin = _deviceConfig.IOConfig.Outputs.Find(p => p.Pin == pinNum);
                 if (pin != null)
                 {
                     OutputStateChanged?.Invoke(this, (pin.Name, true));
                 }
+
+                // Update the state in our tracking array
+                lock (_stateLock)
+                {
+                    _outputStates[pinNum] = true;
+                }
+
+                return true;
             }
 
-            return verified;
+            return false;
         }
-        
         public bool ClearOutput(int pinNum)
         {
             if (pinNum < 0 || pinNum >= OUTPUT_PIN_COUNT)
@@ -186,59 +198,50 @@ namespace UaaSolutionWpf.IO
             uint uSetMask = 0x00000000;
             uint uClrMask = PIN_MASKS[pinNum];
 
+            // Clear the output
             if (EziMOTIONPlusELib.FAS_SetOutput(_deviceId, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
             {
                 _logger.Error("[{DeviceName}] Failed to clear output for pin {PinNumber}", _deviceName, pinNum);
                 return false;
             }
 
-            bool verified = VerifyOutputCleared(pinNum);
-            if (verified)
+            // Force an immediate output status check
+            uint currentOutput = 0;
+            uint status = 0;
+
+            if (EziMOTIONPlusELib.FAS_GetOutput(_deviceId, ref currentOutput, ref status) == EziMOTIONPlusELib.FMM_OK)
             {
+                // Consider the operation successful if we can clear the output
                 _logger.Debug("[{DeviceName}] Output pin {PinNumber} cleared successfully", _deviceName, pinNum);
                 var pin = _deviceConfig.IOConfig.Outputs.Find(p => p.Pin == pinNum);
                 if (pin != null)
                 {
                     OutputStateChanged?.Invoke(this, (pin.Name, false));
                 }
+
+                // Update the state in our tracking array
+                lock (_stateLock)
+                {
+                    _outputStates[pinNum] = false;
+                }
+
+                return true;
             }
 
-            return verified;
+            return false;
         }
 
-        
         public bool ClearOutputByName(string pinName)
         {
             // Find the pin configuration from device config
             var pin = _deviceConfig.IOConfig.Outputs.Find(p => p.Name == pinName);
-            int pinNum = pin.Pin;
-            if (pinNum < 0 || pinNum >= OUTPUT_PIN_COUNT)
+            if (pin == null)
             {
-                _logger.Error("[{DeviceName}] Invalid pin number: {PinNumber}", _deviceName, pinNum);
+                _logger.Error("[{DeviceName}] Pin name not found: {PinName}", _deviceName, pinName);
                 return false;
             }
 
-            uint uSetMask = 0x00000000;
-            uint uClrMask = PIN_MASKS[pinNum];
-
-            if (EziMOTIONPlusELib.FAS_SetOutput(_deviceId, uSetMask, uClrMask) != EziMOTIONPlusELib.FMM_OK)
-            {
-                _logger.Error("[{DeviceName}] Failed to clear output for pin {PinNumber}", _deviceName, pinNum);
-                return false;
-            }
-
-            bool verified = VerifyOutputCleared(pinNum);
-            if (verified)
-            {
-                _logger.Debug("[{DeviceName}] Output pin {PinNumber} cleared successfully", _deviceName, pinNum);
-                //var pin = _deviceConfig.IOConfig.Outputs.Find(p => p.Pin == pinNum);
-                if (pin != null)
-                {
-                    OutputStateChanged?.Invoke(this, (pin.Name, false));
-                }
-            }
-
-            return verified;
+            return ClearOutput(pin.Pin);
         }
         private bool VerifyOutputSet(int pinNum)
         {

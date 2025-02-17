@@ -213,7 +213,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
+                        <controls:PneumaticSlideTestControl x:Name="SlideTestControl" />
                     </Grid>
                 </TabItem>
                 <TabItem Header="Measurements">

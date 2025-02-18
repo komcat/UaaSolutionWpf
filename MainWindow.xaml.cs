@@ -62,7 +62,7 @@ namespace UaaSolutionWpf
         private MotionCoordinator _motionCoordinator;
         private CameraGantryService _cameraGantryService;
         private PneumaticSlideService slideService;
-
+        private AutomationExample _automation;
         public MainWindow()
         {
             InitializeComponent();
@@ -535,6 +535,23 @@ namespace UaaSolutionWpf
                 gantryConnectionManager,
                 gantryMovementService,
                 _logger);
+
+
+            InitializeAutomation();
+        }
+
+
+        private void InitializeAutomation()
+        {
+            _automation = new AutomationExample(
+                motionGraphManager: motionGraphManager,
+                leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
+                rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
+                bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                gantry: gantryMovementService,
+                ioManager: _ioManager,
+                slideService: slideService,
+                logger: _logger);
         }
 
         private void IntiaiteGripperControls()
@@ -1045,21 +1062,17 @@ namespace UaaSolutionWpf
 
         }
 
-        // Optional: Add method to access TEC controller from other parts of the application
-        public TECControllerV2 GetTECController()
-        {
-            return _tecController;
-        }
 
 
-        private async void HandleHome()
+
+        private async void UvOperation_Click(object sender, RoutedEventArgs e)
         {
-            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.HomeSequence());
-        }
-        private async void HandleLeftLensPlace()
-        {
-            await _motionCoordinator.ExecuteCoordinatedMove(MotionSequences.LeftPlace());
+            await _automation.RunUVOperation();
         }
 
+        private async void DisPensingOperation_Click(object sender, RoutedEventArgs e)
+        {
+            await _automation.RunDispenserOperation();
+        }
     }
 }

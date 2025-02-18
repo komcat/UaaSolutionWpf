@@ -90,7 +90,31 @@ namespace UaaSolutionWpf.Sequence
 
                 };
         }
+        public static List<CoordinatedMovement> LeftPick()
+        {
+            return new List<CoordinatedMovement>
+                {
 
+                    new CoordinatedMovement
+                    {
+                        DeviceId = "gantry-main",
+                        TargetPosition = "SeeGripCollLens",
+                        ExecutionOrder = 1,
+                        WaitForCompletion = true
+                    },
+
+
+                    new CoordinatedMovement
+                    {
+                        DeviceId = "hex-left",
+                        TargetPosition = "LensGrip",
+                        ExecutionOrder = 2,
+                        WaitForCompletion = false
+                    }
+
+
+                };
+        }
         public static List<CoordinatedMovement> LeftPlace()
         {
             return new List<CoordinatedMovement>
@@ -117,57 +141,7 @@ namespace UaaSolutionWpf.Sequence
                 };
         }
 
-        public static List<CoordinatedMovement> RightPlace()
-        {
-            return new List<CoordinatedMovement>
-                {
-                    // Move gantry to safe position first
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "gantry-main",
-                        TargetPosition = "SeeFocusLens",
-                        ExecutionOrder = 1,
-                        WaitForCompletion = true
-                    },
-                    
-                    // Move hexapods to approach positions in parallel
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "hex-right",
-                        TargetPosition = "LensPlace",
-                        ExecutionOrder = 2,
-                        WaitForCompletion = false
-                    }
-
-
-                };
-        }
-
-        public static List<CoordinatedMovement> LeftPick()
-        {
-            return new List<CoordinatedMovement>
-                {
-                    
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "gantry-main",
-                        TargetPosition = "SeeGripCollLens",
-                        ExecutionOrder = 1,
-                        WaitForCompletion = true
-                    },
-                    
-                    
-                    new CoordinatedMovement
-                    {
-                        DeviceId = "hex-left",
-                        TargetPosition = "LensGrip",
-                        ExecutionOrder = 2,
-                        WaitForCompletion = false
-                    }
-
-
-                };
-        }
+           
 
         public static List<CoordinatedMovement> RightPick()
         {
@@ -194,6 +168,47 @@ namespace UaaSolutionWpf.Sequence
 
                 };
         }
+        public static List<CoordinatedMovement> RightPlace()
+        {
+            return new List<CoordinatedMovement>
+                {
+                    // Move gantry to safe position first
+                    new CoordinatedMovement
+                    {
+                        DeviceId = "gantry-main",
+                        TargetPosition = "SeeFocusLens",
+                        ExecutionOrder = 1,
+                        WaitForCompletion = true
+                    },
+                    
+                    // Move hexapods to approach positions in parallel
+                    new CoordinatedMovement
+                    {
+                        DeviceId = "hex-right",
+                        TargetPosition = "LensPlace",
+                        ExecutionOrder = 2,
+                        WaitForCompletion = false
+                    }
 
+
+                };
+        }
+
+        public static List<CoordinatedMovement> UVall()
+        {
+            return new List<CoordinatedMovement>
+                {
+                    // Move gantry to safe position first
+                    new CoordinatedMovement
+                    {
+                        DeviceId = "gantry-main",
+                        TargetPosition = "UV",
+                        ExecutionOrder = 1,
+                        WaitForCompletion = true
+                    }
+                    
+
+                };
+        }
     }
 }

@@ -37,8 +37,9 @@ namespace UaaSolutionWpf.Services
                 {
                     var rmSession = new ResourceManager();
                     _session = (MessageBasedSession)rmSession.Open(_resourceName);
-                });
 
+                });
+                await Task.Delay(2000);
                 _isConnected = true;
 
                 // Query device ID to verify connection
@@ -46,14 +47,14 @@ namespace UaaSolutionWpf.Services
                 _logger.Information("Connected to device: {DeviceId}", idResponse);
 
 
-                Log.Information("Clear any pending errors in the queue");
-                // Clear any pending errors in the queue
-                await Task.Run(() => {
-                    _session.RawIO.Write("*CLS\n");  // Clear status command
-                    _session.RawIO.Write("errorqueue.clear()\n"); // Clear error queue
-                });
-                Log.Information("Clear any pending errors in the queue, completed");
-                await Task.Delay(2000);
+                //Log.Information("Clear any pending errors in the queue");
+                //// Clear any pending errors in the queue
+                //await Task.Run(() => {
+                //    _session.RawIO.Write("*CLS\n");  // Clear status command
+                //    _session.RawIO.Write("errorqueue.clear()\n"); // Clear error queue
+                //});
+                //Log.Information("Clear any pending errors in the queue, completed");
+                
                 // Initialize with safe settings
                 await WriteAsync("output1:state off"); // Laser off
                 await WriteAsync("output2:state off"); // TEC off

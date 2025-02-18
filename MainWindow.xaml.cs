@@ -135,23 +135,19 @@ namespace UaaSolutionWpf
 
         private async void InitializeKeithleyControl()
         {
-
-
-
             try
             {
-
                 if (_KeithleyCurrentControl != null)
                 {
                     _KeithleyCurrentControl.SetDependencies(_logger, _realTimeDataManager);
-                    _KeithleyCurrentControl.Init();
+                    _KeithleyCurrentControl.Init("GPIB0::1::INSTR"); // Specify the GPIB resource name
                     _logger.Information("Initializing Keithley Current Control");
 
                     if (!simulationMode)
                     {
                         try
                         {
-                            //await _KeithleyCurrentControl.StartMeasuringAsync();
+                            await StartKeithleyContinuousReadingAsync();
                             _logger.Information("Keithley Current Control automatically connected and started");
                         }
                         catch (Exception ex)
@@ -184,6 +180,35 @@ namespace UaaSolutionWpf
                     MessageBoxImage.Error);
             }
         }
+
+        private async Task StartKeithleyContinuousReadingAsync()
+        {
+            try
+            {
+                // Simulate clicking the Connect button
+                _KeithleyCurrentControl.ConnectButton_Click(null, null);
+
+                // Wait for connection to establish
+                await Task.Delay(1000);
+
+                if (_KeithleyCurrentControl.IsConnected)
+                {
+                    // Simulate clicking the Start button
+                    _KeithleyCurrentControl.StartButton_Click(null, null);
+                    _logger.Information("Successfully started continuous reading from Keithley");
+                }
+                else
+                {
+                    throw new Exception("Failed to establish connection with Keithley");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to start Keithley continuous reading");
+                throw;
+            }
+        }
+
         #region camera basler 
         private void OnCameraConnected(object sender, CameraConnectionEventArgs e)
         {
@@ -466,35 +491,28 @@ namespace UaaSolutionWpf
             //await InitializeIOMonitorControlsAsync();
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
-            Log.Information("Initialize TEC controller UI");
+            
             InitializeTECController(); // Add this line
-            Log.Information("Initialize Pneumatic Slides UI");
+            
             InitializePneumaticSlideControl();
-            Log.Information("Initialize Sesnor Channel UI");
+            
             InitializeSensorChannel();
-            Log.Information("Initialize Movement Control UI");
+            
             InitializeDirectMovementControl();
-            Log.Information("Initialize Motion Coordiantor UI");
+            
             InitializeMotionCoordinator();
-            Log.Information("Initialize Auto Alignment UI");
+            
             InitializeAutoAlignmentControl();
-            Log.Information("Initialize Sequences motion UI");
+            
             InitializeSequenceControl();
+            IntiaiteGripperControls();
 
-            //set up gripper controls
-            //LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
-            //RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
-            Log.Information("Initialize toggle output UI");
-            LeftGripperToggleSwitch.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
-            RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
 
-            // For example, to use it with the dispenser shot
-            UvPlc1TriggerControl.Configure(_ioManager, _logger,"IOBottom", "UV_PLC1", "UV 1");
 
-            Log.Information("Initialize Device Positons Monitor UI");
+
             InitializeDeviceMonitors();
 
-            Log.Information("Initialize Pneumatic Slides Control UI");
+            
             InitializePneumaticSlideControlItems();
 
             
@@ -504,7 +522,18 @@ namespace UaaSolutionWpf
             InitializeSlideTest();
         }
 
+        private void IntiaiteGripperControls()
+        {
+            //set up gripper controls
+            //LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
+            //RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
+            Log.Information("Initialize toggle output UI");
+            LeftGripperToggleSwitch.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
+            RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
 
+            // For example, to use it with the dispenser shot
+            UvPlc1TriggerControl.Configure(_ioManager, _logger, "IOBottom", "UV_PLC1", "UV 1");
+        }
         public void InitializeSlideTest()
         {
             Log.Information("Initializing Pneumatic Slide Test panel");
@@ -545,6 +574,7 @@ namespace UaaSolutionWpf
         }
         private void InitializeDeviceMonitors()
         {
+            Log.Information("Initialize Device Positons Monitor UI");
             // Read configuration
             string configPath = Path.Combine("Config", "motionSystem.json");
             string json = File.ReadAllText(configPath);
@@ -566,6 +596,7 @@ namespace UaaSolutionWpf
         
         private void InitializeSequenceControl()
         {
+            Log.Information("Initialize Sequences motion UI");
             if (SequenceControl != null)
             {
                 SequenceControl.Initialize(_motionCoordinator, _logger);
@@ -574,6 +605,7 @@ namespace UaaSolutionWpf
 
         private void InitializeAutoAlignmentControl()
         {
+            Log.Information("Initialize Auto Alignment UI");
             if (autoAlignmentControlWpf != null)
             {
                 try
@@ -606,6 +638,7 @@ namespace UaaSolutionWpf
         }
         private void InitializeMotionCoordinator()
         {
+            Log.Information("Initialize Motion Coordiantor UI");
             // In your initialization code:
             _motionCoordinator = new MotionCoordinator(
                 motionGraphManager,
@@ -632,6 +665,7 @@ namespace UaaSolutionWpf
         }
         private void InitializeSensorChannel()
         {
+            Log.Information("Initialize Sesnor Channel UI");
             if (SensorDisplay != null)
             {
                 SensorDisplay.Initialize(_realTimeDataManager, _logger);
@@ -820,6 +854,7 @@ namespace UaaSolutionWpf
 
         private void InitializePneumaticSlideControlItems()
         {
+            Log.Information("Initialize Pneumatic Slides Control UI");
             if (PneumaticSlideControl != null && _ioManager != null)
             {
                 // Initialize the control with IOManager and logger
@@ -839,6 +874,7 @@ namespace UaaSolutionWpf
 
         private void InitializePneumaticSlideControl()
         {
+            Log.Information("Initialize Pneumatic Slides UI");
             if (PneumaticSlideControl != null && _ioManager != null)
             {
                 // Initialize the control with IOManager and logger
@@ -895,60 +931,84 @@ namespace UaaSolutionWpf
 
 
         // Add this method alongside other initialization methods
-        private void InitializeTECController()
+        private async void InitializeTECController()
         {
-
+            _logger.Information("Initializing TEC controller UI");
             try
             {
                 // Find the TEC controller in the XAML
                 _tecController = this.FindName("tecControllerV2") as TECControllerV2;
                 if (_tecController == null)
                 {
-                    _logger.Warning("Could not find TECControllerV2 in XAML");
+                    _logger.Error("Could not find TECControllerV2 in XAML");
+                    throw new InvalidOperationException("TECControllerV2 not found in XAML");
                 }
-                if (_tecController != null)
+
+                // Initialize the controller
+                _tecController.SetLogger(_logger);
+                _tecController.InitializeServices();
+                _logger.Information("TEC Controller services initialized");
+
+                if (!simulationMode)
                 {
-                    _tecController.SetLogger(_logger);
-                    _tecController.InitializeServices();
-                    _logger.Information("Initializing TEC Controller");
-
-                    if (!simulationMode)
+                    try
                     {
-                        try
-                        {
-                            // Optionally attempt auto-connect
-                            //_tecController.ConnectButton_Click(null, null);
+                        // Attempt auto-connect with delay to ensure services are ready
+                        await Task.Delay(1000); // Short delay for stability
 
-                            _logger.Information("TEC Controller initialized");
-                        }
-                        catch (Exception ex)
+                        await Dispatcher.InvokeAsync(async () =>
                         {
-                            _logger.Error(ex, "Failed to initialize TEC Controller");
+                            // Simulate button click for connection
+                            _tecController.ConnectButton_Click(null, null);
+                            _logger.Information("Auto-connect initiated for TEC Controller");
+
+                            // Wait for connection to establish
+                            await Task.Delay(2000);
+
+                            // Verify connection status
+                            if (_tecController.IsConnected)
+                            {
+                                _logger.Information("TEC Controller successfully auto-connected");
+
+                                // Optionally set default temperature
+                                await Task.Delay(500);
+                                await _tecController.InitializeDefaultSettings();
+                            }
+                            else
+                            {
+                                _logger.Warning("TEC Controller auto-connect completed but connection not verified");
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Failed to auto-connect TEC Controller");
+                        await Dispatcher.InvokeAsync(() =>
+                        {
                             MessageBox.Show(
-                                "Failed to initialize TEC Controller: " + ex.Message,
-                                "Connection Error",
+                                $"Failed to auto-connect TEC Controller: {ex.Message}\nPlease connect manually.",
+                                "Auto-Connect Error",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
-                        }
-                    }
-                    else
-                    {
-                        _logger.Information("TEC Controller in simulation mode - skipping initialization");
+                        });
                     }
                 }
                 else
                 {
-                    _logger.Warning("TECController reference is null");
+                    _logger.Information("TEC Controller in simulation mode - skipping auto-connect");
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to initialize TEC Controller");
-                MessageBox.Show(
-                    "Failed to initialize TEC Controller: " + ex.Message,
-                    "Initialization Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                _logger.Error(ex, "Critical error initializing TEC Controller");
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show(
+                        $"Critical error initializing TEC Controller: {ex.Message}",
+                        "Initialization Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
             }
         }
         protected override void OnClosed(EventArgs e)

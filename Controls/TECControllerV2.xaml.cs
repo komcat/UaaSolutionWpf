@@ -24,7 +24,19 @@ namespace UaaSolutionWpf.Controls
         private bool _isReading; // Flag to prevent overlapping reads
 
         public event PropertyChangedEventHandler PropertyChanged;
+        // Add these properties to the TECControllerV2 class
 
+        public bool IsLowCurrentMode
+        {
+            get => _currentSetpoint == 0.150;
+        }
+
+        public bool IsHighCurrentMode
+        {
+            get => _currentSetpoint == 0.250;
+        }
+
+        // Update the CurrentSetpoint setter to notify these new properties
         public double CurrentSetpoint
         {
             get => _currentSetpoint;
@@ -34,6 +46,8 @@ namespace UaaSolutionWpf.Controls
                 {
                     _currentSetpoint = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsLowCurrentMode));
+                    OnPropertyChanged(nameof(IsHighCurrentMode));
                 }
             }
         }
@@ -126,8 +140,50 @@ namespace UaaSolutionWpf.Controls
             };
             _readTimer.Tick += ReadTimer_Tick;
         }
+        // Add this method to the TECControllerV2 class in TECControllerV2.xaml.cs
+        public async Task InitializeDefaultSettings()
+        {
+            if (!IsConnected)
+            {
+                _logger.Warning("Cannot initialize default settings - TEC Controller not connected");
+                return;
+            }
 
-        private async void ConnectButton_Click(object sender, RoutedEventArgs e)
+            try
+            {
+                // Set default temperature (25°C)
+                await SafeExecuteAsync(async () =>
+                {
+                    // Set and enable TEC first
+                    await _gpibService.SetTecTemperature(25.0);
+                    await _gpibService.TecOn();
+                    await Dispatcher.InvokeAsync(() => TemperatureSetpoint = 25.0);
+                    _logger.Information("TEC temperature initialized to {Temperature}°C", TemperatureSetpoint);
+
+                    // Wait for temperature to stabilize
+                    await Task.Delay(2000);
+
+                    // Set default current but don't enable laser
+                    await _gpibService.SetLaserCurrent(0.150); // 150mA default
+                    await Dispatcher.InvokeAsync(() => CurrentSetpoint = 0.150);
+                    _logger.Information("Laser current initialized to {Current}A", CurrentSetpoint);
+
+                    // Ensure laser is off initially for safety
+                    await _gpibService.LaserOff();
+                    _logger.Information("Default settings initialized successfully");
+                }, "Error initializing default settings");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to initialize default settings");
+                await Dispatcher.InvokeAsync(() =>
+                    MessageBox.Show($"Error initializing default settings: {ex.Message}",
+                                  "Initialization Error",
+                                  MessageBoxButton.OK,
+                                  MessageBoxImage.Warning));
+            }
+        }
+        public async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (!IsConnected)
             {
@@ -285,24 +341,71 @@ namespace UaaSolutionWpf.Controls
             }
             return true;
         }
+        // Modify LowCurrent_Click and HighCurrent_Click to update button states
         private async void LowCurrent_Click(object sender, RoutedEventArgs e)
         {
+            if (sender is Button button)
+            {
+                button.IsEnabled = false;
+                HighCurrentButton.IsEnabled = false;
+            }
+
             await SafeExecuteAsync(async () =>
             {
+                // First ensure TEC is on at proper temperature
+                await _gpibService.SetTecTemperature(TemperatureSetpoint);
+                await _gpibService.TecOn();
+
+                // Wait for temperature to stabilize
+                await Task.Delay(2000);
+
+                // Now set laser current and turn on
                 await _gpibService.SetLaserCurrent(0.150);
                 await Dispatcher.InvokeAsync(() => CurrentSetpoint = 0.150);
                 await _gpibService.LaserOn();
-            }, "Error setting low current");
+
+                _logger.Information("Set low current mode: TEC {Temp}°C, Current {Current}A",
+                    TemperatureSetpoint, CurrentSetpoint);
+            }, "Error setting low current mode");
+
+            if (sender is Button btn)
+            {
+                btn.IsEnabled = true;
+                HighCurrentButton.IsEnabled = true;
+            }
         }
 
         private async void HighCurrent_Click(object sender, RoutedEventArgs e)
         {
+            if (sender is Button button)
+            {
+                button.IsEnabled = false;
+                LowCurrentButton.IsEnabled = false;
+            }
+
             await SafeExecuteAsync(async () =>
             {
+                // First ensure TEC is on at proper temperature
+                await _gpibService.SetTecTemperature(TemperatureSetpoint);
+                await _gpibService.TecOn();
+
+                // Wait for temperature to stabilize
+                await Task.Delay(2000);
+
+                // Now set laser current and turn on
                 await _gpibService.SetLaserCurrent(0.250);
                 await Dispatcher.InvokeAsync(() => CurrentSetpoint = 0.250);
                 await _gpibService.LaserOn();
-            }, "Error setting high current");
+
+                _logger.Information("Set high current mode: TEC {Temp}°C, Current {Current}A",
+                    TemperatureSetpoint, CurrentSetpoint);
+            }, "Error setting high current mode");
+
+            if (sender is Button btn)
+            {
+                btn.IsEnabled = true;
+                LowCurrentButton.IsEnabled = true;
+            }
         }
 
         private async void SetCurrent_Click(object sender, RoutedEventArgs e)
@@ -311,11 +414,39 @@ namespace UaaSolutionWpf.Controls
 
             await SafeExecuteAsync(async () =>
             {
+                // Ensure TEC is on before changing current
+                if (!await IsTecStable())
+                {
+                    await _gpibService.SetTecTemperature(TemperatureSetpoint);
+                    await _gpibService.TecOn();
+                    await Task.Delay(2000); // Wait for temperature stabilization
+                }
+
                 await _gpibService.SetLaserCurrent(CurrentSetpoint);
-                _logger.Information("Set laser current to {Current}A", CurrentSetpoint);
+                await _gpibService.LaserOn();
+
+                _logger.Information("Set laser current to {Current}A with TEC at {Temp}°C",
+                    CurrentSetpoint, TemperatureSetpoint);
             }, "Error setting current");
         }
+        // Helper method to check TEC status
+        private async Task<bool> IsTecStable()
+        {
+            try
+            {
+                // Read current temperature
+                await _gpibService.ReadTecTemperatureAsync();
 
+                // Check if temperature is within acceptable range
+                const double tolerance = 0.5; // ±0.5°C tolerance
+                return Math.Abs(TemperatureReading - TemperatureSetpoint) <= tolerance;
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Error checking TEC stability");
+                return false;
+            }
+        }
         private async void SetTemperature_Click(object sender, RoutedEventArgs e)
         {
             if (!ValidateTemperatureSetpoint()) return;
@@ -327,11 +458,19 @@ namespace UaaSolutionWpf.Controls
                 _logger.Information("Set TEC temperature to {Temperature}°C", TemperatureSetpoint);
             }, "Error setting temperature");
         }
+
+        // Also update LaserOff to include optional TEC control
         private async void LaserOff_Click(object sender, RoutedEventArgs e)
         {
             await SafeExecuteAsync(async () =>
             {
                 await _gpibService.LaserOff();
+
+                // Optionally keep TEC running or turn it off based on configuration
+                // In this case, we'll keep TEC on for faster temperature stability
+                // when turning laser back on
+                _logger.Information("Laser turned off, TEC remains active at {Temp}°C",
+                    TemperatureSetpoint);
             }, "Error turning laser off");
         }
 

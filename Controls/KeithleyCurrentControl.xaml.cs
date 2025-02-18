@@ -160,7 +160,7 @@ namespace UaaSolutionWpf.Controls
         }
 
 
-        private async void ConnectButton_Click(object sender, RoutedEventArgs e)
+        public async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (!IsConnected)
             {
@@ -196,7 +196,7 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
-        private void StartButton_Click(object sender, RoutedEventArgs e)
+        public void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (!_isMeasuring)
             {

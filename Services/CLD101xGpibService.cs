@@ -45,11 +45,20 @@ namespace UaaSolutionWpf.Services
                 string idResponse = await QueryAsync("*IDN?");
                 _logger.Information("Connected to device: {DeviceId}", idResponse);
 
+
+                Log.Information("Clear any pending errors in the queue");
+                // Clear any pending errors in the queue
+                await Task.Run(() => {
+                    _session.RawIO.Write("*CLS\n");  // Clear status command
+                    _session.RawIO.Write("errorqueue.clear()\n"); // Clear error queue
+                });
+                Log.Information("Clear any pending errors in the queue, completed");
+                await Task.Delay(2000);
                 // Initialize with safe settings
                 await WriteAsync("output1:state off"); // Laser off
                 await WriteAsync("output2:state off"); // TEC off
 
-                await Task.Delay(3000);
+                
                 // Start monitoring if not already running
                 StartMonitoring();
             }

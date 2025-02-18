@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <None Remove="globalAxis.png" />
+    <None Remove="Images\stop.jpg" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,6 +45,9 @@
   <ItemGroup>
     <Resource Include="globalAxis.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\stop.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
 

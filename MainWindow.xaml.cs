@@ -524,6 +524,17 @@ namespace UaaSolutionWpf
             //init homing button
             // Initialize the buffer control after construction
             bufferControl.Initialize(gantryConnectionManager, _logger);
+
+            //emergency stop window
+            //var stopWindow = new EmergencyStopWindow(gantryConnectionManager,gantryMovementService);
+            //stopWindow.Show();
+
+            //emergency manager to detect ESC key stroke to stop gantry
+            var emergencyStopManager = new EmergencyStopManager(
+                this,
+                gantryConnectionManager,
+                gantryMovementService,
+                _logger);
         }
 
         private void IntiaiteGripperControls()

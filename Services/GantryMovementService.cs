@@ -85,7 +85,7 @@ namespace UaaSolutionWpf.Services
                     }
 
                     await MoveToAbsolutePosition(initialPosition);
-                    await Task.Delay(100); // Stability delay
+                    await Task.Delay(20); // Stability delay
                 }
 
                 // Execute path movements
@@ -105,7 +105,7 @@ namespace UaaSolutionWpf.Services
 
                     if (i < pathAnalysis.Path.Count - 2)
                     {
-                        await Task.Delay(100); // Inter-move delay
+                        await Task.Delay(20); // Inter-move delay
                     }
                 }
             }

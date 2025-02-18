@@ -284,6 +284,7 @@ namespace UaaSolutionWpf.Gantry
                 _logger.Information("Stopping all motors");
                 var controller = GetController();
                 await Task.Run(() => controller.StopAllMotors());
+                _logger.Information("Successfully stopped all motors");
             }
             catch (Exception ex)
             {

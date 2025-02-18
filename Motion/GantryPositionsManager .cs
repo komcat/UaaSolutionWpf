@@ -301,49 +301,60 @@ namespace UaaSolutionWpf.Motion
         position.W
             };
 
-            // Since we're moving a gantry, we only use X, Y, Z
-            for (int axis = 0; axis < 3; axis++)
+            try
             {
-                try
+                // Start all axis movements simultaneously
+                var moveOperations = new List<Task>();
+                for (int axis = 0; axis < 3; axis++)
                 {
-                    await _gantryConnectionManager.MoveToAbsolutePositionAsync(axis, axisValues[axis]);
+                    moveOperations.Add(_gantryConnectionManager.MoveToAbsolutePositionAsync(axis, axisValues[axis]));
+                }
 
-                    // Wait for move to complete before starting next axis
-                    // This could be optimized to move multiple axes simultaneously if needed
-                    await WaitForAxisMotionComplete(axis);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Error moving axis {Axis} to position {Position}", axis, axisValues[axis]);
-                    throw;
-                }
+                // Wait for all move commands to be initiated
+                await Task.WhenAll(moveOperations);
+
+                // Now wait for all axes to complete their motion
+                await _gantryConnectionManager.WaitForAllAxesIdleAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error during multi-axis move to position X:{X}, Y:{Y}, Z:{Z}",
+                    position.X, position.Y, position.Z);
+                throw;
             }
         }
-
         private async Task WaitForAxisMotionComplete(int axis)
         {
-            // Implementation depends on your motion controller's API
-            // This is a simplified example
-            const int timeout = 30000; // 30 second timeout
-            const int pollInterval = 100; // Check every 100ms
-            int elapsed = 0;
-
-            while (elapsed < timeout)
+            try
             {
-                // Check if axis is still moving
-                // This needs to be implemented based on your motion controller's API
-                bool isMoving = false; // Replace with actual motion check
+                const int timeout = 30000; // 30 second timeout
+                const int pollInterval = 100; // Check every 100ms
+                int elapsed = 0;
 
-                if (!isMoving)
+                var controller = _gantryConnectionManager.GetController();
+
+                while (elapsed < timeout)
                 {
-                    return;
+                    // Get the current status of the axis
+                    var (_, _, isMoving) = controller.GetAxisStatus(axis);
+
+                    if (!isMoving)
+                    {
+                        _logger.Debug("Axis {Axis} motion completed", axis);
+                        return;
+                    }
+
+                    await Task.Delay(pollInterval);
+                    elapsed += pollInterval;
                 }
 
-                await Task.Delay(pollInterval);
-                elapsed += pollInterval;
+                throw new TimeoutException($"Timeout waiting for axis {axis} motion to complete");
             }
-
-            throw new TimeoutException($"Timeout waiting for axis {axis} motion to complete");
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error waiting for axis {Axis} motion to complete", axis);
+                throw;
+            }
         }
     }
 }

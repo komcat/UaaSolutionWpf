@@ -49,6 +49,7 @@ namespace UaaSolutionWpf.Services
                 await WriteAsync("output1:state off"); // Laser off
                 await WriteAsync("output2:state off"); // TEC off
 
+                await Task.Delay(3000);
                 // Start monitoring if not already running
                 StartMonitoring();
             }
@@ -184,29 +185,119 @@ namespace UaaSolutionWpf.Services
             }
         }
 
-        private async Task<string> QueryAsync(string query)
+        private async Task<string> QueryAsync(string query, int maxRetries = 3)
         {
             if (!_isConnected || _session == null)
                 throw new InvalidOperationException("Not connected to device");
 
-            await _gpibLock.WaitAsync();
+            int retryCount = 0;
+            Exception lastException = null;
+
+            while (retryCount <= maxRetries)
+            {
+                await _gpibLock.WaitAsync();
+                try
+                {
+                    // Calculate exponential backoff delay
+                    int delayMs = retryCount == 0 ? 0 : (int)Math.Pow(2, retryCount - 1) * 1000;
+                    if (retryCount > 0)
+                    {
+                        _logger.Information($"Retry attempt {retryCount} after {delayMs}ms delay for query: {query}");
+                        await Task.Delay(delayMs);
+                    }
+
+                    return await Task.Run(() =>
+                    {
+                        // Set a longer timeout for subsequent retries
+                        int timeoutMs = retryCount == 0 ? _session.TimeoutMilliseconds : 5000;
+                        using (new TemporaryTimeout(_session, timeoutMs))
+                        {
+                            try
+                            {
+                                _session.RawIO.Write(query);
+                                return _session.RawIO.ReadString().Trim();
+                            }
+                            catch (Exception ex)
+                            {
+                                // Clear any pending data in the buffer
+                                try { _session.RawIO.ReadString(); } catch { }
+                                throw;
+                            }
+                        }
+                    });
+                }
+                catch (Ivi.Visa.IOTimeoutException ex)
+                {
+                    lastException = ex;
+                    retryCount++;
+                    _logger.Warning($"Timeout occurred during query (attempt {retryCount}/{maxRetries}): {ex.Message}");
+
+                    if (retryCount > maxRetries)
+                    {
+                        _logger.Error(ex, "Max retries reached for query operation");
+                        ErrorOccurred?.Invoke(this, ex);
+                        throw new TimeoutException($"Query operation failed after {maxRetries} retries", ex);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error querying: {Query}", query);
+                    ErrorOccurred?.Invoke(this, ex);
+                    throw;
+                }
+                finally
+                {
+                    _gpibLock.Release();
+                }
+            }
+
+            // This should never be reached due to the throw in the retry loop
+            throw new TimeoutException($"Query operation failed after {maxRetries} retries", lastException);
+        }
+
+        // Helper class to temporarily modify timeout
+        private class TemporaryTimeout : IDisposable
+        {
+            private readonly MessageBasedSession _session;
+            private readonly int _originalTimeout;
+
+            public TemporaryTimeout(MessageBasedSession session, int temporaryTimeoutMs)
+            {
+                _session = session;
+                _originalTimeout = session.TimeoutMilliseconds;
+                session.TimeoutMilliseconds = temporaryTimeoutMs;
+            }
+
+            public void Dispose()
+            {
+                _session.TimeoutMilliseconds = _originalTimeout;
+            }
+        }
+
+        // Add this method to reset the connection if needed
+        private async Task ResetConnectionAsync()
+        {
+            _logger.Information("Attempting to reset connection...");
             try
             {
-                return await Task.Run(() =>
-                {
-                    _session.RawIO.Write(query);
-                    return _session.RawIO.ReadString().Trim();
-                });
+                // Disconnect and wait briefly
+                Disconnect();
+                await Task.Delay(1000);
+
+                // Reconnect
+                var rmSession = new ResourceManager();
+                _session = (MessageBasedSession)rmSession.Open(_resourceName);
+                _isConnected = true;
+
+                // Query device ID to verify connection
+                string idResponse = await QueryAsync("*IDN?");
+                _logger.Information("Connection reset successful. Device: {DeviceId}", idResponse);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error querying: {Query}", query);
-                ErrorOccurred?.Invoke(this, ex);
+                _logger.Error(ex, "Failed to reset connection");
+                _isConnected = false;
                 throw;
-            }
-            finally
-            {
-                _gpibLock.Release();
             }
         }
 

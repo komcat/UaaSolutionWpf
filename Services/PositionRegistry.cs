@@ -39,7 +39,33 @@ namespace UaaSolutionWpf.Services
                 };
             }
         }
+        public void ReloadPositions()
+        {
+            try
+            {
+                _logger.Information("Reloading positions from {ConfigPath}", _configPath);
 
+                string jsonContent = File.ReadAllText(_configPath);
+                var newPositions = System.Text.Json.JsonSerializer.Deserialize<WorkingPositions>(jsonContent)
+                    ?? throw new InvalidOperationException("Failed to deserialize positions during reload");
+
+                // Update the positions data
+                _positions.Hexapods.Clear();
+                _positions.Gantries.Clear();
+
+                _positions.Hexapods.AddRange(newPositions.Hexapods);
+                _positions.Gantries.AddRange(newPositions.Gantries);
+
+                _logger.Information("Successfully reloaded positions: {HexapodCount} hexapods, {GantryCount} gantries",
+                    newPositions.Hexapods.Count,
+                    newPositions.Gantries.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to reload working positions from {ConfigPath}", _configPath);
+                throw;
+            }
+        }
         public Position GetHexapodPosition(int hexapodId, string positionName)
         {
             var hexapod = _positions.Hexapods?.FirstOrDefault(h => h.HexapodId == hexapodId);

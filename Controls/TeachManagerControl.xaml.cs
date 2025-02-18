@@ -8,6 +8,7 @@ using Serilog;
 using UaaSolutionWpf.Services;
 using System.IO;
 using UaaSolutionWpf.Motion;
+using Serilog.Core;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -170,6 +171,8 @@ namespace UaaSolutionWpf.Controls
                     );
 
                     _positionRegistry.SaveToFile(workingPositionsPath);
+                    _logger.Information($"Reloading {workingPositionsPath}");
+                    _positionRegistry.ReloadPositions();
 
                     _logger.Information(
                         "Successfully taught position {Position} for {Device}",

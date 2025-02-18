@@ -355,7 +355,54 @@ namespace UaaSolutionWpf.Gantry
                 }
             });
         }
+        public async Task WaitForAllAxesIdleAsync()
+        {
+            ValidateConnection();
 
+            try
+            {
+                _logger.Information("Waiting for all axes to become idle");
+                const int IDLE_CHECK_INTERVAL_MS = 100;  // Check every 100ms
+                const int IDLE_TIMEOUT_MS = 30000;       // 30 second timeout
+                var startTime = DateTime.Now;
+
+                var controller = GetController();
+
+                while (true)
+                {
+                    // Check all axes at once
+                    var (_, _, xMoving) = controller.GetAxisStatus(0);
+                    var (_, _, yMoving) = controller.GetAxisStatus(1);
+                    var (_, _, zMoving) = controller.GetAxisStatus(2);
+
+                    // If no axis is moving, we're done
+                    if (!xMoving && !yMoving && !zMoving)
+                    {
+                        _logger.Information("All axes are now idle");
+                        return;
+                    }
+
+                    // Check for timeout
+                    if ((DateTime.Now - startTime).TotalMilliseconds > IDLE_TIMEOUT_MS)
+                    {
+                        var error = "Timeout waiting for axes to become idle";
+                        _logger.Error(error);
+                        throw new TimeoutException(error);
+                    }
+
+                    await Task.Delay(IDLE_CHECK_INTERVAL_MS);
+                }
+            }
+            catch (TimeoutException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error waiting for axes to become idle");
+                throw;
+            }
+        }
         private void OnMotorEnabled()
         {
             _logger.Information("Motor enabled");

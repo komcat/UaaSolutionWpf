@@ -10,7 +10,7 @@ namespace UaaSolutionWpf.Gantry
 {
     public class ACSController
     {
-        private Api Ch;
+        public Api Ch;
         public int AxisNum;
         public ACS.SPiiPlusNET.Axis Axis;
         public bool bConnected;

@@ -403,6 +403,85 @@ namespace UaaSolutionWpf.Gantry
                 throw;
             }
         }
+
+        public async Task RunBufferAsync(int bufferNumber, string labelName = null)
+        {
+            ValidateConnection();
+
+            try
+            {
+                _logger.Information("Running buffer {BufferNumber} {LabelDetails}",
+                    bufferNumber,
+                    labelName != null ? $"from label {labelName}" : "from start");
+
+                var controller = GetController();
+
+                if (!string.IsNullOrEmpty(labelName))
+                {
+                    // Convert label to uppercase for validation
+                    string upperLabel = labelName.Trim().ToUpper();
+
+                    // Validate label name (must start with underscore or A-Z)
+                    if (upperLabel[0] != '_' && (upperLabel[0] < 'A' || upperLabel[0] > 'Z'))
+                    {
+                        var error = "Invalid label name. Label must start with underscore or letter A-Z";
+                        _logger.Error(error);
+                        throw new ArgumentException(error);
+                    }
+
+                    // Run buffer from specified label
+                    await Task.Run(() => controller.Ch.RunBuffer(
+                        (ACS.SPiiPlusNET.ProgramBuffer)bufferNumber,
+                        upperLabel));
+                }
+                else
+                {
+                    // Run buffer from beginning
+                    await Task.Run(() => controller.Ch.RunBuffer(
+                        (ACS.SPiiPlusNET.ProgramBuffer)bufferNumber,
+                        null));
+                }
+
+                _logger.Information("Successfully started buffer {BufferNumber}", bufferNumber);
+            }
+            catch (COMException ex)
+            {
+                _logger.Error(ex, "COM error running buffer {BufferNumber}", bufferNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error running buffer {BufferNumber}", bufferNumber);
+                throw;
+            }
+        }
+
+        public async Task StopBufferAsync(int bufferNumber)
+        {
+            ValidateConnection();
+
+            try
+            {
+                _logger.Information("Stopping buffer {BufferNumber}", bufferNumber);
+
+                var controller = GetController();
+                await Task.Run(() => controller.Ch.StopBuffer(
+                    (ACS.SPiiPlusNET.ProgramBuffer)bufferNumber));
+
+                _logger.Information("Successfully stopped buffer {BufferNumber}", bufferNumber);
+            }
+            catch (COMException ex)
+            {
+                _logger.Error(ex, "COM error stopping buffer {BufferNumber}", bufferNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error stopping buffer {BufferNumber}", bufferNumber);
+                throw;
+            }
+        }
+
         private void OnMotorEnabled()
         {
             _logger.Information("Motor enabled");

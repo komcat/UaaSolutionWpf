@@ -138,6 +138,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <StackPanel x:Name="LeftHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
@@ -147,7 +148,8 @@
                         <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
                             <controls:HexapodControl x:Name="RightHexapodControl" Margin="2"/>
                         </StackPanel>
-                        <controls:GantryControl x:Name="GantryControl" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="23" />
+                        <controls:GantryControl x:Name="GantryControl" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" />
+                        <controls:BufferControl x:Name="bufferControl" Grid.Row="3" Grid.Column="0"/>
                     </Grid>
                 </TabItem>
                 <TabItem Header="hex-bottom">

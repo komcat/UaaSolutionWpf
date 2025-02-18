@@ -520,6 +520,10 @@ namespace UaaSolutionWpf
 
             InitializePneumaticSlideService();
             InitializeSlideTest();
+
+            //init homing button
+            // Initialize the buffer control after construction
+            bufferControl.Initialize(gantryConnectionManager, _logger);
         }
 
         private void IntiaiteGripperControls()

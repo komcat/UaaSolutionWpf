@@ -28,14 +28,14 @@ namespace UaaSolutionWpf.Sequence
                         DeviceId = "hex-left",
                         TargetPosition = "Home",
                         ExecutionOrder = 2,
-                        WaitForCompletion = false
+                        WaitForCompletion = true
                     },
                     new CoordinatedMovement
                     {
                         DeviceId = "hex-right",
                         TargetPosition = "Home",
                         ExecutionOrder = 2,
-                        WaitForCompletion = false
+                        WaitForCompletion = true
                     },
 
                 };

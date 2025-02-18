@@ -177,7 +177,7 @@ namespace UaaSolutionWpf.Scanning.Core
             };
         }
         private async Task<(double maxValue, Position maxPosition)> ScanDirection(
-            string axis, double stepSize, int direction, CancellationToken token)
+    string axis, double stepSize, int direction, CancellationToken token)
         {
             var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
             var maxValue = await GetMeasurement(token);
@@ -186,6 +186,7 @@ namespace UaaSolutionWpf.Scanning.Core
             int consecutiveDecreases = 0;
             double totalDistance = 0;
             bool hasMovedFromMax = false;
+            const double SIGNIFICANT_DECREASE_THRESHOLD = 0.05; // 5% threshold
 
             while (!token.IsCancellationRequested &&
                    _isScanningActive &&
@@ -217,6 +218,9 @@ namespace UaaSolutionWpf.Scanning.Core
                 var currentValue = await GetMeasurement(token);
                 totalDistance += stepSize;
 
+                // Calculate relative decrease from previous value
+                double relativeDecrease = (previousValue - currentValue) / previousValue;
+
                 // Calculate gradient for monitoring
                 double gradient = (currentValue - previousValue) / stepSize;
 
@@ -240,6 +244,13 @@ namespace UaaSolutionWpf.Scanning.Core
                 {
                     consecutiveDecreases++;
                     hasMovedFromMax = true;
+
+                    // Check for significant decrease
+                    if (relativeDecrease > SIGNIFICANT_DECREASE_THRESHOLD)
+                    {
+                        _logger.Information($"Significant decrease detected ({relativeDecrease:P2}). Stopping {axis} axis scan in this direction.");
+                        break;
+                    }
 
                     // Check if we should return to local max
                     if (consecutiveDecreases >= MAX_CONSECUTIVE_DECREASES)

@@ -16,13 +16,13 @@ namespace UaaSolutionWpf
 
         public AutomationExample(
             MotionGraphManager motionGraphManager,
-            HexapodMovementService leftHexapod,
-            HexapodMovementService rightHexapod,
-            HexapodMovementService bottomHexapod,
-            GantryMovementService gantry,
             IOManager ioManager,
             PneumaticSlideService slideService,
-            ILogger logger)
+            ILogger logger,
+            HexapodMovementService leftHexapod=null,
+            HexapodMovementService rightHexapod = null,
+            HexapodMovementService bottomHexapod = null,
+            GantryMovementService gantry = null)
         {
             _logger = logger.ForContext<AutomationExample>();
 

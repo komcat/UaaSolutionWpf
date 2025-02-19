@@ -145,19 +145,19 @@ namespace UaaSolutionWpf.Controls
         }
 
         public void Initialize(
-            HexapodMovementService leftHexapod,
             HexapodMovementService rightHexapod,
-            HexapodMovementService bottomHexapod,
             GantryMovementService gantry,
-            ILogger logger)
+            ILogger logger,
+            HexapodMovementService leftHexapod = null,
+            HexapodMovementService bottomHexapod = null)
         {
             _logger = logger.ForContext<SimpleJogControl>();
             _jogController = new GlobalJogController(
-                leftHexapod,
                 rightHexapod,
-                bottomHexapod,
                 gantry,
-                logger
+                logger,
+                bottomHexapod,
+                leftHexapod
             );
 
             UpdateUVWButtonsState();
@@ -240,13 +240,17 @@ namespace UaaSolutionWpf.Controls
             StepListBox.Items.Clear();
             var micronSteps = new List<MicronStepItem>
             {
+                new MicronStepItem { DisplayText = "0.1 micron", Value = 0.0001 },
+                new MicronStepItem { DisplayText = "0.2 micron", Value = 0.0002 },
+                new MicronStepItem { DisplayText = "0.5 micron", Value = 0.0005 },
                 new MicronStepItem { DisplayText = "1 micron", Value = 0.001 },
                 new MicronStepItem { DisplayText = "5 micron", Value = 0.005 },
                 new MicronStepItem { DisplayText = "10 micron", Value = 0.010 },
                 new MicronStepItem { DisplayText = "50 micron", Value = 0.050 },
                 new MicronStepItem { DisplayText = "100 micron", Value = 0.100 },
                 new MicronStepItem { DisplayText = "200 micron", Value = 0.200 },
-                new MicronStepItem { DisplayText = "500 micron", Value = 0.500 }
+                new MicronStepItem { DisplayText = "500 micron", Value = 0.500 },
+                new MicronStepItem { DisplayText = "1000 micron", Value = 1.000 }
             };
 
             StepListBox.ItemsSource = micronSteps;

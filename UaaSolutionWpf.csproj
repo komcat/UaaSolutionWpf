@@ -137,7 +137,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />
     <ProjectReference Include="..\WpfLiveChart\WpfLiveChart.csproj" />
   </ItemGroup>
 

@@ -30,8 +30,8 @@
                 <ComboBox x:Name="DeviceComboBox" 
                          Width="150" 
                          SelectionChanged="DeviceComboBox_SelectionChanged">
-                    <ComboBoxItem Content="Left Hexapod"/>
-                    <ComboBoxItem Content="Bottom Hexapod"/>
+                    <!--<ComboBoxItem Content="Left Hexapod"/>
+                    <ComboBoxItem Content="Bottom Hexapod"/>-->
                     <ComboBoxItem Content="Right Hexapod"/>
                     <ComboBoxItem Content="Gantry"/>
                 </ComboBox>

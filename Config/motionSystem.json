@@ -1,22 +1,14 @@
 {
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-02-18T12:00:00Z"
+  },
   "Devices": [
-    {
-      "Id": "hex-left",
-      "Type": "Hexapod",
-      "Name": "Left",
-      "GraphId": "HexapodLeft"
-    },
     {
       "Id": "hex-right",
       "Type": "Hexapod",
       "Name": "Right",
       "GraphId": "HexapodRight"
-    },
-    {
-      "Id": "hex-bottom",
-      "Type": "Hexapod",
-      "Name": "Bottom",
-      "GraphId": "HexapodBottom"
     },
     {
       "Id": "gantry-main",

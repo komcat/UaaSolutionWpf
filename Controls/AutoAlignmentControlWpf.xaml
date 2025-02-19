@@ -16,7 +16,7 @@
         </Grid.RowDefinitions>
 
         <!-- Title -->
-        <TextBlock Text="Auto Alignment" 
+        <TextBlock Text="Auto Alignment SAA" 
                  FontSize="16" 
                  FontWeight="Bold" 
                  Grid.Row="0"
@@ -43,23 +43,23 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="LeftScanButton"
+            <!--<Button x:Name="LeftScanButton"
                     Content="←Left Gripper Scan" 
                     Grid.Column="0"
                     Height="30"
                     Margin="0,0,5,0"
                     Background="#007ACC"
                     Foreground="White"
-                    Click="LeftScanButton_Click"/>
+                    Click="LeftScanButton_Click"/>-->
 
             <Button x:Name="RightScanButton"
                     Content="Right Gripper Scan→" 
-                    Grid.Column="1"
+                    Grid.Column="0" Grid.ColumnSpan="2"
                     Height="30"
                     Margin="5,0,0,0"
                     Background="#28A745"
                     Foreground="White"
-                    Click="RightScanButton_Click"/>
+                    Click="RightScanButton_Click" FontSize="20"/>
         </Grid>
 
         <!-- Stop Button -->
@@ -70,7 +70,7 @@
                 Margin="0,0,0,10"
                 Background="#DC3545"
                 Foreground="White"
-                Click="StopButton_Click"/>
+                Click="StopButton_Click" FontSize="20"/>
 
         <!-- Status Display -->
         <TextBox x:Name="StatusTextBox"

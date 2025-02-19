@@ -19,12 +19,12 @@ namespace UaaSolutionWpf.Motion
         private Matrix4x4 _bottomHexapodTransform;
         private Matrix4x4 _gantryTransform;
 
-        public GlobalJogController(
-            HexapodMovementService leftHexapod,
-            HexapodMovementService rightHexapod,
-            HexapodMovementService bottomHexapod,
+        public GlobalJogController(            
+            HexapodMovementService rightHexapod,            
             GantryMovementService gantry,
-            ILogger logger)
+            ILogger logger,
+            HexapodMovementService bottomHexapod = null,
+            HexapodMovementService leftHexapod = null)
         {
             _leftHexapodService = leftHexapod;
             _rightHexapodService = rightHexapod;

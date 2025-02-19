@@ -27,8 +27,8 @@
                 <StackPanel>
                     <TextBlock Text="Listbox" Margin="0,0,0,5" FontWeight="SemiBold"/>
                     <ListBox x:Name="DeviceListBox" Width="150" Height="120">
-                        <ListBoxItem Content="Left Hexapod"/>
-                        <ListBoxItem Content="Bottom Hexapod"/>
+                        <!--<ListBoxItem Content="Left Hexapod"/>
+                        <ListBoxItem Content="Bottom Hexapod"/>-->
                         <ListBoxItem Content="Right Hexapod"/>
                         <ListBoxItem Content="Gantry"/>
                     </ListBox>

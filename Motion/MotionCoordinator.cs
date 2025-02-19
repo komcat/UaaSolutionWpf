@@ -24,12 +24,13 @@ namespace UaaSolutionWpf.Motion
         private readonly SemaphoreSlim _hexapodSemaphore = new SemaphoreSlim(1, 1);
 
         public MotionCoordinator(
+            ILogger logger,
             MotionGraphManager motionGraphManager,
-            HexapodMovementService leftHexapod,
-            HexapodMovementService rightHexapod,
-            HexapodMovementService bottomHexapod,
-            GantryMovementService gantry,
-            ILogger logger)
+            HexapodMovementService leftHexapod=null,
+            HexapodMovementService rightHexapod = null,
+            HexapodMovementService bottomHexapod = null,
+            GantryMovementService gantry = null
+            )
         {
             _motionGraphManager = motionGraphManager;
             _logger = logger.ForContext<MotionCoordinator>();

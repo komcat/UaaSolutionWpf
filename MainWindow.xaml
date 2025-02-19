@@ -18,7 +18,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="30"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -28,7 +28,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel x:Name="TopRowPanel" Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0">
-            <TextBlock FontSize="20">UAA Solution</TextBlock>
+            <TextBlock FontSize="50">SAA Solution</TextBlock>
         </StackPanel>
 
 
@@ -38,7 +38,7 @@
 
             <!--<controls:PneumaticSlideControl x:Name="PneumaticSlideControl" />-->
             <controls:PneumaticSlideControlItem x:Name="PneumaticSlideControl" />
-            <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2" />
+            <!--<controls:TECControllerV2 x:Name="tecControllerV2" Margin="2" />-->
         </StackPanel>
 
 
@@ -61,11 +61,12 @@
             <!--<controls:GripperControl x:Name="LeftGripperControl" Margin="2"/>-->
             <!--<controls:GripperControl x:Name="RightGripperControl" Margin="2"/>-->
 
-            <controls:ToggleSwitch x:Name="LeftGripperToggleSwitch" Margin="2"/>
+            <!--<controls:ToggleSwitch x:Name="LeftGripperToggleSwitch" Margin="2"/>-->
             <controls:ToggleSwitch x:Name="RightGripperToggleSwitch" Margin="2"/>
 
 
             <controls:TriggerControl x:Name="UvPlc1TriggerControl"  />
+            <controls:TriggerControl x:Name="UvPlc2TriggerControl"  />
             <controls:VacBaseControl x:Name="VacBaseControl"/>
         </StackPanel>
 
@@ -129,7 +130,7 @@
                             <Button x:Name="UvOperation" Content="UV operation" Height="100" Width="300" Margin="2" Click="UvOperation_Click"/>
                             <Button x:Name="DisPensingOperation" Content="Dispense 1 operation" Height="100" Width="300" Margin="2" Click="DisPensingOperation_Click" />
                         </StackPanel>
-                        
+
                     </Grid>
                 </TabItem>
                 <TabItem Header="Axises" >
@@ -146,37 +147,16 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <StackPanel x:Name="LeftHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
+                        <!--<StackPanel x:Name="LeftHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
                             <controls:HexapodControl x:Name="LeftHexapodControl" Margin="2"/>
-                        </StackPanel>
+                        </StackPanel>-->
 
-                        <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1">
+                        <StackPanel x:Name="RightHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
                             <controls:HexapodControl x:Name="RightHexapodControl" Margin="2"/>
                         </StackPanel>
                         <controls:GantryControl x:Name="GantryControl" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" />
                         <controls:BufferControl x:Name="bufferControl" Grid.Row="3" Grid.Column="0"/>
                     </Grid>
-                </TabItem>
-                <TabItem Header="hex-bottom">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel x:Name="BottomHexapodPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0">
-                            <controls:HexapodControl x:Name="BottomHexapodControl" Margin="2"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200">
-                            <StackPanel x:Name="BottomHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
-                                <TextBlock>Bottom Hexapod</TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-
                 </TabItem>
                 <TabItem Header="I/O">
                     <Grid>
@@ -228,19 +208,15 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="509*"/>
+                            <ColumnDefinition Width="320*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <!-- Add the ChannelMonitorControl here -->
-                        <controls:KeithleyCurrentControl x:Name="_KeithleyCurrentControl" 
-                                      Grid.Row="0" 
-                                      Grid.Column="0" 
-                                      Width="350"
-                                      Height="600"
-                                      VerticalAlignment="Top"/>
+
                     </Grid>
                 </TabItem>
 
@@ -265,14 +241,9 @@
                                 <TextBlock>Gantry</TextBlock>
                             </StackPanel>
                         </StackPanel>
+
+
                         <StackPanel Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Width="200">
-                            <StackPanel x:Name="LeftHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
-                                <TextBlock>Left Hexapod</TextBlock>
-
-                            </StackPanel>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="3" Grid.Row="1" Grid.RowSpan="2" Width="200">
                             <StackPanel x:Name="RightHexapodManualMoveControl"  Orientation="Vertical" Margin="5">
                                 <TextBlock>Right Hexapod</TextBlock>
                             </StackPanel>

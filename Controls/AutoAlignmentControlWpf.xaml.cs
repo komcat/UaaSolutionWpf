@@ -33,14 +33,14 @@ namespace UaaSolutionWpf.Controls
         }
 
         public void Initialize(
-            HexapodMovementService leftHexapodService,
-            HexapodMovementService rightHexapodService,
             DevicePositionMonitor positionMonitor,
             RealTimeDataManager realTimeDataManager,
-            ILogger logger)
+            ILogger logger,
+            HexapodMovementService leftHexapodService=null,
+            HexapodMovementService rightHexapodService=null)
         {
-            _leftHexapodService = leftHexapodService ?? throw new ArgumentNullException(nameof(leftHexapodService));
-            _rightHexapodService = rightHexapodService ?? throw new ArgumentNullException(nameof(rightHexapodService));
+            _leftHexapodService = leftHexapodService;
+            _rightHexapodService = rightHexapodService;
             _positionMonitor = positionMonitor ?? throw new ArgumentNullException(nameof(positionMonitor));
             _realTimeDataManager = realTimeDataManager ?? throw new ArgumentNullException(nameof(realTimeDataManager));
             _logger = logger?.ForContext<AutoAlignmentControlWpf>();

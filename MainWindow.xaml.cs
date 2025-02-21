@@ -23,6 +23,9 @@ using UaaSolutionWpf.Data;
 using UaaSolutionWpf.Sequence;
 using EzIIOLib;
 using EzIIOLibControl;
+using EzIIOLibControl.Controls;
+using System.Diagnostics;
+using System.ComponentModel;
 
 namespace UaaSolutionWpf
 {
@@ -65,7 +68,7 @@ namespace UaaSolutionWpf
         private AutomationExample _automation;
 
         private MultiDeviceManager deviceManager;
-
+        private List<IOPinToggleSwitch> toggleSwitches;
         public MainWindow()
         {
             InitializeComponent();
@@ -576,7 +579,7 @@ namespace UaaSolutionWpf
                     positionMonitor: devicePositionMonitor,
                     logger: _logger
                 );
-                DeviceMonitorsPanel.Children.Add(monitor);
+                QuickAccessPanel.Children.Add(monitor);
             }
         }
         
@@ -827,11 +830,15 @@ namespace UaaSolutionWpf
                 // Create device manager
                 deviceManager = CreateDeviceManager();
 
+
+
                 // Setup pin monitors
                 SetupPinMonitors();
 
                 // Setup pneumatic slide control
                 SetupPneumaticSlideControl();
+
+                InitializeToggleSwitches();
 
                 _logger.Information("Connected to IOBottom and IOTop devices");
             }
@@ -910,6 +917,115 @@ namespace UaaSolutionWpf
             deviceManager?.DisconnectAll();
             deviceManager?.Dispose();
         }
+
+        private void InitializeToggleSwitches()
+        {
+            try
+            {
+                toggleSwitches = new List<IOPinToggleSwitch>();
+
+                var pinConfigs = new[]
+                {
+                    new { Name = "L_Gripper", Number = 0 },
+                    new { Name = "R_Gripper", Number = 2 },
+                    new { Name = "Vacuum_Base", Number = 10 },
+                    new { Name = "UV_PLC1", Number = 14 },
+                    new { Name = "UV_PLC2", Number = 13 }
+                };
+
+                foreach (var config in pinConfigs)
+                {
+                    var toggleSwitch = CreateToggleSwitch(config.Name, config.Number);
+                    QuickAccessPanel.Children.Add(toggleSwitch);
+                    toggleSwitches.Add(toggleSwitch);
+                }
+
+                // Subscribe to device output state changes
+                var bottomDevice = deviceManager.GetDevice("IOBottom");
+                bottomDevice.OutputStateChanged += Device_OutputStateChanged;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing toggle switches: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private IOPinToggleSwitch CreateToggleSwitch(string name, int number)
+        {
+            var toggleSwitch = new IOPinToggleSwitch
+            {
+                DeviceName = "IOBottom",
+                PinName = name,
+                PinNumber = number,
+                DeviceManager = deviceManager,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+
+            toggleSwitch.PinStateChanged += ToggleSwitch_PinStateChanged;
+            toggleSwitch.Error += ToggleSwitch_Error;
+
+            return toggleSwitch;
+        }
+
+        private void Device_OutputStateChanged(object sender, (string PinName, bool State) e)
+        {
+            try
+            {
+                var toggle = toggleSwitches.FirstOrDefault(t => t.PinName == e.PinName);
+                toggle?.UpdateState(e.State);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating toggle state: {ex.Message}");
+            }
+        }
+
+        private void ToggleSwitch_PinStateChanged(object sender, bool newState)
+        {
+            var toggle = sender as IOPinToggleSwitch;
+            Debug.WriteLine($"Pin {toggle?.PinName} state changed to: {newState}");
+        }
+
+        private void ToggleSwitch_Error(object sender, string errorMessage)
+        {
+            MessageBox.Show(errorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private void CleanupToggleSwitches()
+        {
+            if (toggleSwitches != null)
+            {
+                foreach (var toggle in toggleSwitches)
+                {
+                    toggle.PinStateChanged -= ToggleSwitch_PinStateChanged;
+                    toggle.Error -= ToggleSwitch_Error;
+                }
+                toggleSwitches.Clear();
+            }
+
+            if (QuickAccessPanel != null)
+            {
+                QuickAccessPanel.Children.Clear();
+            }
+
+            if (deviceManager != null)
+            {
+                var bottomDevice = deviceManager.GetDevice("IOBottom");
+                if (bottomDevice != null)
+                {
+                    bottomDevice.OutputStateChanged -= Device_OutputStateChanged;
+                }
+            }
+        }
+        // Method to reinitialize toggle switches if needed
+        public void ReinitializeToggleSwitches()
+        {
+            CleanupToggleSwitches();
+            InitializeToggleSwitches();
+        }
+
+
+
         #endregion
 
 
@@ -1010,6 +1126,20 @@ namespace UaaSolutionWpf
             TeachManagerControl?.Dispose();  // Add this line
 
 
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            try
+            {
+                CleanupToggleSwitches();
+                deviceManager?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error during cleanup: {ex.Message}");
+            }
+            base.OnClosing(e);
         }
 
         //when main window closing.

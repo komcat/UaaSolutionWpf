@@ -16,13 +16,13 @@ using Serilog.Core;
 using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
-using UaaSolutionWpf.IO;
 using UaaSolutionWpf.Motion;
 using Newtonsoft.Json;
 using UaaSolutionWpf.Config;
 using UaaSolutionWpf.Data;
 using UaaSolutionWpf.Sequence;
-
+using EzIIOLib;
+using EzIIOLibControl;
 
 namespace UaaSolutionWpf
 {
@@ -63,6 +63,9 @@ namespace UaaSolutionWpf
         private CameraGantryService _cameraGantryService;
         private PneumaticSlideService slideService;
         private AutomationExample _automation;
+
+        private MultiDeviceManager deviceManager;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -93,8 +96,6 @@ namespace UaaSolutionWpf
             if (RightHexapodControl != null)
                 ((HexapodControl)RightHexapodControl).RobotName = "Right Hexapod";
 
-
-            InitializeIOMonitorControls();
 
 
             // Initialize the camera control
@@ -246,21 +247,6 @@ namespace UaaSolutionWpf
         #endregion
 
         #region
-        private IOManager _ioManager;
-
-        private void InitializeIOMonitorControls()
-        {
-            _ioManager = new IOManager(EziioControlBottom, EziioControlTop, _logger);
-            _ioManager.Initialize();
-
-            //All related IO after this line
-            InitVacBaseControlIO(_ioManager);
-        }
-
-        private void InitVacBaseControlIO(IOManager ioman)
-        {
-            VacBaseControl.Initialize(ioman);
-        }
 
         #endregion
 
@@ -494,8 +480,7 @@ namespace UaaSolutionWpf
             
             InitializeTECController(); // Add this line
             
-            InitializePneumaticSlideControl();
-            
+           
             InitializeSensorChannel();
             
             InitializeDirectMovementControl();
@@ -513,13 +498,10 @@ namespace UaaSolutionWpf
             InitializeDeviceMonitors();
 
             
-            InitializePneumaticSlideControlItems();
 
             
             InitializeCameraGantryService();
 
-            InitializePneumaticSlideService();
-            InitializeSlideTest();
 
             //init homing button
             // Initialize the buffer control after construction
@@ -537,62 +519,34 @@ namespace UaaSolutionWpf
                 _logger);
 
 
-            InitializeAutomation();
+            //Init Eziio stuffs
+            InitializeDeviceManager();
+
+
+            //InitializeAutomation();
         }
 
 
-        private void InitializeAutomation()
-        {
-            _automation = new AutomationExample(
-                motionGraphManager: motionGraphManager,
-                leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
-                rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
-                bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
-                gantry: gantryMovementService,
-                ioManager: _ioManager,
-                slideService: slideService,
-                logger: _logger);
-        }
+        //private void InitializeAutomation()
+        //{
+        //    _automation = new AutomationExample(
+        //        motionGraphManager: motionGraphManager,
+        //        leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
+        //        rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
+        //        bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+        //        gantry: gantryMovementService,
+        //        ioManager: _ioManager,
+        //        slideService: slideService,
+        //        logger: _logger);
+        //}
 
         private void IntiaiteGripperControls()
         {
             //set up gripper controls
-            //LeftGripperControl.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
-            //RightGripperControl.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
             Log.Information("Initialize toggle output UI");
-            LeftGripperToggleSwitch.Configure(_ioManager, "IOBottom", "L_Gripper", "Left Gripper");
-            RightGripperToggleSwitch.Configure(_ioManager, "IOBottom", "R_Gripper", "Right Gripper");
-
-            // For example, to use it with the dispenser shot
-            UvPlc1TriggerControl.Configure(_ioManager, _logger, "IOBottom", "UV_PLC1", "UV 1");
+          
         }
-        public void InitializeSlideTest()
-        {
-            Log.Information("Initializing Pneumatic Slide Test panel");
-            string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "PneumaticSlides.json");
-            slideService = new PneumaticSlideService(configPath, _ioManager, _logger);
-            SlideTestControl.Initialize(slideService, _logger);
-        }
-
-        private void InitializePneumaticSlideService()
-        {
-            Log.Information("Initializing Pneumatic Slide Service");
-            // Initialize the service
-            string configPath = Path.Combine("Config", "PneumaticSlides.json");
-            slideService = new PneumaticSlideService(configPath, _ioManager, _logger);
-
-            // Subscribe to state changes
-            slideService.SlideStateChanged += (sender, e) => {
-                Log.Information(
-                    "Slide {SlideId} changed from {OldState} to {NewState} in {Duration}ms",
-                    e.SlideId,
-                    e.OldState,
-                    e.NewState,
-                    e.TransitionDuration.TotalMilliseconds);
-            };
-
-        }
-
+      
         private void InitializeCameraGantryService()
         {
             Log.Information("Initialize Camera Gantry Service UI");
@@ -845,120 +799,119 @@ namespace UaaSolutionWpf
         }
         //test graph manager
 
-        // In your MainWindow.xaml.cs
-        private async void SetupKeithleyDataHandling()
-        {
-            // Access the data stream
-            var dataStream = _KeithleyCurrentControl.DataStream;
 
-            // Subscribe to batch processing events for real-time updates
-            //dataStream.BatchProcessed += (sender, batch) =>
-            //{
-            //    // Handle the batch of measurements
-            //    // For example, update charts or perform analysis
-            //    foreach (var point in batch)
-            //    {
-            //        Console.WriteLine($"Channel {point.ChannelNumber}: {point.Value} {point.Unit} at {point.Timestamp}");
-            //    }
-            //};
+        #region eziio
 
-            // You can also get the latest data at any time
-            int currentSize = dataStream.BufferSize;
-            Console.WriteLine($"Current buffer size: {currentSize}");
-        }
-        private void LogPathAnalysis(PathAnalysis analysis)
+        private MultiDeviceManager CreateDeviceManager()
         {
-            if (analysis.IsValid)
-            {
-                _logger.Information($"Device: {analysis.DeviceName} ({analysis.DeviceType})");
-                _logger.Information($"Starting at: X={analysis.InitialPosition.X:F3}, Y={analysis.InitialPosition.Y:F3}, Z={analysis.InitialPosition.Z:F3}");
-                _logger.Information($"Closest Known Position: {analysis.CurrentPosition}");
-                _logger.Information($"Requires Initial Move: {analysis.RequiresInitialMove}");
-                _logger.Information($"Target Position: {analysis.TargetPosition}");
-                _logger.Information($"Path: {string.Join(" -> ", analysis.Path)}");
-                _logger.Information($"Number of steps: {analysis.NumberOfSteps}");
-            }
-            else
-            {
-                _logger.Error($"Error: {analysis.Error}");
-            }
+            // Centralize device manager creation
+            var deviceManager = new MultiDeviceManager();
+            ConfigureDevices(deviceManager);
+            return deviceManager;
         }
 
-        private void InitializePneumaticSlideControlItems()
+        private void ConfigureDevices(MultiDeviceManager deviceManager)
         {
-            Log.Information("Initialize Pneumatic Slides Control UI");
-            if (PneumaticSlideControl != null && _ioManager != null)
-            {
-                // Initialize the control with IOManager and logger
-                PneumaticSlideControl.Initialize(_ioManager, _logger);
+            // Add all devices
+            deviceManager.AddDevice("IOBottom");
+            deviceManager.AddDevice("IOTop");
 
-                // Subscribe to IO state changes
-                _ioManager.IOStateChanged += (s, e) =>
-                {
-                    // Only handle input state changes for pneumatic sensors
-                    if (e.IsInput)
-                    {
-                        PneumaticSlideControl.UpdateSensorState(e.PinName, e.State);
-                    }
-                };
+            // Connect to devices
+            deviceManager.ConnectAll();
+        }
+
+        private void InitializeDeviceManager()
+        {
+            try
+            {
+                // Create device manager
+                deviceManager = CreateDeviceManager();
+
+                // Setup pin monitors
+                SetupPinMonitors();
+
+                // Setup pneumatic slide control
+                SetupPneumaticSlideControl();
+
+                _logger.Information("Connected to IOBottom and IOTop devices");
+            }
+            catch (Exception ex)
+            {
+                HandleInitializationError(ex);
             }
         }
 
-        private void InitializePneumaticSlideControl()
+        private void SetupPinMonitors()
         {
-            Log.Information("Initialize Pneumatic Slides UI");
-            if (PneumaticSlideControl != null && _ioManager != null)
-            {
-                // Initialize the control with IOManager and logger
-                PneumaticSlideControl.Initialize(_ioManager, _logger);
+            // Setup for IOBottom
+            outputPinMonitorIOBottom.DeviceManager = deviceManager;
+            outputPinMonitorIOBottom.DeviceName = "IOBottom";
+            outputPinMonitorIOBottom.PinsSource = deviceManager.GetOutputPins("IOBottom");
+            inputPinMonitorIOBottom.PinsSource = deviceManager.GetInputPins("IOBottom");
 
-                // Subscribe to IO state changes
-                _ioManager.IOStateChanged += (s, e) =>
-                {
-                    // Only handle input state changes for pneumatic sensors
-                    if (e.IsInput)
-                    {
-                        switch (e.PinName)
-                        {
-                            case "UV_Head_Up":
-                            case "UV_Head_Down":
-                            case "Dispenser_Head_Up":
-                            case "Dispenser_Head_Down":
-                            case "Pick_Up_Tool_Up":
-                            case "Pick_Up_Tool_Down":
-                                PneumaticSlideControl.UpdateSensorState(e.PinName, e.State);
-                                break;
-                        }
-                    }
-                };
+            // Setup for IOTop
+            outputPinMonitorIOTop.DeviceManager = deviceManager;
+            outputPinMonitorIOTop.DeviceName = "IOTop";
+            outputPinMonitorIOTop.PinsSource = deviceManager.GetOutputPins("IOTop");
+            inputPinMonitorIOTop.PinsSource = deviceManager.GetInputPins("IOTop");
 
-                // Initialize initial states
-                InitializePneumaticStates();
-            }
+            // Optional: If you want to handle the pin clicked event for logging or additional processing
+            outputPinMonitorIOBottom.PinClicked += OnOutputPinClicked;
+            outputPinMonitorIOTop.PinClicked += OnOutputPinClicked;
         }
 
-        private void InitializePneumaticStates()
+        private void SetupPneumaticSlideControl()
         {
-            var sensorNames = new[]
-            {
-                "UV_Head_Up",
-                "UV_Head_Down",
-                "Dispenser_Head_Up",
-                "Dispenser_Head_Down",
-                "Pick_Up_Tool_Up",
-                "Pick_Up_Tool_Down"
-            };
-
-            foreach (var sensorName in sensorNames)
-            {
-                // Make sure this device name matches your IOConfig.json
-                var state = _ioManager.GetPinState("IOTop", sensorName, true);
-                if (state.HasValue)
-                {
-                    PneumaticSlideControl.UpdateSensorState(sensorName, state.Value);
-                }
-            }
+            pneumaticSlideControl.DeviceManager = deviceManager;
+            pneumaticSlideControl.LogEvent += OnPneumaticSlideLog;
+            pneumaticSlideControl.RefreshRequested += OnPneumaticSlideRefresh;
         }
+
+        private void OnOutputPinClicked(object sender, (string DeviceName, string PinName) e)
+        {
+            // Optional: Additional logging or processing
+            string status = $"Toggled {e.DeviceName} pin: {e.PinName}";
+            _logger.Information(status);
+        }
+        private void HandleInitializationError(Exception ex)
+        {
+            string status = $"Error: {ex.Message}";
+            _logger.Error(status);
+            MessageBox.Show($"Initialization error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        // Existing event handlers remain the same
+        private void OnPneumaticSlideLog(object sender, string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _logger.Information(message);
+            });
+        }
+
+        private void OnPneumaticSlideRefresh(object sender, EventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _logger.Information("Pneumatic slides refreshed");
+            });
+        }
+
+        private void HandleClosingEziioDevices()
+        {
+            // Unsubscribe from events
+            if (pneumaticSlideControl != null)
+            {
+                pneumaticSlideControl.LogEvent -= OnPneumaticSlideLog;
+                pneumaticSlideControl.RefreshRequested -= OnPneumaticSlideRefresh;
+            }
+
+            // Disconnect and dispose of device manager
+            deviceManager?.DisconnectAll();
+            deviceManager?.Dispose();
+        }
+        #endregion
+
 
 
 
@@ -1045,8 +998,9 @@ namespace UaaSolutionWpf
         }
         protected override void OnClosed(EventArgs e)
         {
+            HandleClosingEziioDevices();
             base.OnClosed(e);
-            _ioManager?.Dispose();
+            //_ioManager?.Dispose();
             cameraManagerWpf?.Dispose();
             hexapodConnectionManager?.Dispose();
             gantryConnectionManager?.Dispose();
@@ -1054,6 +1008,8 @@ namespace UaaSolutionWpf
             _KeithleyCurrentControl?.Dispose();  // Add this line to ensure proper cleanup
             _tecController?.Dispose();  // Add this line
             TeachManagerControl?.Dispose();  // Add this line
+
+
         }
 
         //when main window closing.
@@ -1074,5 +1030,8 @@ namespace UaaSolutionWpf
         {
             await _automation.RunDispenserOperation();
         }
+
+
+
     }
 }

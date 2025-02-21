@@ -96,18 +96,6 @@
     <None Update="EziMOTIONPlusE.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="IO\InputPinMapping.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="IO\IOBottom.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="IO\IOTop.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="IO\OutputPinMapping.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Ivi.Visa.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -131,12 +119,15 @@
 
   <ItemGroup>
     <Folder Include="Charts\" />
+    <Folder Include="IO\" />
     <Folder Include="Scanning\Data\" />
     <Folder Include="Scanning\Movement\" />
     <Folder Include="Scanning\Monitoring\" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EzIIOLibControl\EzIIOLibControl.csproj" />
+    <ProjectReference Include="..\EzIIOLib\EzIIOLib.csproj" />
     <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />
     <ProjectReference Include="..\WpfLiveChart\WpfLiveChart.csproj" />
   </ItemGroup>

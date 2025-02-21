@@ -4,7 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:UaaSolutionWpf"
-        xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"        
+        xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"
+        xmlns:eziiolibs="clr-namespace:EzIIOLibControl.Controls;assembly=EzIIOLibControl"
         mc:Ignorable="d"
         Title="MainWindow" Height="1158" Width="2185" Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid>
@@ -34,10 +35,7 @@
 
 
         <StackPanel Grid.Column="0" Grid.Row="1" Grid.RowSpan="5" Width="250">
-
-
-            <!--<controls:PneumaticSlideControl x:Name="PneumaticSlideControl" />-->
-            <controls:PneumaticSlideControlItem x:Name="PneumaticSlideControl" />
+            <eziiolibs:PneumaticSlideControl x:Name="pneumaticSlideControl"/>
             <controls:TECControllerV2 x:Name="tecControllerV2" Margin="2" />
         </StackPanel>
 
@@ -58,15 +56,6 @@
                 <!-- Monitors will be added here programmatically -->
             </WrapPanel>
 
-            <!--<controls:GripperControl x:Name="LeftGripperControl" Margin="2"/>-->
-            <!--<controls:GripperControl x:Name="RightGripperControl" Margin="2"/>-->
-
-            <controls:ToggleSwitch x:Name="LeftGripperToggleSwitch" Margin="2"/>
-            <controls:ToggleSwitch x:Name="RightGripperToggleSwitch" Margin="2"/>
-
-
-            <controls:TriggerControl x:Name="UvPlc1TriggerControl"  />
-            <controls:VacBaseControl x:Name="VacBaseControl"/>
         </StackPanel>
 
 
@@ -129,7 +118,7 @@
                             <Button x:Name="UvOperation" Content="UV operation" Height="100" Width="300" Margin="2" Click="UvOperation_Click"/>
                             <Button x:Name="DisPensingOperation" Content="Dispense 1 operation" Height="100" Width="300" Margin="2" Click="DisPensingOperation_Click" />
                         </StackPanel>
-                        
+
                     </Grid>
                 </TabItem>
                 <TabItem Header="Axises" >
@@ -181,38 +170,8 @@
                 <TabItem Header="I/O">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="156*"/>
-                            <ColumnDefinition Width="101*"/>
-                            <ColumnDefinition Width="257*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Left side - Bottom IO Control -->
-                        <ScrollViewer Grid.Column="0" 
-                     VerticalScrollBarVisibility="Auto" 
-                     HorizontalScrollBarVisibility="Disabled"
-                     Margin="10,10,10,10" Grid.ColumnSpan="2">
-                            <controls:EziioControl x:Name="EziioControlBottom"
-                                 DataContext="{Binding BottomEziioViewModel}">
-                            </controls:EziioControl>
-                        </ScrollViewer>
-
-                        <!-- Right side - Top IO Control -->
-                        <ScrollViewer Grid.Column="2" 
-                     VerticalScrollBarVisibility="Auto" 
-                     HorizontalScrollBarVisibility="Disabled"
-                     Margin="10,10,10,10">
-                            <controls:EziioControl x:Name="EziioControlTop"
-                                 DataContext="{Binding TopEziioViewModel}">
-                            </controls:EziioControl>
-
-                        </ScrollViewer>
-                    </Grid>
-                </TabItem>
-                <TabItem Header="Pneumatic Slides">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="350"/>
+                            <ColumnDefinition Width="350"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -220,7 +179,29 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <controls:PneumaticSlideTestControl x:Name="SlideTestControl" />
+                        <!-- Left side - Bottom IO Control -->
+                        <StackPanel x:Name="ioBottomPanel" Margin="5" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
+                            <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOBottom"
+                                                            HeaderText="Output Pins - IOBottom"
+                                                            IsOutput="True"/>
+                            <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOBottom"
+                                                           HeaderText="Input Pins - IOBottom"
+                                                           IsOutput="False"/>
+                        </StackPanel>
+
+
+
+
+
+                        <!-- Right side - Top IO Control -->
+                        <StackPanel x:Name="ioTopPanel" Margin="5" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2">
+                            <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOTop"
+                                                            HeaderText="Output Pins - IOTop"
+                                                            IsOutput="True"/>
+                            <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOTop"
+                                                           HeaderText="Input Pins - IOTop"
+                                                           IsOutput="False"/>
+                        </StackPanel>
                     </Grid>
                 </TabItem>
                 <TabItem Header="Measurements">

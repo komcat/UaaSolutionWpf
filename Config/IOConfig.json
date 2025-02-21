@@ -1,154 +1,208 @@
 {
   "metadata": {
-    "version": "1.0",
+    "version": "2.0",
     "lastUpdated": "2025-02-02T12:00:00Z"
   },
-  "Eziio": [
+  "pneumaticSlides": [
+    {
+      "name": "UV_Head",
+      "output": {
+        "deviceName": "IOBottom",
+        "pinName": "UV_Head"
+      },
+      "extendedInput": {
+        "deviceName": "IOTop",
+        "pinName": "UV_Head_Down"
+      },
+      "retractedInput": {
+        "deviceName": "IOTop",
+        "pinName": "UV_Head_Up"
+      },
+      "timeoutMs": 5000
+    },
+    {
+      "name": "Dispenser_Head",
+      "output": {
+        "deviceName": "IOBottom",
+        "pinName": "Dispenser_Head"
+      },
+      "extendedInput": {
+        "deviceName": "IOTop",
+        "pinName": "Dispenser_Head_Down"
+      },
+      "retractedInput": {
+        "deviceName": "IOTop",
+        "pinName": "Dispenser_Head_Up"
+      },
+      "timeoutMs": 5000
+    },
+    {
+      "name": "Pick_Up_Tool",
+      "output": {
+        "deviceName": "IOBottom",
+        "pinName": "Pick_Up_Tool"
+      },
+      "extendedInput": {
+        "deviceName": "IOTop",
+        "pinName": "Pick_Up_Tool_Down"
+      },
+      "retractedInput": {
+        "deviceName": "IOTop",
+        "pinName": "Pick_Up_Tool_Up"
+      },
+      "timeoutMs": 5000
+    }
+  ],
+  "eziio": [
     {
       "deviceId": 0,
       "name": "IOBottom",
       "IP": "192.168.0.3",
-      "IOConfig": {
-        "Outputs": [
+      "inputCount": 0,
+      "outputCount": 16,
+      "ioConfig": {
+        "outputs": [
           {
-            "Pin": 0,
-            "Name": "L_Gripper"
+            "pin": 0,
+            "name": "L_Gripper"
           },
           {
-            "Pin": 1,
-            "Name": "P1"
+            "pin": 1,
+            "name": "P1"
           },
           {
-            "Pin": 2,
-            "Name": "R_Gripper"
+            "pin": 2,
+            "name": "R_Gripper"
           },
           {
-            "Pin": 3,
-            "Name": "R_Safety"
+            "pin": 3,
+            "name": "R_Safety"
           },
           {
-            "Pin": 4,
-            "Name": "UV_Head"
+            "pin": 4,
+            "name": "UV_Head"
           },
           {
-            "Pin": 5,
-            "Name": "Dispenser_Head"
+            "pin": 5,
+            "name": "Dispenser_Head"
           },
           {
-            "Pin": 6,
-            "Name": "Pick_Up_Tool"
+            "pin": 6,
+            "name": "Pick_Up_Tool"
           },
           {
-            "Pin": 7,
-            "Name": "P7"
+            "pin": 7,
+            "name": "P7"
           },
           {
-            "Pin": 8,
-            "Name": "P8"
+            "pin": 8,
+            "name": "P8"
           },
           {
-            "Pin": 9,
-            "Name": "P9"
+            "pin": 9,
+            "name": "P9"
           },
           {
-            "Pin": 10,
-            "Name": "Vacuum_Base"
+            "pin": 10,
+            "name": "Vacuum_Base"
           },
           {
-            "Pin": 11,
-            "Name": "P11"
+            "pin": 11,
+            "name": "P11"
           },
           {
-            "Pin": 12,
-            "Name": "Reserve_UV_PLC3"
+            "pin": 12,
+            "name": "Reserve_UV_PLC3"
           },
           {
-            "Pin": 13,
-            "Name": "UV_PLC2"
+            "pin": 13,
+            "name": "UV_PLC2"
           },
           {
-            "Pin": 14,
-            "Name": "UV_PLC1"
+            "pin": 14,
+            "name": "UV_PLC1"
           },
           {
-            "Pin": 15,
-            "Name": "Dispenser_Shot"
+            "pin": 15,
+            "name": "Dispenser_Shot"
           }
         ],
-        "Inputs": []
+        "inputs": []
       }
     },
     {
       "deviceId": 1,
       "name": "IOTop",
       "IP": "192.168.0.5",
-      "IOConfig": {
-        "Outputs": [
+      "inputCount": 8,
+      "outputCount": 8,
+      "ioConfig": {
+        "outputs": [
           {
-            "Pin": 0,
-            "Name": "Output0"
+            "pin": 0,
+            "name": "Output0"
           },
           {
-            "Pin": 1,
-            "Name": "Output1"
+            "pin": 1,
+            "name": "Output1"
           },
           {
-            "Pin": 2,
-            "Name": "Output2"
+            "pin": 2,
+            "name": "Output2"
           },
           {
-            "Pin": 3,
-            "Name": "Output3"
+            "pin": 3,
+            "name": "Output3"
           },
           {
-            "Pin": 4,
-            "Name": "Output4"
+            "pin": 4,
+            "name": "Output4"
           },
           {
-            "Pin": 5,
-            "Name": "Output5"
+            "pin": 5,
+            "name": "Output5"
           },
           {
-            "Pin": 6,
-            "Name": "Output6"
+            "pin": 6,
+            "name": "Output6"
           },
           {
-            "Pin": 7,
-            "Name": "Output7"
+            "pin": 7,
+            "name": "Output7"
           }
         ],
-        "Inputs": [
+        "inputs": [
           {
-            "Pin": 0,
-            "Name": "Input0"
+            "pin": 0,
+            "name": "Input0"
           },
           {
-            "Pin": 1,
-            "Name": "UV_Head_Up"
+            "pin": 1,
+            "name": "UV_Head_Up"
           },
           {
-            "Pin": 2,
-            "Name": "UV_Head_Down"
+            "pin": 2,
+            "name": "UV_Head_Down"
           },
           {
-            "Pin": 3,
-            "Name": "Dispenser_Head_Up"
+            "pin": 3,
+            "name": "Dispenser_Head_Up"
           },
           {
-            "Pin": 4,
-            "Name": "Dispenser_Head_Down"
+            "pin": 4,
+            "name": "Dispenser_Head_Down"
           },
           {
-            "Pin": 5,
-            "Name": "Pick_Up_Tool_Up"
+            "pin": 5,
+            "name": "Pick_Up_Tool_Up"
           },
           {
-            "Pin": 6,
-            "Name": "Pick_Up_Tool_Down"
+            "pin": 6,
+            "name": "Pick_Up_Tool_Down"
           },
           {
-            "Pin": 7,
-            "Name": "Input7"
+            "pin": 7,
+            "name": "Input7"
           }
         ]
       }

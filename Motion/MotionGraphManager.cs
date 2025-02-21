@@ -118,19 +118,7 @@ namespace UaaSolutionWpf.Motion
             }
         }
 
-        private async Task<string> GetCurrentPosition(string deviceId)
-        {
-            try
-            {
-                var position = await _positionMonitor.GetCurrentPosition(deviceId);
-                return DeterminePositionName(deviceId, position);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to get current position for device {DeviceId}", deviceId);
-                throw;
-            }
-        }
+   
 
         private string DeterminePositionName(string deviceId, DevicePosition currentPosition)
         {

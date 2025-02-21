@@ -165,12 +165,7 @@ namespace UaaSolutionWpf.Services
                 throw;
             }
         }
-        private async Task<bool> IsAxisEnabledAsync(int axis)
-        {
-            // This would need to be implemented based on how you track axis enable states
-            // For now, returning true as a placeholder
-            return true;
-        }
+
 
         public enum Axis
         {

@@ -64,7 +64,7 @@ namespace UaaSolutionWpf
         private RealTimeDataManager _realTimeDataManager;
         private MotionCoordinator _motionCoordinator;
         private CameraGantryService _cameraGantryService;
-        private PneumaticSlideService slideService;
+
         private AutomationExample _automation;
 
         private MultiDeviceManager deviceManager;
@@ -480,18 +480,18 @@ namespace UaaSolutionWpf
             //await InitializeIOMonitorControlsAsync();
             // Initialize camera with automatic connection and live view
             await InitializeCameraAsync();
-            
+
             InitializeTECController(); // Add this line
-            
-           
+
+
             InitializeSensorChannel();
-            
+
             InitializeDirectMovementControl();
-            
+
             InitializeMotionCoordinator();
-            
+
             InitializeAutoAlignmentControl();
-            
+
             InitializeSequenceControl();
             IntiaiteGripperControls();
 
@@ -500,9 +500,9 @@ namespace UaaSolutionWpf
 
             InitializeDeviceMonitors();
 
-            
 
-            
+
+
             InitializeCameraGantryService();
 
 
@@ -526,30 +526,29 @@ namespace UaaSolutionWpf
             InitializeDeviceManager();
 
 
-            //InitializeAutomation();
+            InitializeAutomation();
         }
 
 
-        //private void InitializeAutomation()
-        //{
-        //    _automation = new AutomationExample(
-        //        motionGraphManager: motionGraphManager,
-        //        leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
-        //        rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
-        //        bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
-        //        gantry: gantryMovementService,
-        //        ioManager: _ioManager,
-        //        slideService: slideService,
-        //        logger: _logger);
-        //}
+        private void InitializeAutomation()
+        {
+            _automation = new AutomationExample(
+                motionGraphManager: motionGraphManager,
+                leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
+                rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
+                bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                gantry: gantryMovementService,
+                ioManager: deviceManager,
+                logger: _logger);
+        }
 
         private void IntiaiteGripperControls()
         {
             //set up gripper controls
             Log.Information("Initialize toggle output UI");
-          
+
         }
-      
+
         private void InitializeCameraGantryService()
         {
             Log.Information("Initialize Camera Gantry Service UI");
@@ -582,7 +581,7 @@ namespace UaaSolutionWpf
                 QuickAccessPanel.Children.Add(monitor);
             }
         }
-        
+
         private void InitializeSequenceControl()
         {
             Log.Information("Initialize Sequences motion UI");

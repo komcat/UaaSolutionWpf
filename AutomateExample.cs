@@ -1,8 +1,8 @@
-﻿using Serilog;
+﻿using EzIIOLib;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UaaSolutionWpf.IO;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.ViewModels;
@@ -20,8 +20,7 @@ namespace UaaSolutionWpf
             HexapodMovementService rightHexapod,
             HexapodMovementService bottomHexapod,
             GantryMovementService gantry,
-            IOManager ioManager,
-            PneumaticSlideService slideService,
+            MultiDeviceManager ioManager,
             ILogger logger)
         {
             _logger = logger.ForContext<AutomationExample>();
@@ -34,7 +33,6 @@ namespace UaaSolutionWpf
                 bottomHexapod: bottomHexapod,
                 gantry: gantry,
                 ioManager: ioManager,
-                slideService: slideService,
                 logger: logger);
         }
 
@@ -97,30 +95,24 @@ namespace UaaSolutionWpf
                         order: 2,
                         waitForComplete: true),
 
-                    // Lower Pick Up Tool with full validation
+                    // Lower Pick Up Tool
                     CoordinatedCommand.CreateSlideCommand(
                         slideId: "pickup_tool",
-                        targetState: SlideState.Down,
+                        targetSlidePosition: SlidePosition.Extended,  // Instead of SlideState.Down
                         order: 3),
 
-                    // Grip the lens
-                    CoordinatedCommand.CreateOutputCommand(
-                        deviceName: "IOBottom",
-                        pinName: "L_Gripper",
-                        state: true,
-                        order: 4,
-                        waitForComplete: true),
+                    
 
                     // Wait for grip to establish
                     CoordinatedCommand.CreateTimerCommand(
                         duration: TimeSpan.FromSeconds(0.5),
-                        order: 5),
+                        order: 10),
 
                     // Raise Pick Up Tool with full validation
                     CoordinatedCommand.CreateSlideCommand(
                         slideId: "pickup_tool",
-                        targetState: SlideState.Up,
-                        order: 6)
+                        targetSlidePosition: SlidePosition.Retracted,  // Instead of SlideState.Up
+                        order: 11)
                 };
 
                 await _coordinator.ExecuteCommandSequence(sequence);

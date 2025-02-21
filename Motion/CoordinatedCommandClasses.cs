@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EzIIOLib;
+using System;
 using System.Collections.Generic;
 using UaaSolutionWpf.ViewModels;
 
@@ -40,8 +41,10 @@ namespace UaaSolutionWpf.Motion
         public TimeSpan? Timeout { get; set; }
 
         // Slide specific properties
-        public string SlideId { get; set; }            // e.g., "uv_head", "dispenser_head"
-        public SlideState TargetSlideState { get; set; }  // Up or Down
+        public string SlideId { get; set; }
+        public SlidePosition TargetSlidePosition { get; set; }  // Changed from SlideState to SlidePosition
+        public TimeSpan? SlideTimeout { get; set; }
+
 
         // Factory methods for cleaner creation
         public static CoordinatedCommand CreateMotionCommand(string deviceId, string targetPosition, int order, bool waitForComplete = true)
@@ -71,16 +74,22 @@ namespace UaaSolutionWpf.Motion
             };
         }
 
-        public static CoordinatedCommand CreateSlideCommand(string slideId, SlideState targetState, int order)
+        public static CoordinatedCommand CreateSlideCommand(
+               string slideId,
+               SlidePosition targetSlidePosition,  // Changed parameter type
+               int order,
+               bool waitForComplete = true,
+               TimeSpan? timeout = null)
         {
             return new CoordinatedCommand
             {
                 Type = CommandType.SlideMove,
                 SlideId = slideId,
-                TargetSlideState = targetState,
+                TargetSlidePosition = targetSlidePosition,
                 ExecutionOrder = order,
-                WaitForCompletion = true, // Always wait for slide operations
-                Description = $"Move slide {slideId} to {targetState}"
+                WaitForCompletion = waitForComplete,
+                SlideTimeout = timeout,
+                Description = $"Move slide {slideId} to {targetSlidePosition}"
             };
         }
 

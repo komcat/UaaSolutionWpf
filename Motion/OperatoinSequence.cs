@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EzIIOLib;
+using System;
 using System.Collections.Generic;
 using UaaSolutionWpf.ViewModels;
 
@@ -19,20 +20,56 @@ namespace UaaSolutionWpf.Motion
             
                 // Lower UV head (PneumaticSlideService handles all validation)
                 CoordinatedCommand.CreateSlideCommand(
-                    slideId: "uv_head",
-                    targetState: SlideState.Down,
+                    slideId: "UV_Head",
+                    targetSlidePosition: SlidePosition.Extended,
                     order: 2),
             
                 // UV exposure time
                 CoordinatedCommand.CreateTimerCommand(
                     duration: TimeSpan.FromSeconds(2),
                     order: 3),
-            
+
+                //set uv off
+                CoordinatedCommand.CreateOutputCommand(
+                    deviceName: "IOBottom",
+                    pinName: "UV_PLC1",
+                    state: false,
+                    order: 4,
+                    waitForComplete: true),
+
+                //wait 0.1sec
+                CoordinatedCommand.CreateTimerCommand(
+                    duration: TimeSpan.FromSeconds(0.1),
+                    order: 5),
+                //set trigger on
+                CoordinatedCommand.CreateOutputCommand(
+                    deviceName: "IOBottom",
+                    pinName: "UV_PLC1",
+                    state: true,
+                    order: 6,
+                    waitForComplete: true),
+
+                    //wait 0.1sec
+                CoordinatedCommand.CreateTimerCommand(
+                    duration: TimeSpan.FromSeconds(0.1),
+                    order: 7),
+
+                //alway set uv_plc1 to OFF
+                CoordinatedCommand.CreateOutputCommand(
+                    deviceName: "IOBottom",
+                    pinName: "UV_PLC1",
+                    state: false,
+                    order: 8,
+                    waitForComplete: true),
+                //wait 120sec
+                CoordinatedCommand.CreateTimerCommand(
+                    duration: TimeSpan.FromSeconds(120),
+                    order: 7),
                 // Raise UV head (PneumaticSlideService handles all validation)
                 CoordinatedCommand.CreateSlideCommand(
-                    slideId: "uv_head",
-                    targetState: SlideState.Up,
-                    order: 4)
+                    slideId: "UV_Head",
+                    targetSlidePosition: SlidePosition.Retracted,
+                    order: 9)
             };
         }
     }

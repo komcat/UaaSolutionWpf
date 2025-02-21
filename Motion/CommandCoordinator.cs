@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
-using UaaSolutionWpf.IO;
+using EzIIOLib;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.ViewModels;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace UaaSolutionWpf.Motion
 {
@@ -13,26 +15,34 @@ namespace UaaSolutionWpf.Motion
     {
         private readonly MotionGraphManager _motionGraphManager;
         private readonly Dictionary<string, Func<string, Task>> _moveExecutors;
-        private readonly IOManager _ioManager;
+        private readonly MultiDeviceManager _ioManager;
         private readonly ILogger _logger;
         private readonly SemaphoreSlim _hexapodSemaphore = new SemaphoreSlim(1, 1);
 
-        private readonly PneumaticSlideService _slideService;
+        private readonly PneumaticSlideManager _slideManager; // Changed from PneumaticSlideService
+
 
         public CommandCoordinator(
-            MotionGraphManager motionGraphManager,
-            HexapodMovementService leftHexapod,
-            HexapodMovementService rightHexapod,
-            HexapodMovementService bottomHexapod,
-            GantryMovementService gantry,
-            IOManager ioManager,
-            PneumaticSlideService slideService,
-            ILogger logger)
+                MotionGraphManager motionGraphManager,
+                HexapodMovementService leftHexapod,
+                HexapodMovementService rightHexapod,
+                HexapodMovementService bottomHexapod,
+                GantryMovementService gantry,
+                MultiDeviceManager ioManager,
+                ILogger logger)
         {
             _motionGraphManager = motionGraphManager;
             _ioManager = ioManager ?? throw new ArgumentNullException(nameof(ioManager));
-            _slideService = slideService ?? throw new ArgumentNullException(nameof(slideService));
+            _slideManager = new PneumaticSlideManager(ioManager);
+
+            var config = LoadConfiguration();
+            _slideManager.LoadSlidesFromConfig(config);
             _logger = logger.ForContext<CommandCoordinator>();
+
+            if (!_ioManager.AreAllDevicesConnected())
+            {
+                throw new InvalidOperationException("EzIIOManager is not connected");
+            }
 
             _moveExecutors = new Dictionary<string, Func<string, Task>>
             {
@@ -42,7 +52,20 @@ namespace UaaSolutionWpf.Motion
                 { "gantry-main", async (position) => await ExecuteGantryMove(gantry, position) }
             };
         }
+        private IOConfiguration LoadConfiguration()
+        {
+            string configPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Config",
+                "IOConfig.json"
+            );
 
+            if (!File.Exists(configPath))
+                throw new FileNotFoundException($"Configuration file not found: {configPath}");
+
+            string jsonContent = File.ReadAllText(configPath);
+            return JsonConvert.DeserializeObject<IOConfiguration>(jsonContent);
+        }
         public async Task ExecuteCommandSequence(List<CoordinatedCommand> commands)
         {
             try
@@ -180,48 +203,87 @@ namespace UaaSolutionWpf.Motion
 
         private async Task ExecuteOutputCommand(CoordinatedCommand command)
         {
-            // Direct IO control without validation
+            // Using EzIIOManager for IO control
             bool success;
             if (command.State)
             {
-                success = _ioManager.SetOutput(command.DeviceName, command.PinName);
-                _logger.Debug("Setting output {Device}.{Pin} without validation", command.DeviceName, command.PinName);
+                success = _ioManager.SetOutput(command.PinName); // Changed to use just pinName
+                _logger.Debug("Setting output pin {Pin} to ON", command.PinName);
             }
             else
             {
-                success = _ioManager.ClearOutput(command.DeviceName, command.PinName);
-                _logger.Debug("Clearing output {Device}.{Pin} without validation", command.DeviceName, command.PinName);
+                success = _ioManager.ClearOutput(command.PinName); // Changed to use just pinName
+                _logger.Debug("Clearing output pin {Pin} to OFF", command.PinName);
             }
 
             if (!success)
             {
                 throw new InvalidOperationException(
-                    $"Failed to set {command.DeviceName}.{command.PinName} to {(command.State ? "ON" : "OFF")}");
+                    $"Failed to set pin {command.PinName} to {(command.State ? "ON" : "OFF")}");
             }
         }
 
         private async Task ExecuteSlideCommand(CoordinatedCommand command)
         {
-            // Full slide control with validation
-            SlideOperationResult result;
-            if (command.TargetSlideState == SlideState.Down)
+            try
             {
-                _logger.Debug("Activating slide {SlideId} with full validation", command.SlideId);
-                result = await _slideService.ActivateSlideAsync(command.SlideId);
-            }
-            else
-            {
-                _logger.Debug("Deactivating slide {SlideId} with full validation", command.SlideId);
-                result = await _slideService.DeactivateSlideAsync(command.SlideId);
-            }
+                var slide = _slideManager.GetSlide(command.SlideId);
+                bool success;
 
-            if (!result.Success)
+                // Use the SlidePosition enum value directly
+                if (command.TargetSlidePosition == SlidePosition.Extended)
+                {
+                    _logger.Debug("Extending slide {SlideId}", command.SlideId);
+                    success = await slide.ExtendAsync();
+                }
+                else
+                {
+                    _logger.Debug("Retracting slide {SlideId}", command.SlideId);
+                    success = await slide.RetractAsync();
+                }
+
+                if (!success)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to move slide {command.SlideId} to position {command.TargetSlidePosition}");
+                }
+
+                // Wait for the slide to reach its target position
+                var startTime = DateTime.UtcNow;
+                var timeout = command.Timeout ?? TimeSpan.FromSeconds(30); // Default 30 second timeout
+
+                while (true)
+                {
+                    var position = slide.Position;
+
+                    if (position == command.TargetSlidePosition)
+                    {
+                        _logger.Information("Slide {SlideId} reached target position {Position}",
+                            command.SlideId, position);
+                        return;
+                    }
+
+                    if (position == SlidePosition.Unknown)
+                    {
+                        throw new InvalidOperationException(
+                            $"Slide {command.SlideId} entered unknown state");
+                    }
+
+                    if (DateTime.UtcNow - startTime > timeout)
+                    {
+                        throw new TimeoutException(
+                            $"Timeout waiting for slide {command.SlideId} to reach position {command.TargetSlidePosition}");
+                    }
+
+                    await Task.Delay(50); // Poll every 50ms
+                }
+            }
+            catch (Exception ex)
             {
-                throw new InvalidOperationException(
-                    $"Failed to move slide {command.SlideId} to {command.TargetSlideState}: {result.Error}");
+                _logger.Error(ex, "Error executing slide command for {SlideId}", command.SlideId);
+                throw;
             }
         }
-
         private async Task ExecuteTimerCommand(CoordinatedCommand command)
         {
             using var timer = new PreciseTimer(_logger);
@@ -241,19 +303,19 @@ namespace UaaSolutionWpf.Motion
 
             while (true)
             {
-                var currentState = _ioManager.GetPinState(command.InputDeviceName, command.InputPinName, true);
+                var currentState = _ioManager.GetInputState(command.InputPinName); // Changed to use EzIIOManager method
 
                 if (currentState == command.ExpectedState)
                 {
-                    _logger.Information("Input {Device}.{Pin} reached expected state {State}",
-                        command.InputDeviceName, command.InputPinName, command.ExpectedState);
+                    _logger.Information("Input pin {Pin} reached expected state {State}",
+                        command.InputPinName, command.ExpectedState);
                     return;
                 }
 
                 if (DateTime.UtcNow - startTime > timeout)
                 {
                     throw new TimeoutException(
-                        $"Timeout waiting for {command.InputDeviceName}.{command.InputPinName} to be {command.ExpectedState}");
+                        $"Timeout waiting for pin {command.InputPinName} to be {command.ExpectedState}");
                 }
 
                 await Task.Delay(50); // Poll every 50ms

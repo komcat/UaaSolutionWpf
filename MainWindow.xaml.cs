@@ -492,7 +492,7 @@ namespace UaaSolutionWpf
 
             InitializeAutoAlignmentControl();
 
-            InitializeSequenceControl();
+            //InitializeSequenceControl();
             IntiaiteGripperControls();
 
 
@@ -582,14 +582,14 @@ namespace UaaSolutionWpf
             }
         }
 
-        private void InitializeSequenceControl()
-        {
-            Log.Information("Initialize Sequences motion UI");
-            if (SequenceControl != null)
-            {
-                SequenceControl.Initialize(_motionCoordinator, _logger);
-            }
-        }
+        //private void InitializeSequenceControl()
+        //{
+        //    Log.Information("Initialize Sequences motion UI");
+        //    if (SequenceControl != null)
+        //    {
+        //        SequenceControl.Initialize(_motionCoordinator, _logger);
+        //    }
+        //}
 
         private void InitializeAutoAlignmentControl()
         {

@@ -91,10 +91,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <controls:SequenceControlPanel x:Name="SequenceControl" 
-                              Grid.Row="0" 
-                              Grid.Column="0" 
-                              Margin="5"/>
+                       
                         <!--<controls:AutoAlignmentControl Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"/>-->
                         <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Grid.ColumnSpan="2" 
                                     Height="400">

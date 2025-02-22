@@ -40,10 +40,10 @@ namespace UaaSolutionWpf.Motion
             // Initialize safety limits
             _safetyLimits = new Dictionary<string, DeviceSafetyLimits>
             {
-                { "hex-left", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Left Hexapod" } },
-                { "hex-right", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Right Hexapod" } },
-                { "hex-bottom", new DeviceSafetyLimits { MaxInitialMoveDistance = 5.0, Name = "Bottom Hexapod" } },
-                { "gantry-main", new DeviceSafetyLimits { MaxInitialMoveDistance = 10.0, Name = "Main Gantry" } }
+                { "hex-left", new DeviceSafetyLimits { MaxInitialMoveDistance = 2.0, Name = "Left Hexapod" } },
+                { "hex-right", new DeviceSafetyLimits { MaxInitialMoveDistance = 2.0, Name = "Right Hexapod" } },
+                { "hex-bottom", new DeviceSafetyLimits { MaxInitialMoveDistance = 2.0, Name = "Bottom Hexapod" } },
+                { "gantry-main", new DeviceSafetyLimits { MaxInitialMoveDistance = 1.0, Name = "Main Gantry" } }
             };
         }
         private bool IsInitialMoveWithinSafetyLimits(string deviceId, DevicePosition currentPosition, Position targetPosition, out double distance)

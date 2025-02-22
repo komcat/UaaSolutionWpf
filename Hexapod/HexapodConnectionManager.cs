@@ -6,26 +6,30 @@ using UaaSolutionWpf.Hexapod;
 using UaaSolutionWpf.Config;
 public class HexapodConnectionManager : IDisposable
 {
-    private readonly ILogger _logger;
-    private readonly Dictionary<HexapodType, PIConnection> _piConnections;
-    private readonly Dictionary<HexapodType, HexapodGCS> _hexapodControllers;
-    private readonly Dictionary<HexapodType, HexapodControl> _hexapodControls;
-    private readonly ConfigurationManager _configManager;
-    private bool _disposed;
-
+    
     public enum HexapodType
     {
         Left,       
         Bottom,
         Right
     }
+    private readonly ILogger _logger;
+    private readonly Dictionary<HexapodType, PIConnection> _piConnections;
+    private readonly Dictionary<HexapodType, HexapodGCS> _hexapodControllers;
+    private readonly Dictionary<HexapodType, HexapodControl> _hexapodControls;
+    private readonly ConfigurationManager _configManager;
+    private readonly HexapodConfigManager _hexapodConfigManager;
+    private bool _disposed;
 
-    public HexapodConnectionManager(Dictionary<HexapodType, HexapodControl> controls)
+    public HexapodConnectionManager(
+        Dictionary<HexapodType, HexapodControl> controls,
+        HexapodConfigManager hexapodConfigManager)
     {
         _logger = Log.ForContext<HexapodConnectionManager>();
         _piConnections = new Dictionary<HexapodType, PIConnection>();
         _hexapodControllers = new Dictionary<HexapodType, HexapodGCS>();
         _hexapodControls = controls;
+        _hexapodConfigManager = hexapodConfigManager ?? throw new ArgumentNullException(nameof(hexapodConfigManager));
 
         try
         {
@@ -45,50 +49,53 @@ public class HexapodConnectionManager : IDisposable
         {
             var hexapodSettings = _configManager.Settings.ConnectionSettings.Hexapods;
 
-            // Initialize settings only for provided controls
-            if (_hexapodControls.ContainsKey(HexapodType.Left))
-            {
-                _piConnections[HexapodType.Left] = new PIConnection
-                {
-                    IPAddress = hexapodSettings.Left.IpAddress ?? "192.168.0.10",
-                    Port = hexapodSettings.Left.Port != 0 ? hexapodSettings.Left.Port : 50000
-                };
-            }
-
-            if (_hexapodControls.ContainsKey(HexapodType.Bottom))
-            {
-                _piConnections[HexapodType.Bottom] = new PIConnection
-                {
-                    IPAddress = hexapodSettings.Bottom.IpAddress ?? "192.168.0.20",
-                    Port = hexapodSettings.Bottom.Port != 0 ? hexapodSettings.Bottom.Port : 50000
-                };
-            }
-
-            if (_hexapodControls.ContainsKey(HexapodType.Right))
-            {
-                _piConnections[HexapodType.Right] = new PIConnection
-                {
-                    IPAddress = hexapodSettings.Right.IpAddress ?? "192.168.0.30",
-                    Port = hexapodSettings.Right.Port != 0 ? hexapodSettings.Right.Port : 50000
-                };
-            }
-
-            // Update UI controls with configuration values
+            // Only initialize settings for enabled hexapods
             foreach (var kvp in _hexapodControls)
             {
-                if (_piConnections.TryGetValue(kvp.Key, out var connection))
+                var type = kvp.Key;
+                var location = type.ToString(); // Converts to "Left", "Right", etc.
+
+                // Skip if hexapod is disabled in config
+                if (!_hexapodConfigManager.IsHexapodEnabled(location))
                 {
-                    kvp.Value.IpAddress = connection.IPAddress;
-                    kvp.Value.PortNumber = connection.Port;
+                    _logger.Information("Skipping {Type} Hexapod - disabled in configuration", type);
+                    kvp.Value.IsConnected = false;
+                    continue;
                 }
+
+                // Get connection settings based on type
+                var settings = type switch
+                {
+                    HexapodType.Left => hexapodSettings.Left,
+                    HexapodType.Bottom => hexapodSettings.Bottom,
+                    HexapodType.Right => hexapodSettings.Right,
+                    _ => throw new ArgumentException($"Invalid hexapod type: {type}")
+                };
+
+                _piConnections[type] = new PIConnection
+                {
+                    IPAddress = settings.IpAddress ?? $"192.168.0.{GetDefaultPort(type)}",
+                    Port = settings.Port != 0 ? settings.Port : 50000
+                };
+
+                // Update UI control with connection settings
+                kvp.Value.IpAddress = _piConnections[type].IPAddress;
+                kvp.Value.PortNumber = _piConnections[type].Port;
             }
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to initialize connection settings from configuration");
-            throw new InvalidOperationException("Failed to load hexapod connection settings from configuration", ex);
+            _logger.Error(ex, "Failed to initialize connection settings");
+            throw new InvalidOperationException("Failed to load hexapod connection settings", ex);
         }
     }
+    private int GetDefaultPort(HexapodType type) => type switch
+    {
+        HexapodType.Left => 10,
+        HexapodType.Bottom => 20,
+        HexapodType.Right => 30,
+        _ => throw new ArgumentException($"Invalid hexapod type: {type}")
+    };
 
     public void InitializeConnections()
     {
@@ -98,7 +105,23 @@ public class HexapodConnectionManager : IDisposable
             {
                 var type = kvp.Key;
                 var control = kvp.Value;
-                var connection = _piConnections[type];
+                var location = type.ToString();
+
+                // Skip if hexapod is disabled
+                if (!_hexapodConfigManager.IsHexapodEnabled(location))
+                {
+                    _logger.Information("{Type} Hexapod is disabled, skipping connection", type);
+                    control.IsConnected = false;
+                    continue;
+                }
+
+                // Only attempt connection if we have connection settings
+                if (!_piConnections.TryGetValue(type, out var connection))
+                {
+                    _logger.Warning("{Type} Hexapod has no connection settings", type);
+                    control.IsConnected = false;
+                    continue;
+                }
 
                 _logger.Information("Attempting to connect to {Type} Hexapod at {IP}:{Port}",
                     type, connection.IPAddress, connection.Port);
@@ -112,7 +135,7 @@ public class HexapodConnectionManager : IDisposable
                 {
                     _logger.Information("{Type} Hexapod connected successfully", type);
                     ConfigureConnectedHexapod(type);
-                    LogInitialPositions(type);  // Add this line
+                    LogInitialPositions(type);
                 }
                 else
                 {
@@ -127,7 +150,6 @@ public class HexapodConnectionManager : IDisposable
             ShowInitializationError(ex.Message);
         }
     }
-
     private void ConfigureConnectedHexapod(HexapodType type)
     {
         _hexapodControllers[type].StartRealTimePositionUpdates(100);

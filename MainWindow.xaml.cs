@@ -26,6 +26,7 @@ using EzIIOLibControl;
 using EzIIOLibControl.Controls;
 using System.Diagnostics;
 using System.ComponentModel;
+using UaaSolutionWpf.Hexapod;
 
 namespace UaaSolutionWpf
 {
@@ -37,6 +38,11 @@ namespace UaaSolutionWpf
     public partial class MainWindow : Window
     {
         private GantryPositionsManager gantryPositionsManager;
+
+        private HexapodConfigManager _hexapodConfigManager;
+        private EnhancedHexapodDeviceFactory _hexapodFactory;
+
+
         private HexapodPositionsManager leftHexapodPositionsManager;
         private HexapodPositionsManager bottomHexapodPositionsManager;
         private HexapodPositionsManager rightHexapodPositionsManager;
@@ -255,21 +261,16 @@ namespace UaaSolutionWpf
 
         private void InitializeJogControl()
         {
-
             if (SimpleJogControl != null)
             {
                 SimpleJogControl.Initialize(
-                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
-                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
-                    _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                    _hexapodConfigManager.IsHexapodEnabled("Left") ? _hexapodFactory.GetService(0) : null,
+                    _hexapodConfigManager.IsHexapodEnabled("Right") ? _hexapodFactory.GetService(2) : null,
+                    _hexapodConfigManager.IsHexapodEnabled("Bottom") ? _hexapodFactory.GetService(1) : null,
                     gantryMovementService,
                     _logger
                 );
-                _logger.Information("SimpleJogControl initialized successfully");
-            }
-            else
-            {
-                _logger.Error("SimpleJogControl reference is null");
+                _logger.Information("SimpleJogControl initialized with enabled hexapods");
             }
         }
         private void InitializePositionManagers()
@@ -285,6 +286,7 @@ namespace UaaSolutionWpf
                 devicePositionMonitor = new DevicePositionMonitor(
                     hexapodConnectionManager,
                     gantryConnectionManager,
+                    _hexapodConfigManager,
                     _logger,
                     positionRegistry,
                     simulationMode);
@@ -359,39 +361,55 @@ namespace UaaSolutionWpf
             bottomHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
             rightHexapodPositionsManager.LoadPositionsAndCreateButtons(positionsPath);
         }
+
+
         private void InitializeHexapod()
         {
             try
             {
-                var controls = new Dictionary<HexapodConnectionManager.HexapodType, HexapodControl>
-                {
-                    { HexapodConnectionManager.HexapodType.Left, LeftHexapodControl },
-                    { HexapodConnectionManager.HexapodType.Bottom, BottomHexapodControl },
-                    { HexapodConnectionManager.HexapodType.Right, RightHexapodControl }
-                };
+                // Initialize configuration first
+                _hexapodConfigManager = new HexapodConfigManager(_logger);
+                _hexapodConfigManager.LoadConfiguration();
 
-                hexapodConnectionManager = new HexapodConnectionManager(controls);
+                // Create controls dictionary only for enabled hexapods
+                var controls = new Dictionary<HexapodConnectionManager.HexapodType, HexapodControl>();
+
+                if (_hexapodConfigManager.IsHexapodEnabled("Left"))
+                {
+                    controls.Add(HexapodConnectionManager.HexapodType.Left, LeftHexapodControl);
+                }
+                if (_hexapodConfigManager.IsHexapodEnabled("Bottom"))
+                {
+                    controls.Add(HexapodConnectionManager.HexapodType.Bottom, BottomHexapodControl);
+                }
+                if (_hexapodConfigManager.IsHexapodEnabled("Right"))
+                {
+                    controls.Add(HexapodConnectionManager.HexapodType.Right, RightHexapodControl);
+                }
+
+                hexapodConnectionManager = new HexapodConnectionManager(controls, _hexapodConfigManager);
                 _logger.Information("Created HexapodConnectionManager instance");
 
-                // Initialize movement services for each hexapod
-                _hexapodMovementServices = new Dictionary<HexapodConnectionManager.HexapodType, HexapodMovementService>();
+                // Initialize the factory with configuration
+                _hexapodFactory = new EnhancedHexapodDeviceFactory(positionRegistry, _hexapodConfigManager, _logger);
+                _hexapodFactory.Initialize(hexapodConnectionManager);
 
-                foreach (var kvp in controls)
+                // Set dependencies only for enabled hexapods
+                if (_hexapodConfigManager.IsHexapodEnabled("Left"))
                 {
-                    var movementService = new HexapodMovementService(
-                        hexapodConnectionManager,
-                        kvp.Key,
-                        positionRegistry,
-                        _logger
-                    );
-                    _hexapodMovementServices[kvp.Key] = movementService;
-
-                    // Set dependencies for the control
-                    kvp.Value.SetDependencies(movementService);
+                    LeftHexapodControl.SetDependencies(_hexapodFactory.GetService(0));
+                }
+                if (_hexapodConfigManager.IsHexapodEnabled("Bottom"))
+                {
+                    BottomHexapodControl.SetDependencies(_hexapodFactory.GetService(1));
+                }
+                if (_hexapodConfigManager.IsHexapodEnabled("Right"))
+                {
+                    RightHexapodControl.SetDependencies(_hexapodFactory.GetService(2));
                 }
 
                 hexapodConnectionManager.InitializeConnections();
-                _logger.Information("Initialized hexapod connections");
+                _logger.Information("Initialized enabled hexapod connections");
             }
             catch (Exception ex)
             {
@@ -404,7 +422,6 @@ namespace UaaSolutionWpf
                 );
             }
         }
-
         private async void IntiailizeAcsGantry()
         {
             // Create the manager with just a _logger
@@ -469,7 +486,7 @@ namespace UaaSolutionWpf
                 }
             }
 
-            devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, _logger, positionRegistry, simulationMode);
+            devicePositionMonitor = new DevicePositionMonitor(hexapodConnectionManager, gantryConnectionManager, _hexapodConfigManager,_logger, positionRegistry, simulationMode);
 
             string configPath = Path.Combine("Config", "motionSystem.json");
 
@@ -534,9 +551,9 @@ namespace UaaSolutionWpf
         {
             _automation = new AutomationExample(
                 motionGraphManager: motionGraphManager,
-                leftHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
-                rightHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
-                bottomHexapod: _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                leftHexapod: _hexapodConfigManager.IsHexapodEnabled("Left") ? _hexapodFactory.GetService(0) : null,
+                rightHexapod: _hexapodConfigManager.IsHexapodEnabled("Right") ? _hexapodFactory.GetService(2) : null,
+                bottomHexapod: _hexapodConfigManager.IsHexapodEnabled("Bottom") ? _hexapodFactory.GetService(1) : null,
                 gantry: gantryMovementService,
                 ioManager: deviceManager,
                 logger: _logger);
@@ -597,10 +614,12 @@ namespace UaaSolutionWpf
             if (autoAlignmentControlWpf != null)
             {
                 try
-                {
+                { 
+
+
                     // Get the movement services for left and right hexapods
-                    var leftHexapodService = _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left];
-                    var rightHexapodService = _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right];
+                    var leftHexapodService = _hexapodConfigManager.IsHexapodEnabled("Left") ? _hexapodFactory.GetService(0) : null;
+                    var rightHexapodService = _hexapodConfigManager.IsHexapodEnabled("Right") ? _hexapodFactory.GetService(2) : null;
 
                     autoAlignmentControlWpf.Initialize(
                         leftHexapodService,
@@ -630,9 +649,9 @@ namespace UaaSolutionWpf
             // In your initialization code:
             _motionCoordinator = new MotionCoordinator(
                 motionGraphManager,
-                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Left],
-                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Right],
-                _hexapodMovementServices[HexapodConnectionManager.HexapodType.Bottom],
+                _hexapodConfigManager.IsHexapodEnabled("Left") ? _hexapodFactory.GetService(0) : null,
+                _hexapodConfigManager.IsHexapodEnabled("Right") ? _hexapodFactory.GetService(2) : null,
+                _hexapodConfigManager.IsHexapodEnabled("Bottom") ? _hexapodFactory.GetService(1) : null,
                 gantryMovementService,
                 _logger
             );

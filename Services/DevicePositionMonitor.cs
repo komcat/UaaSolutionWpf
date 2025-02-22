@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Serilog;
+using UaaSolutionWpf.Config;
 using UaaSolutionWpf.Gantry;
 using UaaSolutionWpf.Motion;
 using UaaSolutionWpf.Services;
@@ -77,20 +78,23 @@ namespace UaaSolutionWpf.Services
         private readonly HexapodConnectionManager _hexapodManager;
         private readonly AcsGantryConnectionManager _gantryManager;
         private readonly PositionRegistry _positionRegistry;
+        private readonly HexapodConfigManager _hexapodConfigManager;
         private bool _simulationMode = false;
         public bool debugMode = false;
 
         private const double POSITION_TOLERANCE = 0.1; // 0.1mm tolerance for position matching
 
         public DevicePositionMonitor(
-            HexapodConnectionManager hexapodManager,
-            AcsGantryConnectionManager gantryManager,
-            ILogger logger,
-            PositionRegistry positionRegistry,
-            bool simulationMode = false)
+                HexapodConnectionManager hexapodManager,
+                AcsGantryConnectionManager gantryManager,
+                HexapodConfigManager hexapodConfigManager,
+                ILogger logger,
+                PositionRegistry positionRegistry,
+                bool simulationMode = false)
         {
             _hexapodManager = hexapodManager;
             _gantryManager = gantryManager;
+            _hexapodConfigManager = hexapodConfigManager ?? throw new ArgumentNullException(nameof(hexapodConfigManager));
             _logger = logger.ForContext<DevicePositionMonitor>();
             _positionRegistry = positionRegistry ?? throw new ArgumentNullException(nameof(positionRegistry));
             _simulationMode = simulationMode;
@@ -106,16 +110,30 @@ namespace UaaSolutionWpf.Services
                     throw new ArgumentException($"Invalid device ID format: {deviceId}");
                 }
 
-                if (_simulationMode)
+                // Convert location part to proper case (e.g. "left" -> "Left")
+                string deviceType = parts[0].ToLower();
+                string location = char.ToUpper(parts[1][0]) + parts[1].Substring(1).ToLower();
+
+                // Check if device is enabled (for hexapods)
+                if (deviceType == "hex")
                 {
-                    return await GetSimulatedPosition(parts[0], parts[1]);
+                    if (!_hexapodConfigManager.IsHexapodEnabled(location))
+                    {
+                        //_logger.Debug("Hexapod {Location} is disabled", location);
+                        return CreateDisabledDevicePosition(deviceType, location);
+                    }
                 }
 
-                return parts[0].ToLower() switch
+                if (_simulationMode)
                 {
-                    "hex" => await GetHexapodPosition(parts[1]),
-                    "gantry" => await GetGantryPosition(parts[1]),
-                    _ => throw new ArgumentException($"Unknown device type: {parts[0]}")
+                    return await GetSimulatedPosition(deviceType, location);
+                }
+
+                return deviceType switch
+                {
+                    "hex" => await GetHexapodPosition(location),
+                    "gantry" => await GetGantryPosition(location),
+                    _ => throw new ArgumentException($"Unknown device type: {deviceType}")
                 };
             }
             catch (Exception ex)
@@ -124,7 +142,22 @@ namespace UaaSolutionWpf.Services
                 throw;
             }
         }
+        private DevicePosition CreateDisabledDevicePosition(string deviceType, string location)
+        {
+            var numAxes = deviceType.ToLower() == "hex" ? 6 : 3;
+            var position = new DevicePosition(numAxes)
+            {
+                Name = "Disabled"
+            };
 
+            // Initialize all coordinates to 0
+            for (int i = 0; i < numAxes; i++)
+            {
+                position.SetAxis(i, 0);
+            }
+
+            return position;
+        }
         private async Task<DevicePosition> GetSimulatedPosition(string deviceType, string location)
         {
             switch (deviceType.ToLower())

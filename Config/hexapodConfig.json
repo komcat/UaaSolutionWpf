@@ -1,0 +1,22 @@
+{
+  "Devices": {
+    "Left": {
+      "IsEnabled": false,
+      "IpAddress": "192.168.0.10",
+      "Port": 50000,
+      "Name": "Left Hexapod"
+    },
+    "Bottom": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.20",
+      "Port": 50000,
+      "Name": "Bottom Hexapod"
+    },
+    "Right": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.30",
+      "Port": 50000,
+      "Name": "Right Hexapod"
+    }
+  }
+}

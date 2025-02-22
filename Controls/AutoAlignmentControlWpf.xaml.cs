@@ -8,6 +8,7 @@ using Serilog;
 using UaaSolutionWpf.Scanning.Core;
 using UaaSolutionWpf.Services;
 using UaaSolutionWpf.Data;
+using System.Windows.Media;
 
 namespace UaaSolutionWpf.Controls
 {
@@ -23,7 +24,8 @@ namespace UaaSolutionWpf.Controls
         private RealTimeDataManager _realTimeDataManager;
         private CancellationTokenSource _scanCancellation;
         private bool _isScanning;
-
+        private bool _hasLeftHexapod;
+        private bool _hasRightHexapod;
         public AutoAlignmentControlWpf()
         {
             InitializeComponent();
@@ -33,21 +35,60 @@ namespace UaaSolutionWpf.Controls
         }
 
         public void Initialize(
-            HexapodMovementService leftHexapodService,
-            HexapodMovementService rightHexapodService,
-            DevicePositionMonitor positionMonitor,
-            RealTimeDataManager realTimeDataManager,
-            ILogger logger)
+    HexapodMovementService leftHexapodService,
+    HexapodMovementService rightHexapodService,
+    DevicePositionMonitor positionMonitor,
+    RealTimeDataManager realTimeDataManager,
+    ILogger logger)
         {
-            _leftHexapodService = leftHexapodService ?? throw new ArgumentNullException(nameof(leftHexapodService));
-            _rightHexapodService = rightHexapodService ?? throw new ArgumentNullException(nameof(rightHexapodService));
+            // Store which services are available
+            _hasLeftHexapod = leftHexapodService != null;
+            _hasRightHexapod = rightHexapodService != null;
+
+            _leftHexapodService = leftHexapodService;
+            _rightHexapodService = rightHexapodService;
             _positionMonitor = positionMonitor ?? throw new ArgumentNullException(nameof(positionMonitor));
             _realTimeDataManager = realTimeDataManager ?? throw new ArgumentNullException(nameof(realTimeDataManager));
             _logger = logger?.ForContext<AutoAlignmentControlWpf>();
 
-            _logger?.Information("AutoAlignmentControlWpf initialized");
-        }
+            // Update UI based on available services
+            UpdateServiceAvailability();
 
+            _logger?.Information("AutoAlignmentControlWpf initialized with Left Hexapod: {HasLeft}, Right Hexapod: {HasRight}",
+                _hasLeftHexapod, _hasRightHexapod);
+        }
+        private void UpdateServiceAvailability()
+        {
+            // Update button states and tooltips
+            if (LeftScanButton != null)
+            {
+                LeftScanButton.IsEnabled = _hasLeftHexapod && !_isScanning;
+                LeftScanButton.ToolTip = _hasLeftHexapod ?
+                    "Start left hexapod scan" :
+                    "Left hexapod is not available";
+            }
+
+            if (RightScanButton != null)
+            {
+                RightScanButton.IsEnabled = _hasRightHexapod && !_isScanning;
+                RightScanButton.ToolTip = _hasRightHexapod ?
+                    "Start right hexapod scan" :
+                    "Right hexapod is not available";
+            }
+
+            // Update visual feedback
+            if (!_hasLeftHexapod)
+            {
+                LeftScanButton.Background = Brushes.Gray;
+                AddStatus("Left hexapod service is not available");
+            }
+
+            if (!_hasRightHexapod)
+            {
+                RightScanButton.Background = Brushes.Gray;
+                AddStatus("Right hexapod service is not available");
+            }
+        }
         private void ModeListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdateStepSizesDisplay();
@@ -62,8 +103,8 @@ namespace UaaSolutionWpf.Controls
         private void UpdateButtonStates()
         {
             bool enableButtons = !_isScanning;
-            LeftScanButton.IsEnabled = enableButtons;
-            RightScanButton.IsEnabled = enableButtons;
+            LeftScanButton.IsEnabled = enableButtons && _hasLeftHexapod;
+            RightScanButton.IsEnabled = enableButtons && _hasRightHexapod;
             StopButton.IsEnabled = _isScanning;
             ModeListBox.IsEnabled = enableButtons;
         }
@@ -91,31 +132,30 @@ namespace UaaSolutionWpf.Controls
                     return;
                 }
 
-                // Validate services
-                var hexapodService = direction == "left" ? _leftHexapodService : _rightHexapodService;
-                if (hexapodService == null)
+                // Validate service availability first
+                if (direction == "left" && !_hasLeftHexapod)
                 {
-                    var message = $"{direction} hexapod service not available";
+                    var message = "Left hexapod service is not available";
+                    _logger?.Error(message);
+                    AddStatus($"Error: {message}");
+                    MessageBox.Show(message, "Service Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                else if (direction == "right" && !_hasRightHexapod)
+                {
+                    var message = "Right hexapod service is not available";
                     _logger?.Error(message);
                     AddStatus($"Error: {message}");
                     MessageBox.Show(message, "Service Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                string hextype;
-                if (direction == "left")
-                {
-                    hextype = "hex-left";
-                }
-                else if (direction == "right")
-                {
-                    hextype = "hex-right";
-                }
-                else
-                {
-                    hextype = "hex-left";
-                }
+                // Get appropriate service and device ID
+                var hexapodService = direction == "left" ? _leftHexapodService : _rightHexapodService;
+                string deviceId = direction == "left" ? "hex-left" : "hex-right";
 
+                _logger?.Information("Starting scan with device {DeviceId}, service available: {ServiceAvailable}",
+                    deviceId, hexapodService != null);
 
                 // Prepare scanning parameters
                 var scanParameters = ScanningParameters.CreateDefault();
@@ -126,8 +166,8 @@ namespace UaaSolutionWpf.Controls
                     hexapodService,
                     _positionMonitor,
                     _realTimeDataManager,
-                    hextype, // Example device ID
-                    "Keithley Current", // Specify the correct data channel
+                    deviceId,
+                    "Keithley Current",
                     scanParameters,
                     _logger
                 );
@@ -139,6 +179,7 @@ namespace UaaSolutionWpf.Controls
 
                 _isScanning = true;
                 UpdateButtonStates();
+                AddStatus($"Starting {direction} hexapod scan...");
 
                 // Create a new CancellationTokenSource
                 _scanCancellation = new CancellationTokenSource();
@@ -147,6 +188,7 @@ namespace UaaSolutionWpf.Controls
                 {
                     // Start the scan with the cancellation token
                     await scanningAlgorithm.StartScan(_scanCancellation.Token);
+                    AddStatus($"{direction} hexapod scan completed successfully");
                 }
                 catch (OperationCanceledException)
                 {
@@ -161,7 +203,7 @@ namespace UaaSolutionWpf.Controls
                 }
                 finally
                 {
-                    // Unsubscribe from events to prevent memory leaks
+                    // Unsubscribe from events
                     scanningAlgorithm.ProgressUpdated -= OnScanProgressUpdated;
                     scanningAlgorithm.ScanCompleted -= OnScanCompleted;
                     scanningAlgorithm.ErrorOccurred -= OnScanError;
@@ -178,9 +220,7 @@ namespace UaaSolutionWpf.Controls
                 AddStatus($"Setup error: {ex.Message}");
                 MessageBox.Show(ex.Message, "Setup Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        // Event handlers
+        }        // Event handlers
         private void OnScanProgressUpdated(object sender, ScanProgressEventArgs e)
         {
             AddStatus($"Scan Progress: {e.Progress:P0} - {e.Status}");

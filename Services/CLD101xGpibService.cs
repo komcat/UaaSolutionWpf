@@ -225,6 +225,7 @@ namespace UaaSolutionWpf.Services
                             try
                             {
                                 _session.RawIO.Write(query);
+                                Task.Delay(20);
                                 return _session.RawIO.ReadString().Trim();
                             }
                             catch (Exception ex)

@@ -68,7 +68,7 @@
 
 
 
-        <controls:SimpleJogControl x:Name="SimpleJogControl"  Margin="5" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="4" />
+        <controls:SimpleJogControl x:Name="SimpleJogControl"  Margin="5" Grid.Column="1" Grid.ColumnSpan="7" Grid.Row="4" />
 
 
 

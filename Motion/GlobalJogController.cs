@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Windows;
 using Serilog;
 using UaaSolutionWpf.Services;
 
@@ -159,6 +160,13 @@ namespace UaaSolutionWpf.Motion
 
         private async Task MoveHexapod(HexapodMovementService service, Vector3 translation, Vector3 rotation, string deviceName)
         {
+            if(service==null)
+            {
+                Log.Warning($"{deviceName} is not available.");
+                MessageBox.Show($"{deviceName} is not available.");
+                return;
+            }
+
             try
             {
                 _logger.Debug("Moving {DeviceName} - Translation: {Translation}, Rotation: {Rotation}",

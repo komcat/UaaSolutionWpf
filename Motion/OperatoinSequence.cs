@@ -63,7 +63,7 @@ namespace UaaSolutionWpf.Motion
                     waitForComplete: true),
                 //wait 120sec
                 CoordinatedCommand.CreateTimerCommand(
-                    duration: TimeSpan.FromSeconds(120),
+                    duration: TimeSpan.FromSeconds(10),
                     order: 7),
                 // Raise UV head (PneumaticSlideService handles all validation)
                 CoordinatedCommand.CreateSlideCommand(

@@ -286,16 +286,31 @@ namespace UaaSolutionWpf.Motion
         }
         private async Task ExecuteTimerCommand(CoordinatedCommand command)
         {
-            using var timer = new PreciseTimer(_logger);
-            var completionSource = new TaskCompletionSource<bool>();
+            try
+            {
+                // Create and show the timer window
+                var timerWindow = new TimerWindow(command.Duration, _logger);
+                timerWindow.Show();
 
-            timer.TimerCompleted += (s, e) => completionSource.SetResult(true);
-            timer.TimerError += (s, e) => completionSource.SetException(e);
-
-            await timer.StartAsync(command.Duration);
-            await completionSource.Task;
+                try
+                {
+                    // Wait for the timer to complete
+                    await timerWindow.WaitForCompletion();
+                    _logger.Information("Timer completed successfully");
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.Information("Timer was cancelled by user");
+                    // Handle cancellation gracefully without throwing
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error executing timer command");
+                throw;
+            }
         }
-
         private async Task ExecuteWaitForInputCommand(CoordinatedCommand command)
         {
             var startTime = DateTime.UtcNow;

@@ -68,51 +68,70 @@ namespace UaaSolutionWpf.Services
 
         private async Task RunTimerAsync(TimeSpan duration)
         {
-            const int TargetAccuracyMs = 1; // Target accuracy in milliseconds
+            const int UPDATE_INTERVAL_MS = 100; // Update UI every 100ms
+            const int SPIN_THRESHOLD_MS = 5; // Switch to spinning for last 5ms
+
             TimeSpan totalElapsed = TimeSpan.Zero;
             _stopwatch.Restart();
 
-            while (totalElapsed < duration)
+            try
             {
-                if (_cancellationTokenSource.Token.IsCancellationRequested)
-                    break;
-
-                // Calculate next tick interval
-                TimeSpan nextTick = TimeSpan.FromMilliseconds(TargetAccuracyMs);
-                TimeSpan remaining = duration - totalElapsed;
-
-                if (remaining < nextTick)
-                    nextTick = remaining;
-
-                // High-precision wait
-                long targetTicks = _stopwatch.ElapsedTicks + (long)(nextTick.TotalSeconds * Stopwatch.Frequency);
-                while (_stopwatch.ElapsedTicks < targetTicks)
+                while (totalElapsed < duration)
                 {
                     if (_cancellationTokenSource.Token.IsCancellationRequested)
                         break;
 
-                    // Efficient spinning for high precision
-                    if (targetTicks - _stopwatch.ElapsedTicks > Stopwatch.Frequency / 1000)
-                        await Task.Delay(0); // Yield to other threads if we're far from target
+                    TimeSpan remaining = duration - totalElapsed;
+                    TimeSpan nextInterval = TimeSpan.FromMilliseconds(
+                        Math.Min(UPDATE_INTERVAL_MS, remaining.TotalMilliseconds)
+                    );
+
+                    if (remaining.TotalMilliseconds > SPIN_THRESHOLD_MS)
+                    {
+                        // Use Task.Delay for longer intervals
+                        await Task.Delay(nextInterval, _cancellationTokenSource.Token);
+                    }
+                    else
+                    {
+                        // Use spinning only for final precision
+                        long targetTicks = _stopwatch.ElapsedTicks +
+                            (long)(remaining.TotalSeconds * Stopwatch.Frequency);
+
+                        while (_stopwatch.ElapsedTicks < targetTicks)
+                        {
+                            if (_cancellationTokenSource.Token.IsCancellationRequested)
+                                break;
+
+                            if (targetTicks - _stopwatch.ElapsedTicks > Stopwatch.Frequency / 1000)
+                                await Task.Yield(); // Yield to other threads periodically
+                        }
+                        break; // Exit after final precision timing
+                    }
+
+                    totalElapsed = TimeSpan.FromSeconds(_stopwatch.ElapsedTicks / (double)Stopwatch.Frequency);
+                    RemainingTime = duration - totalElapsed;
+
+                    // Raise tick event on UI thread
+                    await Task.Run(() => TimerTick?.Invoke(this, RemainingTime));
+
+                    // Log timing accuracy periodically
+                    if (totalElapsed.TotalSeconds % 1 < 0.1) // Log every second
+                    {
+                        _logger.Debug("Timer progress: {Elapsed}/{Duration} seconds",
+                            totalElapsed.TotalSeconds.ToString("F1"),
+                            duration.TotalSeconds.ToString("F1"));
+                    }
                 }
 
-                totalElapsed = TimeSpan.FromSeconds(_stopwatch.ElapsedTicks / (double)Stopwatch.Frequency);
-                RemainingTime = duration - totalElapsed;
-
-                // Raise tick event
-                TimerTick?.Invoke(this, RemainingTime);
-
-                // Log timing accuracy periodically
-                if (totalElapsed.TotalSeconds % 1 < TargetAccuracyMs / 1000.0)
-                {
-                    double accuracyPercent = Math.Abs(1 - (totalElapsed.TotalMilliseconds % 1000) / 1000) * 100;
-                    _logger.Debug("Timer accuracy at {Elapsed}: {Accuracy:F2}% deviation",
-                        totalElapsed, accuracyPercent);
-                }
+                _stopwatch.Stop();
+                await Task.Run(() => TimerCompleted?.Invoke(this, EventArgs.Empty));
             }
-
-            _stopwatch.Stop();
-            TimerCompleted?.Invoke(this, EventArgs.Empty);
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.Error(ex, "Error during timer execution");
+                TimerError?.Invoke(this, ex);
+                throw;
+            }
         }
 
         public void Stop()

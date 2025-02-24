@@ -8,7 +8,13 @@ namespace UaaSolutionWpf.Controls
 {
     public partial class BaslerDisplayViewControl : UserControl, IDisposable
     {
-        private CameraManagerWpf cameraManager;
+        private CameraManagerWpf _cameraManager;
+        public CameraManagerWpf CameraManager
+        {
+            get => _cameraManager;
+            protected set => _cameraManager = value;
+        }
+
         private readonly ILogger _logger;
 
         public event EventHandler<CameraConnectionEventArgs> CameraConnected;
@@ -35,7 +41,7 @@ namespace UaaSolutionWpf.Controls
             }
 
             // Initialize camera manager
-            cameraManager = new CameraManagerWpf(cameraDisplay, _logger);
+            _cameraManager = new CameraManagerWpf(cameraDisplay, _logger);
 
             // Register for image size changes
             cameraDisplay.SizeChanged += CameraDisplay_SizeChanged;
@@ -83,14 +89,14 @@ namespace UaaSolutionWpf.Controls
         {
             try
             {
-                if (cameraManager.ConnectToCamera())
+                if (_cameraManager.ConnectToCamera())
                 {
                     btnConnect.IsEnabled = false;
                     btnStartLive.IsEnabled = true;
                     zoomSlider.IsEnabled = true;
                     statusText.Text = "Camera Connected";
 
-                    string cameraInfo = cameraManager.GetCameraInfo();
+                    string cameraInfo = _cameraManager.GetCameraInfo();
                     _logger.Information(cameraInfo);
 
                     CameraConnected?.Invoke(this, new CameraConnectionEventArgs
@@ -126,7 +132,7 @@ namespace UaaSolutionWpf.Controls
         {
             try
             {
-                cameraManager.StartLiveView();
+                _cameraManager.StartLiveView();
                 btnStartLive.IsEnabled = false;
                 btnStopLive.IsEnabled = true;
                 statusText.Text = "Live view active";
@@ -148,7 +154,7 @@ namespace UaaSolutionWpf.Controls
         {
             try
             {
-                cameraManager.StopLiveView();
+                _cameraManager.StopLiveView();
                 btnStartLive.IsEnabled = true;
                 btnStopLive.IsEnabled = false;
                 statusText.Text = "Live view stopped";
@@ -168,9 +174,9 @@ namespace UaaSolutionWpf.Controls
 
         private void zoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (cameraManager != null)
+            if (_cameraManager != null)
             {
-                cameraManager.SetZoom((float)e.NewValue);
+                _cameraManager.SetZoom((float)e.NewValue);
 
                 // Update overlay scale to match image zoom
                 if (cameraOverlay != null)
@@ -191,11 +197,32 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
+
+
+        private void btnCameraSettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Call the method in CameraOverlayControl
+                if (cameraOverlay != null)
+                {
+                    cameraOverlay.ShowConversionSettings();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error showing camera settings");
+                MessageBox.Show($"Error showing camera settings: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
         public void Dispose()
         {
             try
             {
-                cameraManager?.Dispose();
+                _cameraManager?.Dispose();
                 _logger.Information("Camera control disposed");
             }
             catch (Exception ex)

@@ -1,0 +1,58 @@
+﻿<Window x:Class="UaaSolutionWpf.Windows.ConversionSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Camera Conversion Settings" Height="350" Width="400" 
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
+                   Text="Camera Conversion Settings" 
+                   FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <!-- X Factor -->
+        <Label Grid.Row="1" Grid.Column="0" Content="X Conversion Factor:" 
+               VerticalAlignment="Center" Margin="0,5"/>
+        <TextBox x:Name="txtXFactor" Grid.Row="1" Grid.Column="1" 
+                 Margin="10,5" Padding="5,3" 
+                 ToolTip="Pixel to millimeter conversion factor for X axis"/>
+
+        <!-- Y Factor -->
+        <Label Grid.Row="2" Grid.Column="0" Content="Y Conversion Factor:" 
+               VerticalAlignment="Center" Margin="0,5"/>
+        <TextBox x:Name="txtYFactor" Grid.Row="2" Grid.Column="1" 
+                 Margin="10,5" Padding="5,3"
+                 ToolTip="Pixel to millimeter conversion factor for Y axis"/>
+
+        <!-- Description -->
+        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0" 
+                   TextWrapping="Wrap" Foreground="Gray">
+            These factors convert pixels in the camera image to physical movement
+            in millimeters. Higher values result in larger movements.
+        </TextBlock>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" 
+                    Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="btnCancel" Content="Cancel" Padding="15,5" Margin="5,0" 
+                    Click="btnCancel_Click"/>
+            <Button x:Name="btnSave" Content="Save" Padding="15,5" Margin="5,0" 
+                    Click="btnSave_Click" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

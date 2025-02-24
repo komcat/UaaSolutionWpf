@@ -2,6 +2,7 @@
 using Serilog;
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -85,7 +86,32 @@ namespace UaaSolutionWpf
 
         public event EventHandler<Point> ImageClicked;
         public event EventHandler<string> StatsUpdated;
-       
+        // Add event for image updates
+        public event EventHandler<ImageUpdatedEventArgs> ImageUpdated;
+
+        // Add property to access current image
+        public WriteableBitmap CurrentImage
+        {
+            get
+            {
+                lock (imageLock)
+                {
+                    return currentImage?.Clone();
+                }
+            }
+        }
+        // Add property for raw image data
+        private byte[] currentImageData;
+        public byte[] CurrentImageData
+        {
+            get
+            {
+                lock (imageLock)
+                {
+                    return currentImageData?.Clone() as byte[];
+                }
+            }
+        }
         public CameraManagerWpf(Image imageControl, ILogger logger)
         {
             this.imageControl = imageControl ?? throw new ArgumentNullException(nameof(imageControl));
@@ -248,15 +274,11 @@ namespace UaaSolutionWpf
 
         private async Task ProcessImagesAsync()
         {
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
+            while (!imageQueue.IsCompleted)
             {
                 try
                 {
-                    IGrabResult grabResult = await Task.Run(() =>
-                        imageQueue.Take(cancellationTokenSource.Token));
-
-                    var startTime = DateTime.Now;
-
+                    IGrabResult grabResult = await Task.Run(() => imageQueue.Take());
                     using (grabResult)
                     {
                         if (grabResult.GrabSucceeded)
@@ -265,28 +287,53 @@ namespace UaaSolutionWpf
                             {
                                 lock (imageLock)
                                 {
-                                    UpdateImage(grabResult);
+                                    if (currentImage == null ||
+                                        currentImage.PixelWidth != grabResult.Width ||
+                                        currentImage.PixelHeight != grabResult.Height)
+                                    {
+                                        currentImage = new WriteableBitmap(
+                                            grabResult.Width,
+                                            grabResult.Height,
+                                            96,
+                                            96,
+                                            PixelFormats.Bgra32,
+                                            null);
 
-                                    // Update statistics
-                                    cameraStats.UpdateFrameCount();
-                                    cameraStats.Resolution = new Size(grabResult.Width, grabResult.Height);
-                                    cameraStats.ProcessingTime =
-                                        (long)(DateTime.Now - startTime).TotalMilliseconds;
+                                        originalImageSize = new Size(grabResult.Width, grabResult.Height);
+                                    }
 
-                                    StatsUpdated?.Invoke(this, cameraStats.GetStatsString());
+                                    // Store raw image data
+                                    currentImageData = new byte[grabResult.PayloadSize];
+                                    Marshal.Copy(grabResult.PixelDataPointer, currentImageData, 0, (int)grabResult.PayloadSize);
+
+                                    currentImage.Lock();
+                                    converter.Convert(currentImage.BackBuffer, currentImage.BackBufferStride * grabResult.Height, grabResult);
+                                    currentImage.AddDirtyRect(new Int32Rect(0, 0, grabResult.Width, grabResult.Height));
+                                    currentImage.Unlock();
+
+                                    imageControl.Source = currentImage;
+
+                                    // Raise event with image data
+                                    ImageUpdated?.Invoke(this, new ImageUpdatedEventArgs
+                                    {
+                                        Image = currentImage.Clone(),
+                                        RawData = currentImageData.Clone() as byte[],
+                                        Width = grabResult.Width,
+                                        Height = grabResult.Height,
+                                        Format = grabResult.PixelTypeValue
+                                    });
                                 }
                             }, DispatcherPriority.Render);
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (InvalidOperationException)
                 {
                     break;
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Error processing image");
-                    await Task.Delay(100, cancellationTokenSource.Token);
                 }
             }
         }
@@ -400,5 +447,14 @@ namespace UaaSolutionWpf
                 throw;
             }
         }
+    }
+
+    public class ImageUpdatedEventArgs : EventArgs
+    {
+        public WriteableBitmap Image { get; set; }
+        public byte[] RawData { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public PixelType Format { get; set; }
     }
 }

@@ -22,12 +22,16 @@
             <Button x:Name="btnConnect" Content="Connect" Margin="0,5" Padding="10,5" Click="btnConnect_Click"/>
             <Button x:Name="btnStartLive" Content="Start Live" Margin="0,5" Padding="10,5" Click="btnStartLive_Click"/>
             <Button x:Name="btnStopLive" Content="Stop Live" Margin="0,5" Padding="10,5" Click="btnStopLive_Click"/>
-            <Separator Margin="0,10"/>
+            <!-- Add this to the controls panel in BaslerDisplayViewControl.xaml -->
+            <Separator Margin="0,2"/>
+                <Button x:Name="btnCameraSettings" Content="Camera Settings" 
+                        Margin="0,5" Padding="10,5" Click="btnCameraSettings_Click"/>
+            <Separator Margin="0,2"/>
             <TextBlock Text="Zoom:"/>
             <Slider x:Name="zoomSlider" Minimum="1" Maximum="4" Value="1" 
                     TickFrequency="0.1" IsSnapToTickEnabled="True"
                     ValueChanged="zoomSlider_ValueChanged"/>
-            <Separator Margin="0,10"/>
+            <Separator Margin="0,2"/>
             <CheckBox x:Name="chkShowOverlay" Content="Show Overlay" 
                      IsChecked="True" Margin="0,5"
                      Checked="chkShowOverlay_CheckedChanged"

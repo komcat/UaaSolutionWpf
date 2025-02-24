@@ -7,6 +7,30 @@ namespace UaaSolutionWpf.Motion
 {
     public static class OperationSequences
     {
+
+        public static List<CoordinatedCommand> SeeSLED()
+        {
+            return new List<CoordinatedCommand>
+            {
+                // Move gantry to UV position
+                CoordinatedCommand.CreateMotionCommand(
+                    deviceId: "gantry-main",
+                    targetPosition: "SeeSLED",
+                    order: 1,
+                    waitForComplete: true),
+                CoordinatedCommand.CreateImageCaptureCommand(
+                    prefix: "SeeSLED_before",
+                    order: 2),
+                // settle image capture
+                CoordinatedCommand.CreateTimerCommand(
+                    duration: TimeSpan.FromSeconds(3),
+                    order: 3),
+                CoordinatedCommand.CreateImageCaptureCommand(
+                    prefix: "SeeSLED_after3sec",
+                    order: 4),
+            };
+        }
+
         public static List<CoordinatedCommand> UVOperation()
         {
             return new List<CoordinatedCommand>

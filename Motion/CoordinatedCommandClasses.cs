@@ -8,6 +8,7 @@ namespace UaaSolutionWpf.Motion
     public enum CommandType
     {
         Motion,
+        ImageCapture,
         Output,          // Direct IO control without validation
         Timer,
         WaitForInput,
@@ -44,8 +45,19 @@ namespace UaaSolutionWpf.Motion
         public string SlideId { get; set; }
         public SlidePosition TargetSlidePosition { get; set; }  // Changed from SlideState to SlidePosition
         public TimeSpan? SlideTimeout { get; set; }
-
-
+        // Add property for image capture
+        public string ImageCapturePrefix { get; set; }
+        public static CoordinatedCommand CreateImageCaptureCommand(string prefix, int order, bool waitForComplete = true)
+        {
+            return new CoordinatedCommand
+            {
+                Type = CommandType.ImageCapture,
+                ExecutionOrder = order,
+                WaitForCompletion = waitForComplete,
+                Description = $"Capture camera image with prefix {prefix}",
+                ImageCapturePrefix = prefix
+            };
+        }
         // Factory methods for cleaner creation
         public static CoordinatedCommand CreateMotionCommand(string deviceId, string targetPosition, int order, bool waitForComplete = true)
         {

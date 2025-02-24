@@ -27,6 +27,7 @@ using EzIIOLibControl.Controls;
 using System.Diagnostics;
 using System.ComponentModel;
 using UaaSolutionWpf.Hexapod;
+using System.Printing;
 
 namespace UaaSolutionWpf
 {
@@ -75,6 +76,7 @@ namespace UaaSolutionWpf
 
         private MultiDeviceManager deviceManager;
         private List<IOPinToggleSwitch> toggleSwitches;
+        private CameraManagerWpf _cameraManager;
         public MainWindow()
         {
             InitializeComponent();
@@ -556,6 +558,7 @@ namespace UaaSolutionWpf
                 bottomHexapod: _hexapodConfigManager.IsHexapodEnabled("Bottom") ? _hexapodFactory.GetService(1) : null,
                 gantry: gantryMovementService,
                 ioManager: deviceManager,
+                cameraManager: _cameraManager,
                 logger: _logger);
         }
 
@@ -569,7 +572,7 @@ namespace UaaSolutionWpf
         private void InitializeCameraGantryService()
         {
             Log.Information("Initialize Camera Gantry Service UI");
-            _cameraGantryService = new CameraGantryService(gantryMovementService, _logger);
+            _cameraGantryService = new CameraGantryService(gantryMovementService,devicePositionMonitor, _logger);
 
             // Initialize the overlay control with the service
             if (cameraDisplayViewControl?.cameraOverlay != null)
@@ -723,6 +726,8 @@ namespace UaaSolutionWpf
         {
             try
             {
+                _cameraManager=cameraDisplayViewControl.CameraManager;
+
                 if (cameraDisplayViewControl != null)
                 {
                     // Wire up events
@@ -1171,12 +1176,31 @@ namespace UaaSolutionWpf
 
         private async void UvOperation_Click(object sender, RoutedEventArgs e)
         {
-            await _automation.RunUVOperation();
+            try
+            {
+                // Run the SLED operation
+                await _automation.RunSeeSLED();
+
+               
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error during SLED operation and image capture");
+                MessageBox.Show($"Error: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async void DisPensingOperation_Click(object sender, RoutedEventArgs e)
         {
-            await _automation.RunDispenserOperation();
+            try
+            {
+                await _automation.RunDispenserOperation();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error during Run Dispense operation");
+                MessageBox.Show($"Error: {ex.Message}", "Operation Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
 

@@ -232,6 +232,30 @@ namespace UaaSolutionWpf.Controls
             _coordinateDisplay.Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// Shows settings dialog for camera conversion factors
+        /// </summary>
+        public void ShowConversionSettings()
+        {
+            if (_gantryService != null)
+            {
+                // Get the main window as owner
+                var mainWindow = Application.Current.MainWindow;
+
+                bool settingsChanged = _gantryService.ShowSettingsDialog(mainWindow);
+                if (settingsChanged)
+                {
+                    _logger.Information("Camera conversion settings updated via settings dialog");
+                }
+            }
+            else
+            {
+                _logger.Warning("Cannot show conversion settings - camera gantry service not initialized");
+                MessageBox.Show("Camera gantry service not initialized",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private void ShowClickedCoordinates(double deltaX, double deltaY)
         {
             MessageBox.Show(

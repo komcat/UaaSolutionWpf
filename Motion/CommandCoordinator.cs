@@ -8,6 +8,7 @@ using UaaSolutionWpf.Services;
 using UaaSolutionWpf.ViewModels;
 using Newtonsoft.Json;
 using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace UaaSolutionWpf.Motion
 {
@@ -20,7 +21,8 @@ namespace UaaSolutionWpf.Motion
         private readonly SemaphoreSlim _hexapodSemaphore = new SemaphoreSlim(1, 1);
 
         private readonly PneumaticSlideManager _slideManager; // Changed from PneumaticSlideService
-
+                                                              // Add new field for camera manager
+        private readonly CameraManagerWpf _cameraManager;
 
         public CommandCoordinator(
                 MotionGraphManager motionGraphManager,
@@ -29,11 +31,13 @@ namespace UaaSolutionWpf.Motion
                 HexapodMovementService bottomHexapod,
                 GantryMovementService gantry,
                 MultiDeviceManager ioManager,
+                CameraManagerWpf cameraManager,
                 ILogger logger)
         {
             _motionGraphManager = motionGraphManager;
             _ioManager = ioManager ?? throw new ArgumentNullException(nameof(ioManager));
             _slideManager = new PneumaticSlideManager(ioManager);
+            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
 
             var config = LoadConfiguration();
             _slideManager.LoadSlidesFromConfig(config);
@@ -155,7 +159,9 @@ namespace UaaSolutionWpf.Motion
                     case CommandType.WaitForInput:
                         await ExecuteWaitForInputCommand(command);
                         break;
-
+                    case CommandType.ImageCapture:
+                        await ExecuteImageCaptureCommand(command);
+                        break;
                     default:
                         throw new ArgumentException($"Unknown command type: {command.Type}");
                 }
@@ -361,6 +367,44 @@ namespace UaaSolutionWpf.Motion
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error moving gantry to {Position}", targetPosition);
+                throw;
+            }
+        }
+
+        private async Task ExecuteImageCaptureCommand(CoordinatedCommand command)
+        {
+            try
+            {
+                WriteableBitmap currentImage = _cameraManager.CurrentImage;
+
+                if (currentImage != null)
+                {
+                    // Create Captures directory if it doesn't exist
+                    string capturesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Captures");
+                    Directory.CreateDirectory(capturesDir);
+
+                    // Generate filename with timestamp and prefix
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    string filename = Path.Combine(capturesDir, $"{command.ImageCapturePrefix}_{timestamp}.png");
+
+                    // Create encoder and save image
+                    using (FileStream stream = new FileStream(filename, FileMode.Create))
+                    {
+                        BitmapEncoder encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(currentImage));
+                        encoder.Save(stream);
+                    }
+
+                    _logger.Information("Image captured and saved to {Filename}", filename);
+                }
+                else
+                {
+                    throw new InvalidOperationException("No camera image available to capture");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error capturing image");
                 throw;
             }
         }

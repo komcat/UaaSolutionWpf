@@ -21,6 +21,7 @@ namespace UaaSolutionWpf
             HexapodMovementService bottomHexapod,
             GantryMovementService gantry,
             MultiDeviceManager ioManager,
+            CameraManagerWpf cameraManager,
             ILogger logger)
         {
             _logger = logger.ForContext<AutomationExample>();
@@ -33,9 +34,26 @@ namespace UaaSolutionWpf
                 bottomHexapod: bottomHexapod,
                 gantry: gantry,
                 ioManager: ioManager,
+                cameraManager: cameraManager,
                 logger: logger);
         }
 
+
+        public async Task RunSeeSLED()
+        {
+            try
+            {
+                _logger.Information("Starting SeeSLED operation sequence");
+                var sequence = OperationSequences.SeeSLED();
+                await _coordinator.ExecuteCommandSequence(sequence);
+                _logger.Information("SeeSLED operation sequence completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error executing SeeSLED operation sequence");
+                throw;
+            }
+        }
         public async Task RunUVOperation()
         {
             try

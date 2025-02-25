@@ -22,11 +22,11 @@
       "Target": 0.0007
     },
     {
-      "ChannelName": "reserved",
+      "ChannelName": "Keithley Current (tcp)",
       "Id": 3,
       "Value": 0,
-      "Unit": "",
-      "Target": 0
+      "Unit": "A",
+      "Target": 0.0007
     },
     {
       "ChannelName": "PM400_1",

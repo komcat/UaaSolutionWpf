@@ -15,18 +15,19 @@ namespace UaaSolutionWpf.Motion
                 // Move gantry to UV position
                 CoordinatedCommand.CreateMotionCommand(
                     deviceId: "gantry-main",
-                    targetPosition: "SeeSLED",
+                    targetPosition: "Fiducial3",
                     order: 1,
                     waitForComplete: true),
+               
                 CoordinatedCommand.CreateImageCaptureCommand(
-                    prefix: "SeeSLED_before",
+                    prefix: "Fid3-1",
                     order: 2),
                 // settle image capture
                 CoordinatedCommand.CreateTimerCommand(
                     duration: TimeSpan.FromSeconds(3),
                     order: 3),
                 CoordinatedCommand.CreateImageCaptureCommand(
-                    prefix: "SeeSLED_after3sec",
+                    prefix: "Fid3-2",
                     order: 4),
             };
         }

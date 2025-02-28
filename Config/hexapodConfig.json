@@ -1,22 +1,33 @@
 {
-  "Devices": {
-    "Left": {
-      "IsEnabled": false,
+  "MotionDevices": {
+    "hex-left": {
+      "IsEnabled": true,
       "IpAddress": "192.168.0.10",
       "Port": 50000,
-      "Name": "Left Hexapod"
+      "Id": 0,
+      "Name": "hex-left"
     },
-    "Bottom": {
+    "hex-bottom": {
       "IsEnabled": true,
       "IpAddress": "192.168.0.20",
       "Port": 50000,
-      "Name": "Bottom Hexapod"
+      "Id": 1,
+      "Name": "hex-bottom"
     },
-    "Right": {
+    "hex-right": {
       "IsEnabled": true,
       "IpAddress": "192.168.0.30",
       "Port": 50000,
-      "Name": "Right Hexapod"
+      "Id":2,
+      "Name": "hex-right"
+    },
+    "gantry-main":
+    {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.30",
+      "Port": 50000,
+      "Id":2,
+      "Name": "gantry-main"
     }
   }
 }

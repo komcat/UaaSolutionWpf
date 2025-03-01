@@ -70,7 +70,6 @@ namespace UaaSolutionWpf
 
         private RealTimeDataManager _realTimeDataManager;
         private MotionCoordinator _motionCoordinator;
-        private CameraGantryService _cameraGantryService;
 
         private AutomationExample _automation;
 
@@ -571,14 +570,14 @@ namespace UaaSolutionWpf
 
         private void InitializeCameraGantryService()
         {
-            Log.Information("Initialize Camera Gantry Service UI");
-            _cameraGantryService = new CameraGantryService(gantryMovementService,devicePositionMonitor, _logger);
+            //Log.Information("Initialize Camera Gantry Service UI");
+            //_cameraGantryService = new CameraGantryService(gantryMovementService,devicePositionMonitor, _logger);
 
-            // Initialize the overlay control with the service
-            if (cameraDisplayViewControl?.cameraOverlay != null)
-            {
-                cameraDisplayViewControl.cameraOverlay.Initialize(_cameraGantryService, _logger);
-            }
+            //// Initialize the overlay control with the service
+            //if (cameraDisplayViewControl?.cameraOverlay != null)
+            //{
+            //    cameraDisplayViewControl.cameraOverlay.Initialize(_cameraGantryService, _logger);
+            //}
         }
         private void InitializeDeviceMonitors()
         {

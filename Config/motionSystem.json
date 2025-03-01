@@ -1,28 +1,31 @@
 {
-  "Devices": [
-    {
-      "Id": "hex-left",
-      "Type": "Hexapod",
-      "Name": "Left",
-      "GraphId": "HexapodLeft"
+  "MotionDevices": {
+    "hex-left": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.10",
+      "Port": 50000,
+      "Id": 0,
+      "Name": "hex-left"
     },
-    {
-      "Id": "hex-right",
-      "Type": "Hexapod",
-      "Name": "Right",
-      "GraphId": "HexapodRight"
+    "hex-bottom": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.20",
+      "Port": 50000,
+      "Id": 1,
+      "Name": "hex-bottom"
     },
-    {
-      "Id": "hex-bottom",
-      "Type": "Hexapod",
-      "Name": "Bottom",
-      "GraphId": "HexapodBottom"
+    "hex-right": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.30",
+      "Port": 50000,
+      "Id": 2,
+      "Name": "hex-right"
     },
-    {
-      "Id": "gantry-main",
-      "Type": "Gantry",
-      "Name": "MainGantry",
-      "GraphId": "Gantry"
+    "gantry-main": {
+      "IsEnabled": true,
+      "IpAddress": "192.168.0.50",
+      "Id": 3,
+      "Name": "gantry-main"
     }
-  ]
+  }
 }

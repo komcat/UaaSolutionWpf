@@ -1,0 +1,18 @@
+{
+  "PixelsPerMillimeterX": 403.22581,
+  "PixelsPerMillimeterY": 396.82540,
+  "CameraCenterX": 640.0,
+  "CameraCenterY": 512.0,
+  "GantryDeviceId": "1",
+  "LastCalibrationDate": "2025-02-28T15:30:45.1234567Z",
+  "CalibrationPoint1PixelX": 640.0,
+  "CalibrationPoint1PixelY": 512.0,
+  "CalibrationPoint2PixelX": 680.0,
+  "CalibrationPoint2PixelY": 552.0,
+  "CalibrationPoint1MotionX": 100.0,
+  "CalibrationPoint1MotionY": 100.0,
+  "CalibrationPoint1MotionZ": 20.0,
+  "CalibrationPoint2MotionX": 110.0,
+  "CalibrationPoint2MotionY": 110.0,
+  "CalibrationPoint2MotionZ": 20.0
+}

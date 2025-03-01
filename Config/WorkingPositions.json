@@ -186,7 +186,7 @@
   ],
   "Gantries": [
     {
-      "GantryId": 4,
+      "GantryId": 3,
       "Positions": {
         "Home": {
           "X": 3.0,

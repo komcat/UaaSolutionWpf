@@ -1,0 +1,276 @@
+﻿<Window x:Class="UaaSolutionWpf.VisionMotionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:UaaSolutionWpf"
+        xmlns:tcm="clr-namespace:testConfigurableMachine;assembly=testConfigurableMachine"
+        xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"
+        xmlns:eziiolibs="clr-namespace:EzIIOLibControl.Controls;assembly=EzIIOLibControl"
+        mc:Ignorable="d"
+        Title="Vision Motion Control System" Height="700" Width="1600"
+        Loaded="Window_Loaded">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="800" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Motion Control Header -->
+        <TextBlock Grid.Column="0" Grid.Row="0" Text="Motion Control" 
+                   FontSize="18" FontWeight="Bold" Margin="10,10,10,0" />
+
+        <!-- Motion Control Tabs -->
+        <TabControl Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Margin="10,0,10,0" x:Name="MotionControlTabControl">
+            <TabItem Header="RUN">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Automated Sequence Control" FontWeight="Bold" Margin="0,5"/>
+                    <Button Content="Start Sequence" Margin="0,5"/>
+                    <Button Content="Pause Sequence" Margin="0,5"/>
+                    <Button Content="Stop Sequence" Margin="0,5"/>
+                    <GroupBox Header="Sequence Status" Margin="0,10">
+                        <StackPanel Margin="5">
+                            <TextBlock Text="Current State: Idle" Margin="0,5"/>
+                            <TextBlock Text="Current Step: --" Margin="0,5"/>
+                            <ProgressBar Height="20" Value="0" Margin="0,5"/>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="I/O">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Left side - Bottom IO Control -->
+                    <StackPanel x:Name="ioBottomPanel" Margin="5" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
+                        <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOBottom"
+                                            HeaderText="Output Pins - IOBottom"
+                                            IsOutput="True"/>
+                        <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOBottom"
+                                           HeaderText="Input Pins - IOBottom"
+                                           IsOutput="False"/>
+                    </StackPanel>
+
+                    <!-- Right side - Top IO Control -->
+                    <StackPanel x:Name="ioTopPanel" Margin="5" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2">
+                        <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOTop"
+                                            HeaderText="Output Pins - IOTop"
+                                            IsOutput="True"/>
+                        <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOTop"
+                                           HeaderText="Input Pins - IOTop"
+                                           IsOutput="False"/>
+                    </StackPanel>
+
+                    <!-- Additional controls for I/O tab -->
+                    <StackPanel Grid.Column="2" Grid.Row="0" Margin="5">
+                        <GroupBox Header="Quick Actions" Margin="0,0,0,10">
+                            <WrapPanel Margin="5">
+                                <!-- Toggle switches will be added here dynamically -->
+                            </WrapPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Manual" IsSelected="True">
+                <!-- Place a TabControl here for device tabs -->
+                <TabControl x:Name="DevicesTabControl" Margin="5">
+                    <!-- Tabs will be added dynamically when devices are connected -->
+                    <TabItem Header="No Devices" x:Name="NoDevicesTab">
+                        <TextBlock Text="No motion devices are connected. Please initialize the motion system." 
+                       TextWrapping="Wrap" Margin="20" VerticalAlignment="Center" />
+                    </TabItem>
+                </TabControl>
+            </TabItem>
+        </TabControl>
+
+        <!-- Initialize Button Panel -->
+        <StackPanel Grid.Column="0" Grid.Row="3" Margin="10">
+            <Button Content="Initialize Motion System" Click="InitializeMotionSystem_Click" Margin="0,0,0,5" Padding="5"/>
+            <Button Content="Stop All Devices" Click="StopAllDevices_Click" Margin="0,0,0,5" Padding="5"/>
+        </StackPanel>
+
+        <!-- Vision Control Header -->
+        <TextBlock Grid.Column="1" Grid.Row="0" Text="Vision Control" 
+                   FontSize="18" FontWeight="Bold" Margin="10,10,10,0" />
+
+        <!-- Vision Control Tabs -->
+        <TabControl Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Margin="10" x:Name="VisionControlTabControl">
+            <TabItem Header="Camera Control" IsSelected="True">
+                <!-- Camera Control Panel -->
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Camera Controls -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Connection Controls -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
+                            <Button x:Name="ConnectCameraButton" Content="Connect Camera" Click="ConnectCamera_Click" Margin="0,0,10,0" Padding="10,5"/>
+                            <Button x:Name="StartLiveViewButton" Content="Start Live View" Click="StartLiveView_Click" Margin="0,0,10,0" Padding="10,5" IsEnabled="False"/>
+                            <Button x:Name="StopLiveViewButton" Content="Stop Live View" Click="StopLiveView_Click" Margin="0,0,10,0" Padding="10,5" IsEnabled="False"/>
+                            <Button x:Name="DisconnectCameraButton" Content="Disconnect Camera" Click="DisconnectCamera_Click" Margin="0,0,10,0" Padding="10,5" IsEnabled="False"/>
+                        </StackPanel>
+
+                        <!-- Vision-Motion Integration Controls -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal">
+                            <Button x:Name="CalibrateVisionButton" Content="Calibrate Vision-Motion" Click="CalibrateVision_Click" Margin="0,0,10,0" Padding="10,5" IsEnabled="False"/>
+                            <!-- Update the EnableClickToMoveCheckBox element to include the Click event handler -->
+                            <CheckBox x:Name="EnableClickToMoveCheckBox" Content="Enable Click-to-Move" 
+                                      Margin="0,0,10,0" VerticalAlignment="Center" IsEnabled="False"
+                                      Click="EnableClickToMoveCheckBox_CheckedChanged" Checked="EnableClickToMoveCheckBox_Checked"/>
+                            <TextBlock Text="Click on the image to move gantry to that position" VerticalAlignment="Center" Foreground="Gray"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Camera View -->
+                    <!-- Camera View -->
+                    <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="0,0,0,10">
+                        <Grid Background="Black" 
+                              x:Name="ImageControlGrid" 
+                              MouseMove="ImageControlGrid_MouseMove" 
+                              MouseLeave="ImageControlGrid_MouseLeave">
+                            <!-- Camera Image -->
+                            <Image x:Name="CameraImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                            <!-- Canvas Overlay for Visualization -->
+                            <Canvas x:Name="VisualizationOverlay" Width="{Binding ActualWidth, ElementName=CameraImage}" 
+                Height="{Binding ActualHeight, ElementName=CameraImage}"
+                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                            <Canvas x:Name="CrosshairCanvas" 
+                                    IsHitTestVisible="False" 
+                                    Background="Transparent">
+                                <Line x:Name="HorizontalCrosshairLine" 
+                                      Stroke="Cyan" 
+                                      StrokeThickness="1" 
+                                      Visibility="Collapsed"/>
+                                <Line x:Name="VerticalCrosshairLine" 
+                                      Stroke="Cyan" 
+                                      StrokeThickness="1" 
+                                      Visibility="Collapsed"/>
+
+                                <!-- Static Center Crosshair (Yellow) -->
+                                <Line x:Name="StaticHorizontalCrosshairLine" 
+                                        Stroke="Yellow" 
+                                        StrokeThickness="1"/>
+                                <Line x:Name="StaticVerticalCrosshairLine" 
+                                        Stroke="Yellow" 
+                                        StrokeThickness="1"/>
+
+                            </Canvas>
+
+                            <!-- No Camera Text -->
+                            <TextBlock x:Name="NoCameraTextBlock" Text="No camera connected" 
+                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="16" FontWeight="Bold"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Camera Settings -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Camera Info -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock x:Name="CameraInfoTextBlock" Text="Camera: Not connected" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="CameraStatsTextBlock" Text="Stats: --" Margin="0,0,0,5"/>
+                        </StackPanel>
+
+                        <!-- Zoom Controls -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <TextBlock Text="Zoom:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <Button x:Name="ZoomOutButton" Content="-" Click="ZoomOut_Click" Width="30" Margin="0,0,5,0" IsEnabled="False"/>
+                            <TextBlock x:Name="ZoomTextBlock" Text="100%" VerticalAlignment="Center" MinWidth="50" TextAlignment="Center"/>
+                            <Button x:Name="ZoomInButton" Content="+" Click="ZoomIn_Click" Width="30" Margin="5,0,0,0" IsEnabled="False"/>
+                            <Button x:Name="ZoomResetButton" Content="Reset" Click="ZoomReset_Click" Width="50" Margin="10,0,0,0" IsEnabled="False"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Vision Settings">
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Camera Settings Controls -->
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Camera Configuration" FontWeight="Bold" Margin="0,5"/>
+                        <Grid Margin="0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Exposure:" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Value="50" Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="50%" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Threshold:" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" Value="128" Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="128" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Gain:" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="100" Value="25" Margin="0,0,10,5"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="25%" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Processing Options -->
+                    <GroupBox Grid.Row="1" Header="Image Processing Options" Margin="0,10,0,0">
+                        <StackPanel Margin="5">
+                            <CheckBox Content="Enable edge detection" Margin="0,5"/>
+                            <CheckBox Content="Apply blur filter" Margin="0,5"/>
+                            <CheckBox Content="Auto brightness correction" Margin="0,5" IsChecked="True"/>
+                            <CheckBox Content="Save captured images" Margin="0,5"/>
+                            <Button Content="Configure ROI..." Margin="0,10,0,0" Padding="10,5"/>
+                        </StackPanel>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3" VerticalAlignment="Bottom">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusBarTextBlock" Text="Ready to initialize"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

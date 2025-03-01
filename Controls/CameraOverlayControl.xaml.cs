@@ -16,7 +16,7 @@ namespace UaaSolutionWpf.Controls
         private Path _mouseCrosshair;
         private TextBlock _coordinateDisplay;
         private Point _imageCenter;
-        private CameraGantryService _gantryService;
+        
         private ILogger _logger;
         private bool _isEnabled = true;
         public event EventHandler<ClickLocationEventArgs> LocationClicked;
@@ -33,14 +33,11 @@ namespace UaaSolutionWpf.Controls
             SizeChanged += OnSizeChanged;
         }
 
-        public void Initialize(CameraGantryService gantryService, ILogger logger)
+        public void Initialize(ILogger logger)
         {
-            _gantryService = gantryService ?? throw new ArgumentNullException(nameof(gantryService));
             _logger = logger?.ForContext<CameraOverlayControl>();
 
-            // Subscribe to gantry service events
-            _gantryService.MovementStarted += OnGantryMovementStarted;
-            _gantryService.MovementCompleted += OnGantryMovementCompleted;
+
         }
 
         private void OnGantryMovementStarted(object sender, MovementStartedEventArgs e)
@@ -77,7 +74,6 @@ namespace UaaSolutionWpf.Controls
 
         private async void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (!_isEnabled || _gantryService == null) return;
 
             if (e.ChangedButton == MouseButton.Left)
             {
@@ -100,7 +96,7 @@ namespace UaaSolutionWpf.Controls
                     if (parent is BaslerDisplayViewControl displayControl)
                     {
                         double scaleFactor = displayControl.GetCurrentScaleFactor();
-                        await _gantryService.HandleCameraClick(mousePos, _imageCenter, scaleFactor);
+                        //await _gantryService.HandleCameraClick(mousePos, _imageCenter, scaleFactor);
                     }
                 }
                 catch (Exception ex)
@@ -237,23 +233,23 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         public void ShowConversionSettings()
         {
-            if (_gantryService != null)
-            {
-                // Get the main window as owner
-                var mainWindow = Application.Current.MainWindow;
+            //if (_gantryService != null)
+            //{
+            //    // Get the main window as owner
+            //    var mainWindow = Application.Current.MainWindow;
 
-                bool settingsChanged = _gantryService.ShowSettingsDialog(mainWindow);
-                if (settingsChanged)
-                {
-                    _logger.Information("Camera conversion settings updated via settings dialog");
-                }
-            }
-            else
-            {
-                _logger.Warning("Cannot show conversion settings - camera gantry service not initialized");
-                MessageBox.Show("Camera gantry service not initialized",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            //    bool settingsChanged = _gantryService.ShowSettingsDialog(mainWindow);
+            //    if (settingsChanged)
+            //    {
+            //        _logger.Information("Camera conversion settings updated via settings dialog");
+            //    }
+            //}
+            //else
+            //{
+            //    _logger.Warning("Cannot show conversion settings - camera gantry service not initialized");
+            //    MessageBox.Show("Camera gantry service not initialized",
+            //        "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            //}
         }
 
         private void ShowClickedCoordinates(double deltaX, double deltaY)

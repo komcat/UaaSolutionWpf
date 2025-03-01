@@ -52,6 +52,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Config\ConfigurationClass.cs">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
     <Compile Update="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>
@@ -93,6 +96,9 @@
     <None Update="Config\RealTimeData.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Config\VisionMotionCalibration.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Config\WorkingGraphs.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -129,12 +135,15 @@
     <Folder Include="Scanning\Data\" />
     <Folder Include="Scanning\Movement\" />
     <Folder Include="Scanning\Monitoring\" />
+    <Folder Include="Windows\" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EzIIOLibControl\EzIIOLibControl.csproj" />
     <ProjectReference Include="..\EzIIOLib\EzIIOLib.csproj" />
     <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />
+    <ProjectReference Include="..\testConfigurableMachine\MotionServiceLib\MotionServiceLib.csproj" />
+    <ProjectReference Include="..\testConfigurableMachine\testConfigurableMachine\testConfigurableMachine.csproj" />
     <ProjectReference Include="..\WpfLiveChart\WpfLiveChart.csproj" />
   </ItemGroup>
 

@@ -14,6 +14,12 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using UaaSolutionWpf.Data;
 using System.Windows.Media;
+using ScottPlot;
+using ScottPlot.WPF;
+using Color = System.Windows.Media.Color;
+using Colors = System.Windows.Media.Colors;
+
+
 namespace UaaSolutionWpf
 {
     /// <summary>
@@ -33,6 +39,10 @@ namespace UaaSolutionWpf
         private bool _isLiveViewRunning = false;
         private System.Windows.Threading.DispatcherTimer _statsUpdateTimer;
         private RealTimeDataManager realTimeDataManager;
+        // Maintain a list to store historical data for plotting
+        private List<double> _xDataPoints = new List<double>();
+        private List<double> _yDataPoints = new List<double>();
+        private DateTime _firstMeasurementTime;
         public VisionMotionWindow()
         {
             InitializeComponent();
@@ -61,7 +71,7 @@ namespace UaaSolutionWpf
             tecController.SetLogger(_logger);
 
             InitializeKeithleyControl();
-
+            InitializePlot();
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -154,12 +164,14 @@ namespace UaaSolutionWpf
 
                             // Optionally update the percentage text
                             PercentageTextBlock.Text = $"{percentageOfTarget:F1}%";
+
+                            // Update plot data
+                            UpdatePlotData(measurement.Value);
                         }
                     });
                 }
             }
         }
-
         private (string formattedValue, string prefixedUnit) FormatValueWithPrefix(double value, string unit)
         {
             // Absolute value for comparison
@@ -1458,6 +1470,94 @@ namespace UaaSolutionWpf
             }
         }
 
+
+        private void InitializePlot()
+        {
+           
+
+            // Clear any existing plots
+            AlignmentPlot.Reset();
+
+            // Add a scatter plot
+            //AlignmentPlot.Plot.Add.Scatter(dataX, dataY);
+
+            // Customize the plot
+            AlignmentPlot.Plot.Title("Alignment Scan");
+            AlignmentPlot.Plot.XLabel("Position");
+            AlignmentPlot.Plot.YLabel("Signal Intensity");
+
+            // Render the plot
+            AlignmentPlot.Refresh();
+        }
+
+        // Method to update plot dynamically
+
+        private void UpdatePlotData(double measurementValue)
+        {
+            try
+            {
+                // Initialize first measurement time if not set
+                if (_xDataPoints.Count == 0)
+                {
+                    _firstMeasurementTime = DateTime.Now;
+                }
+
+                // Calculate elapsed time in seconds
+                double elapsedTime = (DateTime.Now - _firstMeasurementTime).TotalSeconds;
+
+                // Add new data points
+                _xDataPoints.Add(elapsedTime);
+                _yDataPoints.Add(measurementValue);
+
+                // Keep only the last 100 data points to prevent memory growth
+                if (_xDataPoints.Count > 100)
+                {
+                    _xDataPoints.RemoveAt(0);
+                    _yDataPoints.RemoveAt(0);
+                }
+
+                // Update the plot
+                UpdatePlot(_xDataPoints.ToArray(), _yDataPoints.ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error updating plot data");
+            }
+        }
+
+        // Method to update plot dynamically
+        private void UpdatePlot(double[] xData, double[] yData)
+        {
+            try
+            {
+                if (AlignmentPlot == null)
+                {
+                    _logger.Warning("AlignmentPlot is null in UpdatePlot");
+                    return;
+                }
+
+                // Clear previous plot
+                AlignmentPlot.Plot.Clear();
+
+                // Add new scatter plot
+                AlignmentPlot.Plot.Add.Scatter(xData, yData);
+
+                // Customize plot
+                AlignmentPlot.Plot.Title("Real-Time Measurement");
+                AlignmentPlot.Plot.XLabel("Time (seconds)");
+                AlignmentPlot.Plot.YLabel("Measurement Value");
+
+                // Automatically adjust axis to show all data
+                AlignmentPlot.Plot.Axes.AutoScale();
+
+                // Refresh the plot
+                AlignmentPlot.Refresh();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error updating plot");
+            }
+        }
         protected override void OnClosed(EventArgs e)
         {
             try

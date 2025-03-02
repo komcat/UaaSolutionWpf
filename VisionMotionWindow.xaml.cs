@@ -20,6 +20,7 @@ using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
 
 
+
 namespace UaaSolutionWpf
 {
     /// <summary>
@@ -120,7 +121,9 @@ namespace UaaSolutionWpf
             // initialize the AutoAlignmentControl
             AutoAlignmentControl.Initialize(_motionKernel, realTimeDataManager, _logger);
             AutoAlignmentControl.SetDataChannel("Keithley Current");
+
         }
+
 
         private void Data_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -1571,6 +1574,7 @@ namespace UaaSolutionWpf
                     if (_isLiveViewRunning)
                     {
                         _cameraManager.StopLiveView();
+
                     }
                     _cameraManager.Dispose();
                     _cameraManager = null;

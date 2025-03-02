@@ -54,19 +54,6 @@
                     </StackPanel>
                 </TabItem.Header>
 
-                <StackPanel Margin="5">
-                    <TextBlock Text="Automated Sequence Control" FontWeight="Bold" Margin="0,5"/>
-                    <Button Content="Start Sequence" Margin="0,5"/>
-                    <Button Content="Pause Sequence" Margin="0,5"/>
-                    <Button Content="Stop Sequence" Margin="0,5"/>
-                    <GroupBox Header="Sequence Status" Margin="0,10">
-                        <StackPanel Margin="5">
-                            <TextBlock Text="Current State: Idle" Margin="0,5"/>
-                            <TextBlock Text="Current Step: --" Margin="0,5"/>
-                            <ProgressBar Height="20" Value="0" Margin="0,5"/>
-                        </StackPanel>
-                    </GroupBox>
-                </StackPanel>
             </TabItem>
 
             <TabItem >

@@ -10,8 +10,30 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Scanning\Data\**" />
+    <Compile Remove="Scanning\Monitoring\**" />
+    <Compile Remove="Scanning\Movement\**" />
+    <EmbeddedResource Remove="Scanning\Data\**" />
+    <EmbeddedResource Remove="Scanning\Monitoring\**" />
+    <EmbeddedResource Remove="Scanning\Movement\**" />
+    <None Remove="Scanning\Data\**" />
+    <None Remove="Scanning\Monitoring\**" />
+    <None Remove="Scanning\Movement\**" />
+    <Page Remove="Scanning\Data\**" />
+    <Page Remove="Scanning\Monitoring\**" />
+    <Page Remove="Scanning\Movement\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="globalAxis.png" />
+    <None Remove="Images\axis.png" />
+    <None Remove="Images\Hex-bottom.png" />
+    <None Remove="Images\IO.png" />
+    <None Remove="Images\Manual.png" />
+    <None Remove="Images\measurement.png" />
+    <None Remove="Images\RUN.png" />
     <None Remove="Images\stop.jpg" />
+    <None Remove="Images\teach.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,8 +68,29 @@
     <Resource Include="globalAxis.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Images\axis.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\Hex-bottom.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\IO.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\Manual.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\measurement.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\RUN.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Images\stop.jpg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\teach.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
 
@@ -80,9 +123,6 @@
     </None>
     <None Update="Config\channelconfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Config\hexapodConfig.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Config\IOConfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -131,10 +171,7 @@
 
   <ItemGroup>
     <Folder Include="Charts\" />
-    <Folder Include="IO\" />
-    <Folder Include="Scanning\Data\" />
-    <Folder Include="Scanning\Movement\" />
-    <Folder Include="Scanning\Monitoring\" />
+    <Folder Include="Sequence\" />
     <Folder Include="Windows\" />
   </ItemGroup>
 

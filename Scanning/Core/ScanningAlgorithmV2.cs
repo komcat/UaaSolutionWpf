@@ -2,16 +2,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
-using UaaSolutionWpf.Motion;
-using UaaSolutionWpf.Services;
+using MotionServiceLib;
 using UaaSolutionWpf.Data;
 
 namespace UaaSolutionWpf.Scanning.Core
 {
-    public class ScanningAlgorithm : IDisposable
+    public class ScanningAlgorithmV2 : IDisposable
     {
-        private readonly HexapodMovementService _movementService;
-        private readonly DevicePositionMonitor _positionMonitor;
+        private readonly MotionKernel _motionKernel;
         private readonly RealTimeDataManager _dataManager;
         private readonly ILogger _logger;
         private readonly string _deviceId;
@@ -22,36 +20,34 @@ namespace UaaSolutionWpf.Scanning.Core
         private bool _isHaltRequested;
         private CancellationTokenSource _cancellationSource;
         private ScanDataCollector _dataCollector;
-        private GlobalPeakData _globalPeak;
-        private BaselineData _baseline;
+
+        // Using MotionServiceLib.Position type for global peak
+        private MotionPeakData _globalPeak;
+        private MotionBaselineData _baseline;
 
         // Constants
-        private const int MOTION_SETTLE_TIME_MS = 250;
         private const int MAX_CONSECUTIVE_DECREASES = 3;
-        private readonly string[] SCAN_AXES = { "X", "Y", "Z" };
 
         public event EventHandler<ScanProgressEventArgs> ProgressUpdated;
         public event EventHandler<ScanCompletedEventArgs> ScanCompleted;
         public event EventHandler<ScanErrorEventArgs> ErrorOccurred;
         public event EventHandler<(double Value, Position Position)> DataPointAcquired;
-        public event EventHandler<GlobalPeakData> GlobalPeakUpdated;
+        public event EventHandler<MotionPeakData> GlobalPeakUpdated;
 
-        public ScanningAlgorithm(
-            HexapodMovementService movementService,
-            DevicePositionMonitor positionMonitor,
+        public ScanningAlgorithmV2(
+            MotionKernel motionKernel,
             RealTimeDataManager dataManager,
             string deviceId,
             string dataChannel,
             ScanningParameters parameters,
             ILogger logger)
         {
-            _movementService = movementService ?? throw new ArgumentNullException(nameof(movementService));
-            _positionMonitor = positionMonitor ?? throw new ArgumentNullException(nameof(positionMonitor));
+            _motionKernel = motionKernel ?? throw new ArgumentNullException(nameof(motionKernel));
             _dataManager = dataManager ?? throw new ArgumentNullException(nameof(dataManager));
             _deviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
             _dataChannel = dataChannel ?? throw new ArgumentNullException(nameof(dataChannel));
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-            _logger = logger?.ForContext<ScanningAlgorithm>() ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger?.ForContext<ScanningAlgorithmV2>() ?? throw new ArgumentNullException(nameof(logger));
 
             _dataCollector = new ScanDataCollector(_deviceId);
             _cancellationSource = new CancellationTokenSource();
@@ -78,7 +74,9 @@ namespace UaaSolutionWpf.Scanning.Core
                     _logger.Information($"Scan completed. Returned to global peak position with value: {_globalPeak.Value:F6}");
                 }
 
-                OnScanCompleted(new ScanCompletedEventArgs(_dataCollector.GetResults()));
+                // Create ScanResults using the internal conversion methods
+                var results = _dataCollector.GetResults();
+                OnScanCompleted(new ScanCompletedEventArgs(results));
             }
             catch (OperationCanceledException)
             {
@@ -97,43 +95,32 @@ namespace UaaSolutionWpf.Scanning.Core
                 await Cleanup();
             }
         }
-        // Add this helper method to the class
-        private Position ConvertToPosition(DevicePosition devicePosition)
-        {
-            return new Position
-            {
-                X = devicePosition.X,
-                Y = devicePosition.Y,
-                Z = devicePosition.Z,
-                U = devicePosition.U,
-                V = devicePosition.V,
-                W = devicePosition.W
-            };
-        }
+
         private async Task RecordBaseline(CancellationToken token)
         {
             _logger.Information("Recording baseline for device {DeviceId}", _deviceId);
 
-            var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            // Get current position directly from motion kernel
+            var currentPosition = await _motionKernel.GetCurrentPositionAsync(_deviceId);
             var currentValue = await GetMeasurement(token);
 
-            _baseline = new BaselineData
+            _baseline = new MotionBaselineData
             {
                 Value = currentValue,
-                Position = ConvertToPosition(currentPosition),  // Convert DevicePosition to Position
+                Position = currentPosition,
                 Timestamp = DateTime.Now
             };
 
             // Initialize global peak with baseline
-            _globalPeak = new GlobalPeakData
+            _globalPeak = new MotionPeakData
             {
                 Value = currentValue,
-                Position = ConvertToPosition(currentPosition),  // Convert DevicePosition to Position
+                Position = currentPosition,
                 Timestamp = DateTime.Now,
                 Context = "Initial Position"
             };
 
-            _dataCollector.RecordBaseline(currentValue, currentPosition);
+            _dataCollector.RecordBaseline(currentValue, ConvertToScanPosition(currentPosition));
             _logger.Information($"Baseline recorded: Value={currentValue:F6} at position {currentPosition}");
             OnProgressUpdated(new ScanProgressEventArgs(0, "Baseline recorded"));
         }
@@ -144,8 +131,8 @@ namespace UaaSolutionWpf.Scanning.Core
             {
                 if (!_isScanningActive || token.IsCancellationRequested) break;
 
-                // Use AxesToScan from parameters instead of hardcoded SCAN_AXES
-                foreach (var axis in _parameters.AxesToScan)  // This now follows Z, X, Y order
+                // Use AxesToScan from parameters
+                foreach (var axis in _parameters.AxesToScan)
                 {
                     if (!_isScanningActive || token.IsCancellationRequested) break;
 
@@ -165,23 +152,22 @@ namespace UaaSolutionWpf.Scanning.Core
                 }
             }
         }
-        // Add this helper method to get position value for specific axis
-        private double GetAxisPosition(DevicePosition position, string axis)
-        {
-            return axis.ToUpper() switch
-            {
-                "X" => position.X,
-                "Y" => position.Y,
-                "Z" => position.Z,
-                _ => throw new ArgumentException($"Invalid axis: {axis}")
-            };
-        }
+
         private async Task<(double maxValue, Position maxPosition)> ScanDirection(
-    string axis, double stepSize, int direction, CancellationToken token)
+            string axis, double stepSize, int direction, CancellationToken token)
         {
-            var currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            var currentPosition = await _motionKernel.GetCurrentPositionAsync(_deviceId);
             var maxValue = await GetMeasurement(token);
-            var maxPosition = ConvertToPosition(currentPosition);
+            var maxPosition = new Position
+            {
+                X = currentPosition.X,
+                Y = currentPosition.Y,
+                Z = currentPosition.Z,
+                U = currentPosition.U,
+                V = currentPosition.V,
+                W = currentPosition.W
+            };
+
             var previousValue = maxValue;
             int consecutiveDecreases = 0;
             double totalDistance = 0;
@@ -193,7 +179,16 @@ namespace UaaSolutionWpf.Scanning.Core
                    consecutiveDecreases < MAX_CONSECUTIVE_DECREASES &&
                    totalDistance < _parameters.MaxTotalDistance)
             {
-                var newPosition = ConvertToPosition(currentPosition);
+                // Create a new position for the move
+                var newPosition = new Position
+                {
+                    X = currentPosition.X,
+                    Y = currentPosition.Y,
+                    Z = currentPosition.Z,
+                    U = currentPosition.U,
+                    V = currentPosition.V,
+                    W = currentPosition.W
+                };
 
                 // Update specific axis
                 switch (axis.ToUpper())
@@ -211,10 +206,12 @@ namespace UaaSolutionWpf.Scanning.Core
                         throw new ArgumentException($"Invalid axis: {axis}");
                 }
 
+                // Move to the new position
                 await MoveToPosition(newPosition, token);
                 await Task.Delay(_parameters.MotionSettleTimeMs, token);
 
-                currentPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+                // Get the actual position after moving (may be different from target due to constraints)
+                currentPosition = await _motionKernel.GetCurrentPositionAsync(_deviceId);
                 var currentValue = await GetMeasurement(token);
                 totalDistance += stepSize;
 
@@ -224,18 +221,26 @@ namespace UaaSolutionWpf.Scanning.Core
                 // Calculate gradient for monitoring
                 double gradient = (currentValue - previousValue) / stepSize;
 
-                _dataCollector.RecordMeasurement(currentValue, currentPosition, axis, stepSize, direction);
-                DataPointAcquired?.Invoke(this, (currentValue, ConvertToPosition(currentPosition)));
+                _dataCollector.RecordMeasurement(currentValue, ConvertToScanPosition(currentPosition), axis, stepSize, direction);
+                DataPointAcquired?.Invoke(this, (currentValue, currentPosition));
 
                 string logMessage = $"{axis} {(direction > 0 ? "+" : "-")}: " +
-                    $"Pos={GetAxisPosition(currentPosition, axis):F6}mm, Value={currentValue:F6}";
+                    $"Pos={GetAxisValue(currentPosition, axis):F6}mm, Value={currentValue:F6}";
 
                 _logger.Information(logMessage);
 
                 if (currentValue > maxValue)
                 {
                     maxValue = currentValue;
-                    maxPosition = ConvertToPosition(currentPosition);
+                    maxPosition = new Position
+                    {
+                        X = currentPosition.X,
+                        Y = currentPosition.Y,
+                        Z = currentPosition.Z,
+                        U = currentPosition.U,
+                        V = currentPosition.V,
+                        W = currentPosition.W
+                    };
                     consecutiveDecreases = 0;
                     hasMovedFromMax = false;
                     _logger.Information($"{logMessage} - New Local Maximum");
@@ -289,7 +294,7 @@ namespace UaaSolutionWpf.Scanning.Core
             _logger.Information($"Starting {axis} axis scan with step size {stepSize * 1000:F3} microns");
 
             // Store initial position
-            var startPosition = await _positionMonitor.GetCurrentPosition(_deviceId);
+            var startPosition = await _motionKernel.GetCurrentPositionAsync(_deviceId);
             var initialValue = await GetMeasurement(token);
 
             // Scan in positive direction
@@ -299,7 +304,7 @@ namespace UaaSolutionWpf.Scanning.Core
 
             // Return to start position after positive scan
             _logger.Information($"Returning to start position for negative {axis} axis scan");
-            await MoveToPosition(ConvertToPosition(startPosition), token);
+            await MoveToPosition(startPosition, token);
             await Task.Delay(_parameters.MotionSettleTimeMs, token);
 
             if (token.IsCancellationRequested) return;
@@ -323,6 +328,7 @@ namespace UaaSolutionWpf.Scanning.Core
             await MoveToPosition(bestPosition, token);
             await Task.Delay(_parameters.MotionSettleTimeMs, token);
         }
+
         private async Task ReturnToGlobalPeakIfBetter(CancellationToken token)
         {
             if (_globalPeak == null) return;
@@ -345,10 +351,18 @@ namespace UaaSolutionWpf.Scanning.Core
         {
             if (_globalPeak == null || value > _globalPeak.Value)
             {
-                _globalPeak = new GlobalPeakData
+                _globalPeak = new MotionPeakData
                 {
                     Value = value,
-                    Position = position,
+                    Position = new Position
+                    {
+                        X = position.X,
+                        Y = position.Y,
+                        Z = position.Z,
+                        U = position.U,
+                        V = position.V,
+                        W = position.W
+                    },
                     Timestamp = DateTime.Now,
                     Context = context
                 };
@@ -397,20 +411,47 @@ namespace UaaSolutionWpf.Scanning.Core
 
         private async Task MoveToPosition(Position position, CancellationToken token)
         {
-            await _movementService.MoveToAbsolutePosition(new[]
+            try
             {
-                position.X, position.Y, position.Z,
-                position.U, position.V, position.W
-            });
+                // Use the MotionKernel directly to move to the position
+                bool success = await _motionKernel.MoveToAbsolutePositionAsync(_deviceId, position);
+
+                if (!success)
+                {
+                    throw new InvalidOperationException($"Failed to move device {_deviceId} to target position");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error moving device {DeviceId} to position", _deviceId);
+                throw;
+            }
         }
 
-        private int GetAxisIndex(string axis) => axis.ToUpper() switch
+        private double GetAxisValue(Position position, string axis) => axis.ToUpper() switch
         {
-            "X" => 0,
-            "Y" => 1,
-            "Z" => 2,
+            "X" => position.X,
+            "Y" => position.Y,
+            "Z" => position.Z,
+            "U" => position.U,
+            "V" => position.V,
+            "W" => position.W,
             _ => throw new ArgumentException($"Invalid axis: {axis}")
         };
+
+        // Renamed method to avoid conflict with existing DevicePosition class
+        private DevicePosition ConvertToScanPosition(Position position)
+        {
+            return new DevicePosition
+            {
+                X = position.X,
+                Y = position.Y,
+                Z = position.Z,
+                U = position.U,
+                V = position.V,
+                W = position.W
+            };
+        }
 
         private async Task HandleScanCancellation()
         {
@@ -472,21 +513,9 @@ namespace UaaSolutionWpf.Scanning.Core
         }
     }
 
-    public class GlobalPeakData
-    {
-        public double Value { get; set; }
-        public Position Position { get; set; }
-        public DateTime Timestamp { get; set; }
-        public string Context { get; set; }
-    }
 
-    public class BaselineData
-    {
-        public double Value { get; set; }
-        public Position Position { get; set; }
-        public DateTime Timestamp { get; set; }
-    }
-
+    // Add these events to the partial class VisionMotionWindow
+    // Event argument classes for scanning operations
     public class ScanProgressEventArgs : EventArgs
     {
         public double Progress { get; }
@@ -516,6 +545,62 @@ namespace UaaSolutionWpf.Scanning.Core
         public ScanErrorEventArgs(Exception error)
         {
             Error = error;
+        }
+    }
+
+
+
+    /// <summary>
+    /// Data class for peak information using MotionServiceLib.Position
+    /// </summary>
+    public class MotionPeakData
+    {
+        public double Value { get; set; }
+        public Position Position { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string Context { get; set; }
+    }
+
+    /// <summary>
+    /// Data class for baseline information using MotionServiceLib.Position
+    /// </summary>
+    public class MotionBaselineData
+    {
+        public double Value { get; set; }
+        public Position Position { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
+    /// <summary>
+    /// Data class for position information to avoid name conflicts
+    /// </summary>
+    public class ScanPositionData
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Z { get; set; }
+        public double U { get; set; }
+        public double V { get; set; }
+        public double W { get; set; }
+
+        public override string ToString()
+        {
+            return $"X={X:F6}, Y={Y:F6}, Z={Z:F6}, U={U:F6}, V={V:F6}, W={W:F6}";
+        }
+    }
+
+    public class DevicePosition
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Z { get; set; }
+        public double U { get; set; }
+        public double V { get; set; }
+        public double W { get; set; }
+
+        public override string ToString()
+        {
+            return $"X={X:F6}, Y={Y:F6}, Z={Z:F6}, U={U:F6}, V={V:F6}, W={W:F6}";
         }
     }
 }

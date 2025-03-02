@@ -203,7 +203,14 @@ namespace UaaSolutionWpf
                 throw;
             }
         }
-
+        public string GetCurrentFps()
+        {
+            if (cameraStats != null)
+            {
+                return $"{cameraStats.CurrentFps:F1}";
+            }
+            return "0.0";
+        }
         public void StartLiveView()
         {
             if (camera == null || !camera.IsOpen)

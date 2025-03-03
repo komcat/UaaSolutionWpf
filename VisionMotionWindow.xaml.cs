@@ -18,6 +18,7 @@ using ScottPlot;
 using ScottPlot.WPF;
 using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
+using UaaSolutionWpf.Commands;
 
 
 
@@ -1621,6 +1622,44 @@ namespace UaaSolutionWpf
         private void EnableClickToMoveCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private async void TestMoveCommandButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Create a new command sequence
+            var sequence = new CommandSequence(
+                "Demo Sequence",
+                "Demonstrates a sequence of motion and delay commands"
+            );
+
+            // Add commands to the sequence
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeePIC"
+            ));
+
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(2)));
+
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeeSLED"
+            ));
+
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(1)));
+
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeePIC"
+            ));
+
+            // Execute the sequence
+            var result = await sequence.ExecuteAsync(CancellationToken.None);
+
+            // Log the result
+            _logger.Information("Sequence result: {Result}", result);
         }
     }
 }

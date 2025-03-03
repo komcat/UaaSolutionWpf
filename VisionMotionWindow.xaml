@@ -53,7 +53,24 @@
                        
                     </StackPanel>
                 </TabItem.Header>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
+                    <Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
+
+
+
+                </Grid>
             </TabItem>
 
             <TabItem >

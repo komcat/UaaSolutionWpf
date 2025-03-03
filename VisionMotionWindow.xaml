@@ -67,7 +67,7 @@
                     </Grid.RowDefinitions>
 
                     <Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
-
+                    <Button x:Name="TestCameraCaptureCommand" Content="Test Camera capture" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="TestCameraCaptureCommand_Click"/>
 
 
                 </Grid>

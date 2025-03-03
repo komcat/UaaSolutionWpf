@@ -45,6 +45,8 @@ namespace UaaSolutionWpf
         private List<double> _xDataPoints = new List<double>();
         private List<double> _yDataPoints = new List<double>();
         private DateTime _firstMeasurementTime;
+
+        private PneumaticSlideManager pneumaticSlideManager;
         public VisionMotionWindow()
         {
             InitializeComponent();
@@ -83,6 +85,9 @@ namespace UaaSolutionWpf
 
             // Initialize IO monitors
             InitializeIOMonitors();
+            pneumaticSlideManager = new PneumaticSlideManager(deviceManager);
+            pneumaticSlideManager.InitSlides();
+
 
             // Initialize toggle switches for quick access
             InitializeToggleSwitches();
@@ -1625,6 +1630,99 @@ namespace UaaSolutionWpf
         }
 
         private async void TestMoveCommandButton_Click(object sender, RoutedEventArgs e)
+        {
+            TestUVAction();
+        }
+
+        private async void TestUVAction()
+        {
+            // Create a new command sequence
+            var sequence = new CommandSequence(
+                "UV Sequence",
+                "Demonstrates motion and IO"
+            );
+
+            // Move to UV position
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "UV"
+            ));
+
+            // Extend UV head down (assuming you have a slide for this)
+            // This command will already wait until the slide is fully extended
+            sequence.AddCommand(new PneumaticSlideCommand(
+                pneumaticSlideManager,
+                "UV_Head",  // Replace with your actual slide name
+                true       // Extend
+            ));
+
+            // Make sure UV_PLC1 is off before triggering
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                false
+            ));
+
+            // Short delay to ensure the above command completes
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(100)));
+
+            // Trigger UV_PLC1 on for 0.5 seconds
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                true
+            ));
+
+            // Wait for 0.5 seconds
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(500)));
+
+            // Turn off UV_PLC1
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                false
+            ));
+
+            // Delay for 60 seconds
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(60)));
+
+            // Retract UV head up
+            // This command will already wait until the slide is fully retracted
+            sequence.AddCommand(new PneumaticSlideCommand(
+                pneumaticSlideManager,
+                "UV_Head",  // Replace with your actual slide name
+                false      // Retract
+            ));
+
+            // Execute the sequence
+            StatusBarTextBlock.Text = "Running UV sequence...";
+            try
+            {
+                var result = await sequence.ExecuteAsync(CancellationToken.None);
+
+                if (result.Success)
+                {
+                    StatusBarTextBlock.Text = "UV sequence completed successfully";
+                    _logger.Information("UV sequence completed: {ExecutionTime}ms", result.ExecutionTime.TotalMilliseconds);
+                }
+                else
+                {
+                    StatusBarTextBlock.Text = $"UV sequence failed: {result.Message}";
+                    _logger.Warning("UV sequence failed: {Message}", result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusBarTextBlock.Text = "Error in UV sequence";
+                _logger.Error(ex, "Error executing UV sequence");
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void TestLoopSledAndPic()
         {
             // Create a new command sequence
             var sequence = new CommandSequence(

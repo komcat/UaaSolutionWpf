@@ -124,7 +124,28 @@ namespace UaaSolutionWpf.Data
 
             LoadConfiguration(configPath);
         }
+        /// <summary>
+        /// Checks if a channel exists in the configuration
+        /// </summary>
+        /// <param name="channelName">The name of the channel to check</param>
+        /// <returns>True if the channel exists, false otherwise</returns>
+        public bool ChannelExists(string channelName)
+        {
+            if (string.IsNullOrEmpty(channelName))
+            {
+                return false;
+            }
 
+            _configLock.EnterReadLock();
+            try
+            {
+                return _channelConfigs.ContainsKey(channelName);
+            }
+            finally
+            {
+                _configLock.ExitReadLock();
+            }
+        }
         private void LoadConfiguration(string configPath)
         {
             try

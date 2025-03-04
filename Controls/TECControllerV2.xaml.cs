@@ -185,6 +185,15 @@ namespace UaaSolutionWpf.Controls
         }
         public async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
+            InitializeServices();
+
+            if (_gpibService == null)
+            {
+                MessageBox.Show("Services not initialized. Please try again.", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (!IsConnected)
             {
                 ConnectButton.IsEnabled = false;

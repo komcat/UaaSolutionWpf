@@ -52,6 +52,33 @@ namespace UaaSolutionWpf.Commands
             }
         }
 
+        // List to store result handlers
+        private readonly List<Func<CommandResult, Task>> _resultHandlers = new List<Func<CommandResult, Task>>();
+
+        /// <summary>
+        /// Add a handler to process command results
+        /// </summary>
+        /// <param name="handler">The handler function that takes a CommandResult and returns a Task</param>
+        public void AddResultHandler(Func<CommandResult, Task> handler)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            _resultHandlers.Add(handler);
+        }
+
+        /// <summary>
+        /// Add a handler to process command results (synchronous version)
+        /// </summary>
+        /// <param name="handler">The handler function that takes a CommandResult</param>
+        public void AddResultHandler(Action<CommandResult> handler)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            _resultHandlers.Add(result =>
+            {
+                handler(result);
+                return Task.CompletedTask;
+            });
+        }
+
         /// <summary>
         /// Execute the sequence of commands
         /// </summary>

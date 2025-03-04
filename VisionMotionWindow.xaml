@@ -9,7 +9,7 @@
         xmlns:eziiolibs="clr-namespace:EzIIOLibControl.Controls;assembly=EzIIOLibControl"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
-        Title="Vision Motion Control System" Height="627" Width="1600"
+        Title="Vision Motion Control System" Height="855" Width="1600"
         Loaded="Window_Loaded">
     <Grid Margin="0,0,0,8">
         <Grid.ColumnDefinitions>
@@ -68,8 +68,10 @@
 
                     <Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
                     <Button x:Name="TestCameraCaptureCommand" Content="Test Camera capture" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="TestCameraCaptureCommand_Click"/>
-
-
+                    <Button x:Name="TestDUtWorkFlow"
+                            Content="test dut" 
+                            Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" 
+                            Click="TestDUtWorkFlow_Click"/>
                 </Grid>
             </TabItem>
 
@@ -122,7 +124,7 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
-
+      
             <TabItem IsSelected="True">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
@@ -130,14 +132,17 @@
 
                     </StackPanel>
                 </TabItem.Header>
-                <!-- Place a TabControl here for device tabs -->
+
                 <TabControl x:Name="DevicesTabControl" Margin="5">
                     <!-- Tabs will be added dynamically when devices are connected -->
+                                      
                     <TabItem Header="No Devices" x:Name="NoDevicesTab">
                         <TextBlock Text="No motion devices are connected. Please initialize the motion system." 
                        TextWrapping="Wrap" Margin="20" VerticalAlignment="Center" />
                     </TabItem>
                 </TabControl>
+
+
             </TabItem>
             
             
@@ -146,7 +151,7 @@
             <TabItem x:Name="GantryGripperTab">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Gripper Control" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        <TextBlock Text="Maintenance" VerticalAlignment="Center" Margin="5,0,0,0"/>
                     </StackPanel>
                 </TabItem.Header>
                 <Grid Margin="5">
@@ -160,14 +165,18 @@
                         <!-- Gantry Control Group (Minimized) -->
                         <Expander Header="Gantry Control" IsExpanded="True" Margin="0,0,0,5">
                             <StackPanel Margin="5">
-                                <UniformGrid Columns="3" Rows="3">
+                                <UniformGrid Columns="3" Rows="4">
                                     <Button x:Name="GantryHomeButton" Content="Home" Margin="2" Padding="3" Click="GantryHomeButton_Click"/>
                                     <Button x:Name="GantryDispense1Button" Content="Dispense 1" Margin="2" Padding="3" Click="GantryDispense1Button_Click"/>
                                     <Button x:Name="GantryDispense2Button" Content="Dispense 2" Margin="2" Padding="3" Click="GantryDispense2Button_Click"/>
                                     <Button x:Name="GantryUVButton" Content="UV" Margin="2" Padding="3" Click="GantryUVButton_Click"/>
-                                    <Button x:Name="GantrySLEDButton" Content="See SLED" Margin="2" Padding="3" Click="GantrySLEDButton_Click"/>
-                                    <Button x:Name="GantryPICButton" Content="See PIC" Margin="2" Padding="3" Click="GantryPICButton_Click"/>
-                                    <Button x:Name="GantrySNButton" Content="See SN" Margin="2" Padding="3" Click="GantrySNButton_Click"/>
+                                    <Button x:Name="GantrySLEDButton" Content="👁️ SLED" Margin="2" Padding="3" Click="GantrySLEDButton_Click"/>
+                                    <Button x:Name="GantryPICButton" Content="👁️ PIC" Margin="2" Padding="3" Click="GantryPICButton_Click"/>
+                                    <Button x:Name="GantrySNButton" Content="👁️ SN" Margin="2" Padding="3" Click="GantrySNButton_Click"/>
+                                    <Button x:Name="GantrySeeGripCollimateLens" Content="👁️🤏 Coll Lens" Margin="2" Padding="3" Click="GantrySeeGripCollimateLens_Click"/>
+                                    <Button x:Name="GantrySeeGripFocusLens" Content="👁️🤏 Focus Lens" Margin="2" Padding="3" Click="GantrySeeGripFocusLens_Click"/>
+                                    <Button x:Name="GantrySeePlaceCollLens" Content="👁️ Coll Lens" Margin="2" Padding="3" Click="GantrySeePlaceCollLens_Click"/>
+                                    <Button x:Name="GantrySeePlaceFocusLens" Content="👁️ Focus Lens" Margin="2" Padding="3" Click="GantrySeePlaceFocusLens_Click"/>
                                 </UniformGrid>
 
                                 <!-- Dispense Settings (Compact) -->
@@ -183,10 +192,6 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-
-                                        <TextBlock Text="Volume:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                        <Slider x:Name="ShotVolumeSlider" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Value="50" Margin="0,2"/>
-                                        <TextBlock x:Name="ShotVolumeLabel" Text="50%" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="5,0,0,0"/>
 
                                         <TextBlock Text="Time:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0"/>
                                         <Slider x:Name="DispenseTimeSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="5000" Value="1000" Margin="0,2"/>
@@ -236,30 +241,11 @@
                                 Background="#FFC6E2FF" Click="TriggerUV1Button_Click"/>
                                     <Button x:Name="TriggerUV2Button" Content="Trigger UV2" Margin="2" Padding="3" 
                                 Background="#FFC6E2FF" Click="TriggerUV2Button_Click"/>
-                                    <Button x:Name="TriggerBothUVButton" Content="Trigger UV1+UV2" Margin="2" Padding="3" 
-                                Background="#FFB8DBFF" Click="TriggerBothUVButton_Click"/>
+                                    <Button x:Name="DeactivateUvHead" Content="Trigger UV1+UV2" Margin="2" Padding="3" 
+                                Background="#FFB8DBFF" Click="DeactivateUvHead_Click"/>
                                 </UniformGrid>
 
-                                <!-- UV Settings (More Compact) -->
-                                <Grid Margin="0,5,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Text="Intensity:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                    <Slider x:Name="UVIntensitySlider" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Value="80" Margin="0,2"/>
-                                    <TextBlock x:Name="UVIntensityLabel" Text="80%" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="5,0,0,0"/>
-
-                                    <TextBlock Text="Duration:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                    <Slider x:Name="UVDurationSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10000" Value="3000" Margin="0,2"/>
-                                    <TextBlock x:Name="UVDurationLabel" Text="3.0s" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                                </Grid>
+                                
                             </StackPanel>
                         </Expander>
                     </StackPanel>
@@ -316,6 +302,16 @@
                         </GroupBox>
                     </StackPanel>
                 </Grid>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Jog Robot" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                
+                
             </TabItem>
         </TabControl>
 
@@ -518,9 +514,9 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       Grid.Column="2" Grid.Row="1" Grid.RowSpan="3">
 
-            <StackPanel>
+            <StackPanel x:Name="RightSidePanel">
                 <controls:KeithleyCurrentControl x:Name="keithleyCurrentControl" Margin="5"/>
-                <controls:TECControllerV2 x:Name="tecController" Margin="5"/>
+                
             </StackPanel>
 
         </ScrollViewer>

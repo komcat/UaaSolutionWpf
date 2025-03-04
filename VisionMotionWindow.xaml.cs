@@ -71,11 +71,35 @@ namespace UaaSolutionWpf
             realTimeDataManager = new RealTimeDataManager(realTimeConfigPath, _logger);
             realTimeDataManager.Data.PropertyChanged += Data_PropertyChanged;
 
-            tecController = new TECControllerV2();
+
+
+            //Init the TEC Controller
+            // Create the controller
+            var tecController = new TECControllerV2();
+
+            // Set logger first
             tecController.SetLogger(_logger);
+
+            // Initialize services
+            tecController.InitializeServices();
+
+            // Add to your container/panel instead of directly clicking
+            RightSidePanel.Children.Add(tecController);
+
+            // If you want to auto-connect, use this approach instead
+            tecController.Loaded += (sender, args) =>
+            {
+                // This will run after the control is fully loaded
+                tecController.ConnectButton_Click(tecController, null);
+            };
+
+
+
 
             InitializeKeithleyControl();
             InitializePlot();
+
+
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -1011,87 +1035,89 @@ namespace UaaSolutionWpf
                     return;
                 }
 
-                // Get the gantry device ID
-                string gantryId = _activeGantryDeviceId;
-                if (string.IsNullOrEmpty(gantryId))
-                {
-                    // Try to find a gantry device
-                    foreach (var device in _motionKernel.GetDevices())
-                    {
-                        if (device.Type == MotionDeviceType.Gantry && device.IsEnabled &&
-                            _motionKernel.IsDeviceConnected(device.Id))
-                        {
-                            gantryId = device.Id;
-                            break;
-                        }
-                    }
-                }
-
-                if (string.IsNullOrEmpty(gantryId))
-                {
-                    MessageBox.Show("No gantry device connected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
                 StatusBarTextBlock.Text = "Moving gantry to home position...";
-                bool success = await _motionKernel.HomeDeviceAsync(gantryId);
-                StatusBarTextBlock.Text = success ? "Gantry moved to home position." : "Failed to move gantry to home position.";
+
+                // Use the extension method
+                bool success = await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "Home");
+
+                StatusBarTextBlock.Text = success
+                    ? "Gantry moved to home position successfully."
+                    : "Failed to move gantry to home position.";
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error in GantryHomeButton_Click");
-                StatusBarTextBlock.Text = "Error moving gantry to home position.";
+                StatusBarTextBlock.Text = "Error moving gantry to home position";
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
         private async void GantryDispense1Button_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("Dispense1");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "Dispense1");
         }
 
         private async void GantryDispense2Button_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("Dispense2");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "Dispense2");
         }
 
         private async void GantryUVButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("UV");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "UV");
         }
 
         private async void GantrySLEDButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("SeeSLED");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeSLED");
         }
 
         private async void GantryPICButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("SeePIC");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeePIC");
         }
 
         private async void GantrySNButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("SeeSN");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "CamSeeNumber");
         }
 
+        private async void GantrySeeGripCollimateLens_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeGripCollLens");
+        }
+
+        private async void GantrySeeGripFocusLens_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeGripFocusLens");
+        }
+        private async void GantrySeePlaceCollLens_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeCollLens");
+        }
+
+        private async void GantrySeePlaceFocusLens_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeFocusLens");
+        }
         private async void DispenseButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 // Get the settings from the sliders
-                double volume = ShotVolumeSlider.Value;
+                //double volume = ShotVolumeSlider.Value;
                 double time = DispenseTimeSlider.Value;
 
-                StatusBarTextBlock.Text = $"Dispensing with volume {volume:F0}% for {time / 1000:F1} seconds...";
+                StatusBarTextBlock.Text = $"Dispensing with  {time / 1000:F1} seconds...";
 
                 // Simulate dispense operation - in a real implementation, you would control actual dispense hardware
                 // For example, turn on an output pin for the specified time
                 if (deviceManager != null)
                 {
+                    deviceManager.SetOutput("IOBottom", "Dispenser_Shot");
                     // Turn on dispense pin or control valve
                     await Task.Delay((int)time); // Wait for the specified time
                                                  // Turn off dispense pin or control valve
+                    deviceManager.ClearOutput("IOBottom", "Dispenser_Shot");
                 }
 
                 StatusBarTextBlock.Text = "Dispense completed.";
@@ -1104,79 +1130,85 @@ namespace UaaSolutionWpf
             }
         }
 
+
         #endregion
 
         #region Left Gripper Control Event Handlers
-
+        private string _leftHexId = "0";
+        private string _leftGripperIOName = "L_Gripper";
         private async void LeftGripperHomeButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("LeftGripperHome");
+            await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "Home");
         }
 
         private async void LeftGripLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("LeftGripLens");
+            await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "LensGrip");
         }
 
         private async void LeftReleaseLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("LeftReleaseLens");
+
+            await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "LensPlace");
         }
 
         private async void LeftRejectLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("LeftRejectLens");
+            await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "RejectLens");
         }
 
         private async void GripLeftButton_Click(object sender, RoutedEventArgs e)
         {
-            await ControlGripper("L_Gripper", true);
+            await ControlGripper(_leftGripperIOName, true);
             LeftGripperStatusText.Text = "Gripping";
         }
 
         private async void UngripLeftButton_Click(object sender, RoutedEventArgs e)
         {
-            await ControlGripper("L_Gripper", false);
+            await ControlGripper(_leftGripperIOName, false);
             LeftGripperStatusText.Text = "Not gripping";
         }
 
         #endregion
 
         #region Right Gripper Control Event Handlers
+        private string _rightHexId = "2";
+        private string _rightGripperIOName = "R_Gripper";
 
         private async void RightGripperHomeButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("RightGripperHome");
+            await _motionKernel.MoveToDestinationViaPathAsync(_rightHexId, "Home");
         }
 
         private async void RightGripLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("RightGripLens");
+            await _motionKernel.MoveToDestinationViaPathAsync(_rightHexId, "LensGrip");
         }
 
         private async void RightReleaseLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("RightReleaseLens");
+            await _motionKernel.MoveToDestinationViaPathAsync(_rightHexId, "LensPlace");
         }
 
         private async void RightRejectLensButton_Click(object sender, RoutedEventArgs e)
         {
-            await MoveGantryToPosition("RightRejectLens");
+            await _motionKernel.MoveToDestinationViaPathAsync(_rightHexId, "RejectLens");
         }
 
         private async void GripRightButton_Click(object sender, RoutedEventArgs e)
         {
-            await ControlGripper("R_Gripper", true);
+            await ControlGripper(_rightGripperIOName, true);
             RightGripperStatusText.Text = "Gripping";
         }
 
         private async void UngripRightButton_Click(object sender, RoutedEventArgs e)
         {
-            await ControlGripper("R_Gripper", false);
+            await ControlGripper(_rightGripperIOName, false);
             RightGripperStatusText.Text = "Not gripping";
         }
 
         #endregion
+
 
         #region Vacuum Control Event Handlers
 
@@ -1203,6 +1235,16 @@ namespace UaaSolutionWpf
                 // Implement UV header activation logic - could be moving to a position and/or activating pins
                 // For example, move to UV position first
                 await MoveGantryToPosition("UV");
+                var result = MessageBox.Show("Do you want to extend the UV Head down?", "UV Head", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    // Extend UV head down
+                    await pneumaticSlideManager.GetSlide("UV_Head").ExtendAsync();
+                }
+
+                MessageBox.Show("Please turn on the UV light source manually.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+
 
                 StatusBarTextBlock.Text = "UV header activated and ready.";
             }
@@ -1213,7 +1255,10 @@ namespace UaaSolutionWpf
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
+        private async void DeactivateUvHead_Click(object sender, RoutedEventArgs e)
+        {
+            await pneumaticSlideManager.GetSlide("UV_Head").RetractAsync();
+        }
         private async void TriggerUV1Button_Click(object sender, RoutedEventArgs e)
         {
             await TriggerUV("UV_PLC1");
@@ -1224,51 +1269,19 @@ namespace UaaSolutionWpf
             await TriggerUV("UV_PLC2");
         }
 
-        private async void TriggerBothUVButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                double intensity = UVIntensitySlider.Value;
-                double duration = UVDurationSlider.Value;
-
-                StatusBarTextBlock.Text = $"Triggering both UV1 and UV2 with intensity {intensity:F0}% for {duration / 1000:F1} seconds...";
-
-                // Activate both UV pins
-                await ControlGripper("UV_PLC1", true);
-                await ControlGripper("UV_PLC2", true);
-
-                // Wait for the specified duration
-                await Task.Delay((int)duration);
-
-                // Deactivate both UV pins
-                await ControlGripper("UV_PLC1", false);
-                await ControlGripper("UV_PLC2", false);
-
-                StatusBarTextBlock.Text = "UV1 and UV2 exposure complete.";
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error triggering both UV");
-                StatusBarTextBlock.Text = "Error during UV exposure.";
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
 
         private async Task TriggerUV(string uvDevice)
         {
             try
             {
-                double intensity = UVIntensitySlider.Value;
-                double duration = UVDurationSlider.Value;
+
                 string uvName = uvDevice == "UV_PLC1" ? "UV1" : "UV2";
 
-                StatusBarTextBlock.Text = $"Triggering {uvName} with intensity {intensity:F0}% for {duration / 1000:F1} seconds...";
 
                 // Activate UV pin
                 await ControlGripper(uvDevice, true);
 
                 // Wait for the specified duration
-                await Task.Delay((int)duration);
 
                 // Deactivate UV pin
                 await ControlGripper(uvDevice, false);
@@ -1287,142 +1300,20 @@ namespace UaaSolutionWpf
 
         #region Helper Methods
 
-        private async Task MoveGantryToPosition(string positionName)
-        {
-            try
-            {
-                if (_motionKernel == null)
-                {
-                    MessageBox.Show("Motion system not initialized.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Get the gantry device ID
-                string gantryId = _activeGantryDeviceId;
-                if (string.IsNullOrEmpty(gantryId))
-                {
-                    // Try to find a gantry device
-                    foreach (var gantrydevice in _motionKernel.GetDevices())
-                    {
-                        if (gantrydevice.Type == MotionDeviceType.Gantry && gantrydevice.IsEnabled &&
-                            _motionKernel.IsDeviceConnected(gantrydevice.Id))
-                        {
-                            gantryId = gantrydevice.Id;
-                            break;
-                        }
-                    }
-                }
-
-                if (string.IsNullOrEmpty(gantryId))
-                {
-                    MessageBox.Show("No gantry device connected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Check if the position exists
-                var device = _motionKernel.GetDevices().FirstOrDefault(d => d.Id == gantryId);
-                if (device == null || !device.Positions.ContainsKey(positionName))
-                {
-                    // Position doesn't exist, show a message
-                    MessageBox.Show($"The position '{positionName}' is not defined. You may need to teach this position first.",
-                        "Position Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                StatusBarTextBlock.Text = $"Moving gantry to {positionName} position...";
-                bool success = await _motionKernel.MoveToPositionAsync(gantryId, positionName);
-                StatusBarTextBlock.Text = success ? $"Gantry moved to {positionName} position." : $"Failed to move gantry to {positionName} position.";
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error in MoveGantryToPosition");
-                StatusBarTextBlock.Text = $"Error moving gantry to {positionName} position.";
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private async Task ControlGripper(string gripperName, bool activate)
-        {
-            try
-            {
-                if (deviceManager == null)
-                {
-                    MessageBox.Show("IO system not initialized.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Get the pin number from the gripper name
-                int pinNumber = -1;
-                switch (gripperName)
-                {
-                    case "L_Gripper":
-                        pinNumber = 0; // Use actual pin numbers from your configuration
-                        break;
-                    case "R_Gripper":
-                        pinNumber = 2;
-                        break;
-                    case "Vacuum_Base":
-                        pinNumber = 10;
-                        break;
-                    case "UV_PLC1":
-                        pinNumber = 14;
-                        break;
-                    case "UV_PLC2":
-                        pinNumber = 13;
-                        break;
-                    default:
-                        throw new ArgumentException($"Unknown gripper: {gripperName}");
-                }
-
-                // Control the output pin
-                string deviceName = "IOBottom"; // Or whichever device controls the grippers
-                StatusBarTextBlock.Text = $"{(activate ? "Activating" : "Deactivating")} {gripperName}...";
-
-                var device = deviceManager.GetDevice(deviceName);
-                if (device != null)
-                {
-                    device.SetOutput(gripperName, true);
-                    StatusBarTextBlock.Text = $"{gripperName} {(activate ? "activated" : "deactivated")}.";
-                }
-                else
-                {
-                    StatusBarTextBlock.Text = $"Failed to {(activate ? "activate" : "deactivate")} {gripperName}: Device not found.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error in ControlGripper");
-                StatusBarTextBlock.Text = $"Error controlling {gripperName}.";
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
 
         #endregion
 
         // Add this to the Window_Loaded method to initialize slider value displays
         private void InitializeSliderEvents()
         {
-            // Initialize slider value change handlers
-            ShotVolumeSlider.ValueChanged += (s, e) =>
-            {
-                ShotVolumeLabel.Text = $"{e.NewValue:F0}%";
-            };
+            //// Initialize slider value change handlers
 
             DispenseTimeSlider.ValueChanged += (s, e) =>
             {
                 DispenseTimeLabel.Text = $"{e.NewValue / 1000:F1} sec";
             };
 
-            // UV Control sliders
-            UVIntensitySlider.ValueChanged += (s, e) =>
-            {
-                UVIntensityLabel.Text = $"{e.NewValue:F0}%";
-            };
 
-            UVDurationSlider.ValueChanged += (s, e) =>
-            {
-                UVDurationLabel.Text = $"{e.NewValue / 1000:F1} sec";
-            };
         }
 
 
@@ -1431,7 +1322,7 @@ namespace UaaSolutionWpf
             try
             {
                 // Load the RealTimeData.json file
-                string jsonPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Config", "RealTimeData.json");
+                string jsonPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "RealTimeData.json");
                 if (System.IO.File.Exists(jsonPath))
                 {
                     string jsonContent = System.IO.File.ReadAllText(jsonPath);
@@ -1482,7 +1373,7 @@ namespace UaaSolutionWpf
 
         private void InitializePlot()
         {
-           
+
 
             // Clear any existing plots
             AlignmentPlot.Reset();
@@ -1759,5 +1650,7 @@ namespace UaaSolutionWpf
             // Log the result
             _logger.Information("Sequence result: {Result}", result);
         }
+
+
     }
 }

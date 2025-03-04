@@ -11,7 +11,7 @@ namespace UaaSolutionWpf.Services
         private MessageBasedSession _session;
         private readonly string _resourceName;
         private bool _isConnected;
-        private readonly ILogger _logger;
+        private ILogger _logger;
         private bool _disposed;
         private CancellationTokenSource _monitoringCts;
         private Task _monitoringTask;

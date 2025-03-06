@@ -310,8 +310,22 @@
                         <TextBlock Text="Jog Robot" VerticalAlignment="Center" Margin="5,0,0,0"/>
                     </StackPanel>
                 </TabItem.Header>
-                
-                
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="Global Jog Control" FontWeight="Bold" FontSize="16" Margin="0,0,0,5"/>
+                        <TextBlock Text="Control all selected devices simultaneously with a common coordinate system" 
+                      TextWrapping="Wrap" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <!-- Global Jog Control -->
+                    <ContentPresenter x:Name="GlobalJogContentPresenter" Grid.Row="1"/>
+                </Grid>
             </TabItem>
         </TabControl>
 

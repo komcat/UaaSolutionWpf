@@ -5,11 +5,140 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using UaaSolutionWpf.Commands;
 
 namespace UaaSolutionWpf
 {
     public partial class VisionMotionWindow
     {
+
+        private async void TestUVAction()
+        {
+            // Create a new command sequence
+            var sequence = new CommandSequence(
+                "UV Sequence",
+                "Demonstrates motion and IO"
+            );
+
+            // Move to UV position
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "UV"
+            ));
+
+            // Extend UV head down (assuming you have a slide for this)
+            // This command will already wait until the slide is fully extended
+            sequence.AddCommand(new PneumaticSlideCommand(
+                pneumaticSlideManager,
+                "UV_Head",  // Replace with your actual slide name
+                true       // Extend
+            ));
+
+            // Make sure UV_PLC1 is off before triggering
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                false
+            ));
+
+            // Short delay to ensure the above command completes
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(100)));
+
+            // Trigger UV_PLC1 on for 0.5 seconds
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                true
+            ));
+
+            // Wait for 0.5 seconds
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(500)));
+
+            // Turn off UV_PLC1
+            sequence.AddCommand(new SetOutputPinCommand(
+                deviceManager,
+                "IOBottom",
+                "UV_PLC1",
+                false
+            ));
+
+            // Delay for 60 seconds
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(60)));
+
+            // Retract UV head up
+            // This command will already wait until the slide is fully retracted
+            sequence.AddCommand(new PneumaticSlideCommand(
+                pneumaticSlideManager,
+                "UV_Head",  // Replace with your actual slide name
+                false      // Retract
+            ));
+
+            // Execute the sequence
+            StatusBarTextBlock.Text = "Running UV sequence...";
+            try
+            {
+                var result = await sequence.ExecuteAsync(CancellationToken.None);
+
+                if (result.Success)
+                {
+                    StatusBarTextBlock.Text = "UV sequence completed successfully";
+                    _logger.Information("UV sequence completed: {ExecutionTime}ms", result.ExecutionTime.TotalMilliseconds);
+                }
+                else
+                {
+                    StatusBarTextBlock.Text = $"UV sequence failed: {result.Message}";
+                    _logger.Warning("UV sequence failed: {Message}", result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusBarTextBlock.Text = "Error in UV sequence";
+                _logger.Error(ex, "Error executing UV sequence");
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void TestLoopSledAndPic()
+        {
+            // Create a new command sequence
+            var sequence = new CommandSequence(
+                "Demo Sequence",
+                "Demonstrates a sequence of motion and delay commands"
+            );
+
+            // Add commands to the sequence
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeePIC"
+            ));
+
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(2)));
+
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeeSLED"
+            ));
+
+            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(1)));
+
+            sequence.AddCommand(new MoveToNamedPositionCommand(
+                _motionKernel,
+                "3",
+                "SeePIC"
+            ));
+
+            // Execute the sequence
+            var result = await sequence.ExecuteAsync(CancellationToken.None);
+
+            // Log the result
+            _logger.Information("Sequence result: {Result}", result);
+        }
+
+
         /// <summary>
         /// Moves the gantry along a predefined sequence of positions
         /// </summary>

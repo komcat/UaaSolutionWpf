@@ -219,7 +219,7 @@ namespace UaaSolutionWpf.Data
         {
             // Example validation logic
             // You might want to add more sophisticated validation based on your requirements
-            return value >= 0 && value <= config.Target * 2; // Simple example
+            return value >= -config.Target * 100 && value <= config.Target * 100; // Simple example
         }
 
         public bool TryGetChannelValue(string channelName, out MeasurementValue value)

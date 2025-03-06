@@ -19,6 +19,7 @@ using ScottPlot.WPF;
 using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
 using UaaSolutionWpf.Commands;
+using System.IO;
 
 
 
@@ -47,6 +48,9 @@ namespace UaaSolutionWpf
         private DateTime _firstMeasurementTime;
 
         private PneumaticSlideManager pneumaticSlideManager;
+        // Add this field to the VisionMotionWindow class
+        private GlobalJogControl _globalJogControl;
+
         public VisionMotionWindow()
         {
             InitializeComponent();
@@ -107,8 +111,12 @@ namespace UaaSolutionWpf
             // Initialize UI state
             StatusBarTextBlock.Text = "Ready to initialize motion system";
 
+            // Ensure device transformations file exists
+            EnsureDeviceTransformationsFile();
+
             // Initialize IO monitors
             InitializeIOMonitors();
+
             pneumaticSlideManager = new PneumaticSlideManager(deviceManager);
             pneumaticSlideManager.InitSlides();
 
@@ -343,7 +351,8 @@ namespace UaaSolutionWpf
                         _logger.Error(ex, "Error creating tab for device {DeviceId}", device.Id);
                     }
                 }
-
+                // Initialize the Global Jog Control
+                InitializeGlobalJogControl();
                 // Update UI state
                 StatusBarTextBlock.Text = "Motion system initialized";
 
@@ -1092,7 +1101,7 @@ namespace UaaSolutionWpf
         }
         private async void GantrySeePlaceCollLens_Click(object sender, RoutedEventArgs e)
         {
-            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeCollLens");
+            await _motionKernel.MoveToDestinationShortestPathAsync(_activeGantryDeviceId, "SeeCollimateLens");
         }
 
         private async void GantrySeePlaceFocusLens_Click(object sender, RoutedEventArgs e)
@@ -1458,10 +1467,14 @@ namespace UaaSolutionWpf
                 _logger.Error(ex, "Error updating plot");
             }
         }
+        // Update OnClosed to clean up the GlobalJogControl resources
         protected override void OnClosed(EventArgs e)
         {
             try
             {
+                // Clean up global jog control resources if needed
+                _globalJogControl = null;
+
                 // Clean up toggle switches
                 CleanupToggleSwitches();
 
@@ -1471,8 +1484,8 @@ namespace UaaSolutionWpf
                     if (_isLiveViewRunning)
                     {
                         _cameraManager.StopLiveView();
-
                     }
+
                     _cameraManager.Dispose();
                     _cameraManager = null;
                 }
@@ -1504,7 +1517,6 @@ namespace UaaSolutionWpf
                 Log.CloseAndFlush();
             }
         }
-
         private void CalibrateVision_Click(object sender, RoutedEventArgs e)
         {
 
@@ -1525,132 +1537,100 @@ namespace UaaSolutionWpf
             TestUVAction();
         }
 
-        private async void TestUVAction()
+        // Add this method to initialize the Global Jog Control
+        private void InitializeGlobalJogControl()
         {
-            // Create a new command sequence
-            var sequence = new CommandSequence(
-                "UV Sequence",
-                "Demonstrates motion and IO"
-            );
-
-            // Move to UV position
-            sequence.AddCommand(new MoveToNamedPositionCommand(
-                _motionKernel,
-                "3",
-                "UV"
-            ));
-
-            // Extend UV head down (assuming you have a slide for this)
-            // This command will already wait until the slide is fully extended
-            sequence.AddCommand(new PneumaticSlideCommand(
-                pneumaticSlideManager,
-                "UV_Head",  // Replace with your actual slide name
-                true       // Extend
-            ));
-
-            // Make sure UV_PLC1 is off before triggering
-            sequence.AddCommand(new SetOutputPinCommand(
-                deviceManager,
-                "IOBottom",
-                "UV_PLC1",
-                false
-            ));
-
-            // Short delay to ensure the above command completes
-            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(100)));
-
-            // Trigger UV_PLC1 on for 0.5 seconds
-            sequence.AddCommand(new SetOutputPinCommand(
-                deviceManager,
-                "IOBottom",
-                "UV_PLC1",
-                true
-            ));
-
-            // Wait for 0.5 seconds
-            sequence.AddCommand(new DelayCommand(TimeSpan.FromMilliseconds(500)));
-
-            // Turn off UV_PLC1
-            sequence.AddCommand(new SetOutputPinCommand(
-                deviceManager,
-                "IOBottom",
-                "UV_PLC1",
-                false
-            ));
-
-            // Delay for 60 seconds
-            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(60)));
-
-            // Retract UV head up
-            // This command will already wait until the slide is fully retracted
-            sequence.AddCommand(new PneumaticSlideCommand(
-                pneumaticSlideManager,
-                "UV_Head",  // Replace with your actual slide name
-                false      // Retract
-            ));
-
-            // Execute the sequence
-            StatusBarTextBlock.Text = "Running UV sequence...";
             try
             {
-                var result = await sequence.ExecuteAsync(CancellationToken.None);
+                _logger.Information("Initializing Global Jog Control");
 
-                if (result.Success)
+                // Create the Global Jog Control
+                _globalJogControl = new GlobalJogControl(_motionKernel);
+
+                // Set it to the ContentPresenter
+                GlobalJogContentPresenter.Content = _globalJogControl;
+
+                _logger.Information("Global Jog Control initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error initializing Global Jog Control");
+                MessageBox.Show($"Error initializing Global Jog Control: {ex.Message}",
+                    "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // Add this method to create and save a DeviceTransformations.json file
+        private void EnsureDeviceTransformationsFile()
+        {
+            try
+            {
+                string configDir = "Config";
+                if (!Directory.Exists(configDir))
                 {
-                    StatusBarTextBlock.Text = "UV sequence completed successfully";
-                    _logger.Information("UV sequence completed: {ExecutionTime}ms", result.ExecutionTime.TotalMilliseconds);
+                    Directory.CreateDirectory(configDir);
+                    _logger.Information("Created Config directory");
                 }
-                else
+
+                string transformFile = Path.Combine(configDir, "DeviceTransformations.json");
+                if (!File.Exists(transformFile))
                 {
-                    StatusBarTextBlock.Text = $"UV sequence failed: {result.Message}";
-                    _logger.Warning("UV sequence failed: {Message}", result.Message);
+                    // Create sample transformation matrices based on your device setup
+                    var transformations = new List<object>
+            {
+                new
+                {
+                    DeviceId = "0", // Left hexapod
+                    Matrix = new
+                    {
+                        M11 = 0.0,  M12 = -1.0, M13 = 0.0,
+                        M21 = 1.0,  M22 = 0.0,  M23 = 0.0,
+                        M31 = 0.0,  M32 = 0.0,  M33 = 1.0
+                    }
+                },
+                new
+                {
+                    DeviceId = "1", // Bottom hexapod
+                    Matrix = new
+                    {
+                        M11 = 1.0,  M12 = 0.0,  M13 = 0.0,
+                        M21 = 0.0,  M22 = 1.0,  M23 = 0.0,
+                        M31 = 0.0,  M32 = 0.0,  M33 = 1.0
+                    }
+                },
+                new
+                {
+                    DeviceId = "2", // Right hexapod
+                    Matrix = new
+                    {
+                        M11 = 0.0,  M12 = 0.0,  M13 = 1.0,
+                        M21 = 0.0,  M22 = -1.0, M23 = 0.0,
+                        M31 = -1.0, M32 = 0.0,  M33 = 0.0
+                    }
+                },
+                new
+                {
+                    DeviceId = "3", // Gantry
+                    Matrix = new
+                    {
+                        M11 = 1.0,  M12 = 0.0,  M13 = 0.0,
+                        M21 = 0.0,  M22 = 1.0,  M23 = 0.0,
+                        M31 = 0.0,  M32 = 0.0,  M33 = -1.0
+                    }
+                }
+            };
+
+                    string json = System.Text.Json.JsonSerializer.Serialize(transformations,
+                        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+                    File.WriteAllText(transformFile, json);
+                    _logger.Information("Created default device transformations file");
                 }
             }
             catch (Exception ex)
             {
-                StatusBarTextBlock.Text = "Error in UV sequence";
-                _logger.Error(ex, "Error executing UV sequence");
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger.Error(ex, "Error ensuring device transformations file");
             }
         }
-        private async void TestLoopSledAndPic()
-        {
-            // Create a new command sequence
-            var sequence = new CommandSequence(
-                "Demo Sequence",
-                "Demonstrates a sequence of motion and delay commands"
-            );
-
-            // Add commands to the sequence
-            sequence.AddCommand(new MoveToNamedPositionCommand(
-                _motionKernel,
-                "3",
-                "SeePIC"
-            ));
-
-            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(2)));
-
-            sequence.AddCommand(new MoveToNamedPositionCommand(
-                _motionKernel,
-                "3",
-                "SeeSLED"
-            ));
-
-            sequence.AddCommand(new DelayCommand(TimeSpan.FromSeconds(1)));
-
-            sequence.AddCommand(new MoveToNamedPositionCommand(
-                _motionKernel,
-                "3",
-                "SeePIC"
-            ));
-
-            // Execute the sequence
-            var result = await sequence.ExecuteAsync(CancellationToken.None);
-
-            // Log the result
-            _logger.Information("Sequence result: {Result}", result);
-        }
-
-
     }
 }

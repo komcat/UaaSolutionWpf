@@ -37,6 +37,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Emgu.CV" Version="4.10.0.5680" />
+    <PackageReference Include="Emgu.CV.runtime.windows" Version="4.10.0.5680" />
+    <PackageReference Include="Emgu.CV.Wpf" Version="4.10.0.5680" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="ScottPlot" Version="5.0.54" />
     <PackageReference Include="ScottPlot.WPF" Version="5.0.54" />
@@ -127,6 +130,9 @@
     <None Update="Config\DeviceTransformations.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Config\ImageProc\circle1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Config\IOConfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -174,8 +180,8 @@
 
   <ItemGroup>
     <Folder Include="Charts\" />
+    <Folder Include="Config\ImageProc\" />
     <Folder Include="Sequence\" />
-    <Folder Include="Windows\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -184,6 +190,7 @@
     <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />
     <ProjectReference Include="..\testConfigurableMachine\MotionServiceLib\MotionServiceLib.csproj" />
     <ProjectReference Include="..\testConfigurableMachine\testConfigurableMachine\testConfigurableMachine.csproj" />
+    <ProjectReference Include="..\test_EmguCv\CircleDetectorLib\CircleDetectorLib.csproj" />
     <ProjectReference Include="..\WpfLiveChart\WpfLiveChart.csproj" />
   </ItemGroup>
 

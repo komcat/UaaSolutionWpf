@@ -1,0 +1,12 @@
+{
+  "XPosition": 500,
+  "YPosition": 395.49167374860417,
+  "Width": 250.32342798547546,
+  "Height": 248.67152218343733,
+  "MinimumDistance": 65.05657355967436,
+  "EdgeDetectionThreshold": 105.43998145820032,
+  "CenterDetectionThreshold": 24.960001685618163,
+  "MinRadius": 40.3714681031879,
+  "MaxRadius": 188.70397033312045,
+  "DP": 1
+}

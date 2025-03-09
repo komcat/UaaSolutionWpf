@@ -83,6 +83,8 @@ namespace UaaSolutionWpf
         private const int MaxFrameRate = 30;
         private const int MaxWidth = 1281;
         private const int MaxHeight = 1025;
+        private DateTime _lastFrameProcessedTime = DateTime.MinValue;
+        private readonly TimeSpan _frameThrottleInterval = TimeSpan.FromMilliseconds(33); // ~30fps max
 
         public event EventHandler<Point> ImageClicked;
         public event EventHandler<string> StatsUpdated;
@@ -265,11 +267,28 @@ namespace UaaSolutionWpf
         {
             try
             {
+                // Implement frame skipping to prevent queue buildup
+                if (DateTime.Now - _lastFrameProcessedTime < _frameThrottleInterval)
+                {
+                    e.GrabResult?.Dispose();
+                    return;
+                }
+
+                _lastFrameProcessedTime = DateTime.Now;
+
                 using (IGrabResult grabResult = e.GrabResult)
                 {
                     if (grabResult.GrabSucceeded && isProcessing)
                     {
-                        imageQueue.Add(grabResult.Clone());
+                        // Add to queue, but drop frames if queue gets too large
+                        if (imageQueue.Count < 5)
+                        {
+                            imageQueue.Add(grabResult.Clone());
+                        }
+                        else
+                        {
+                            _logger.Warning("Dropping frame - queue too large ({0} items)", imageQueue.Count);
+                        }
                     }
                 }
             }
@@ -281,103 +300,293 @@ namespace UaaSolutionWpf
 
         private async Task ProcessImagesAsync()
         {
-            while (!imageQueue.IsCompleted)
+            while (!cancellationTokenSource.Token.IsCancellationRequested)
             {
                 try
                 {
-                    IGrabResult grabResult = await Task.Run(() => imageQueue.Take());
-                    using (grabResult)
+                    // Use TryTake with timeout instead of Take (which blocks)
+                    if (imageQueue.TryTake(out IGrabResult grabResult, 100, cancellationTokenSource.Token))
                     {
-                        if (grabResult.GrabSucceeded)
+                        using (grabResult)
                         {
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            if (grabResult.GrabSucceeded)
                             {
-                                lock (imageLock)
+                                var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                                await Application.Current.Dispatcher.InvokeAsync(() =>
                                 {
-                                    if (currentImage == null ||
-                                        currentImage.PixelWidth != grabResult.Width ||
-                                        currentImage.PixelHeight != grabResult.Height)
+                                    try
                                     {
-                                        currentImage = new WriteableBitmap(
-                                            grabResult.Width,
-                                            grabResult.Height,
-                                            96,
-                                            96,
-                                            PixelFormats.Bgra32,
-                                            null);
+                                        UpdateImage(grabResult);
 
-                                        originalImageSize = new Size(grabResult.Width, grabResult.Height);
+                                        // Update statistics
+                                        cameraStats.UpdateFrameCount();
+                                        cameraStats.Resolution = new Size(grabResult.Width, grabResult.Height);
+
+                                        // Trigger the stats updated event
+                                        StatsUpdated?.Invoke(this, cameraStats.GetStatsString());
                                     }
-
-                                    // Store raw image data
-                                    currentImageData = new byte[grabResult.PayloadSize];
-                                    Marshal.Copy(grabResult.PixelDataPointer, currentImageData, 0, (int)grabResult.PayloadSize);
-
-                                    currentImage.Lock();
-                                    converter.Convert(currentImage.BackBuffer, currentImage.BackBufferStride * grabResult.Height, grabResult);
-                                    currentImage.AddDirtyRect(new Int32Rect(0, 0, grabResult.Width, grabResult.Height));
-                                    currentImage.Unlock();
-
-                                    imageControl.Source = currentImage;
-
-                                    // Raise event with image data
-                                    ImageUpdated?.Invoke(this, new ImageUpdatedEventArgs
+                                    catch (Exception ex)
                                     {
-                                        Image = currentImage.Clone(),
-                                        RawData = currentImageData.Clone() as byte[],
-                                        Width = grabResult.Width,
-                                        Height = grabResult.Height,
-                                        Format = grabResult.PixelTypeValue
-                                    });
-                                }
-                            }, DispatcherPriority.Render);
+                                        _logger.Error(ex, "Error updating image on UI thread");
+                                    }
+                                }, DispatcherPriority.Background);
+
+                                sw.Stop();
+                                cameraStats.ProcessingTime = sw.ElapsedMilliseconds;
+                            }
                         }
                     }
+                    else
+                    {
+                        // If no image was available, yield to other threads
+                        await Task.Delay(1);
+                    }
                 }
-                catch (InvalidOperationException)
+                catch (OperationCanceledException)
                 {
+                    // Expected when cancellation is requested
                     break;
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Error processing image");
+                    await Task.Delay(100); // Delay to prevent tight loop on errors
                 }
             }
         }
-
         private void UpdateImage(IGrabResult grabResult)
         {
-            if (currentImage == null ||
-                currentImage.PixelWidth != grabResult.Width ||
-                currentImage.PixelHeight != grabResult.Height)
+            lock (imageLock)
             {
-                currentImage = new WriteableBitmap(
-                    grabResult.Width,
-                    grabResult.Height,
-                    96,
-                    96,
-                    PixelFormats.Bgra32,
-                    null);
+                if (currentImage == null ||
+                    currentImage.PixelWidth != grabResult.Width ||
+                    currentImage.PixelHeight != grabResult.Height)
+                {
+                    currentImage = new WriteableBitmap(
+                        grabResult.Width,
+                        grabResult.Height,
+                        96,
+                        96,
+                        PixelFormats.Bgra32,
+                        null);
 
-                originalImageSize = new Size(grabResult.Width, grabResult.Height);
+                    originalImageSize = new Size(grabResult.Width, grabResult.Height);
+                }
+
+                // Store raw image data
+                if (currentImageData == null || currentImageData.Length != grabResult.PayloadSize)
+                {
+                    currentImageData = new byte[grabResult.PayloadSize];
+                }
+                Marshal.Copy(grabResult.PixelDataPointer, currentImageData, 0, (int)grabResult.PayloadSize);
+
+                currentImage.Lock();
+                try
+                {
+                    converter.Convert(
+                        currentImage.BackBuffer,
+                        currentImage.BackBufferStride * grabResult.Height,
+                        grabResult);
+                    currentImage.AddDirtyRect(
+                        new Int32Rect(0, 0, grabResult.Width, grabResult.Height));
+                }
+                finally
+                {
+                    currentImage.Unlock();
+                }
+
+                imageControl.Source = currentImage;
+
+                // Raise event with image data - use existing image objects to avoid excessive allocations
+                ImageUpdated?.Invoke(this, new ImageUpdatedEventArgs
+                {
+                    Image = currentImage,
+                    RawData = currentImageData,
+                    Width = grabResult.Width,
+                    Height = grabResult.Height,
+                    Format = grabResult.PixelTypeValue
+                });
+            }
+        }
+
+
+        /// <summary>
+        /// Captures a single image from the camera
+        /// </summary>
+        /// <param name="timeout">Timeout in milliseconds for waiting for a frame</param>
+        /// <returns>A WriteableBitmap containing the captured image, or null if no image could be captured</returns>
+        public WriteableBitmap Snap(int timeout = 1000)
+        {
+            _logger.Information("Attempting to snap a single image from camera");
+
+            if (camera == null || !camera.IsOpen)
+            {
+                _logger.Warning("Cannot snap image: Camera is not initialized or opened");
+                return null;
             }
 
-            currentImage.Lock();
             try
             {
-                converter.Convert(
-                    currentImage.BackBuffer,
-                    currentImage.BackBufferStride * grabResult.Height,
-                    grabResult);
-                currentImage.AddDirtyRect(
-                    new Int32Rect(0, 0, grabResult.Width, grabResult.Height));
+                // If the camera is not already grabbing, start it
+                bool wasGrabbing = false;
+                if (!camera.StreamGrabber.IsGrabbing)
+                {
+                    _logger.Information("Starting camera grab for single image");
+                    camera.Parameters[PLCamera.AcquisitionMode].SetValue(PLCamera.AcquisitionMode.SingleFrame);
+                    camera.StreamGrabber.Start(1, GrabStrategy.OneByOne, GrabLoop.ProvidedByStreamGrabber);
+                }
+                else
+                {
+                    wasGrabbing = true;
+                }
+
+                // Use a semaphore to signal when we have an image
+                using (SemaphoreSlim signal = new SemaphoreSlim(0, 1))
+                {
+                    WriteableBitmap snappedImage = null;
+
+                    // Set up a one-time event handler to capture the image
+                    EventHandler<ImageGrabbedEventArgs> handler = null;
+                    handler = (sender, e) =>
+                    {
+                        try
+                        {
+                            using (IGrabResult grabResult = e.GrabResult)
+                            {
+                                if (grabResult.GrabSucceeded)
+                                {
+                                    lock (imageLock)
+                                    {
+                                        // Create new WriteableBitmap if needed
+                                        if (snappedImage == null ||
+                                            snappedImage.PixelWidth != grabResult.Width ||
+                                            snappedImage.PixelHeight != grabResult.Height)
+                                        {
+                                            snappedImage = new WriteableBitmap(
+                                                grabResult.Width,
+                                                grabResult.Height,
+                                                96,
+                                                96,
+                                                PixelFormats.Bgra32,
+                                                null);
+                                        }
+
+                                        // Convert the image
+                                        snappedImage.Lock();
+                                        try
+                                        {
+                                            converter.Convert(
+                                                snappedImage.BackBuffer,
+                                                snappedImage.BackBufferStride * grabResult.Height,
+                                                grabResult);
+                                            snappedImage.AddDirtyRect(
+                                                new Int32Rect(0, 0, grabResult.Width, grabResult.Height));
+                                        }
+                                        finally
+                                        {
+                                            snappedImage.Unlock();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "Error processing snapped image");
+                        }
+                        finally
+                        {
+                            // Signal that we have processed the image
+                            signal.Release();
+                        }
+                    };
+
+                    try
+                    {
+                        // Register for grabbed images
+                        camera.StreamGrabber.ImageGrabbed += handler;
+
+                        // Execute the software trigger if available
+                        if (!wasGrabbing)
+                        {
+                            if (camera.Parameters.Contains(PLCamera.TriggerSoftware))
+                            {
+                                camera.Parameters[PLCamera.TriggerSoftware].Execute();
+                                _logger.Information("Software trigger executed");
+                            }
+                        }
+
+                        // Wait for the image with timeout
+                        if (signal.Wait(timeout))
+                        {
+                            _logger.Information("Successfully captured snap image");
+                            return snappedImage;
+                        }
+                        else
+                        {
+                            _logger.Warning("Timeout waiting for snap image");
+                            return null;
+                        }
+                    }
+                    finally
+                    {
+                        // Unregister the event handler
+                        camera.StreamGrabber.ImageGrabbed -= handler;
+
+                        // If we started grabbing for this snap, stop it
+                        if (!wasGrabbing && camera.StreamGrabber.IsGrabbing)
+                        {
+                            camera.StreamGrabber.Stop();
+
+                            // If we were in continuous mode before, restore it
+                            if (isProcessing)
+                            {
+                                camera.Parameters[PLCamera.AcquisitionMode].SetValue(PLCamera.AcquisitionMode.Continuous);
+                                camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
+                            }
+                        }
+                    }
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                currentImage.Unlock();
+                _logger.Error(ex, "Error snapping image from camera");
+                return null;
             }
 
-            imageControl.Source = currentImage;
+
+        }
+        /// <summary>
+        /// Captures a single image from the camera and displays it in the specified Image control
+        /// </summary>
+        /// <param name="targetImageControl">The Image control to display the captured image</param>
+        /// <param name="timeout">Timeout in milliseconds for waiting for a frame</param>
+        /// <returns>A WriteableBitmap containing the captured image, or null if no image could be captured</returns>
+        public WriteableBitmap SnapToImageControl(Image targetImageControl, int timeout = 1000)
+        {
+            _logger.Information("Attempting to snap a single image from camera to specified Image control");
+
+            if (targetImageControl == null)
+            {
+                _logger.Warning("Cannot snap image: Target Image control is null");
+                return null;
+            }
+
+            WriteableBitmap snappedImage = Snap(timeout);
+
+            if (snappedImage != null)
+            {
+                // Update the specified image control on the UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    targetImageControl.Source = snappedImage;
+                });
+
+                _logger.Information("Successfully updated target Image control with snapped image");
+            }
+
+            return snappedImage;
         }
 
         private void ImageControl_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

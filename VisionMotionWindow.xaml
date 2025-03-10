@@ -62,16 +62,27 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
+                    <Button x:Name="RestHomeButton" Content="Reset To Home" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="RestHomeButton_Click"/>
+                    <Button x:Name="MovetoProbesButton" Content="Move to Probes SLED/PIC" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="MovetoProbesButton_Click"/>
+                    <Button x:Name="PickLeftLensButton" Content="Pick/Place Left Lens" Grid.Column="0" Grid.Row="2" Margin="5" Padding="5" Click="PickLeftLensButton_Click"/>
+                    <Button x:Name="PickRightLensButton" Content="Pick/Place Right Lens" Grid.Column="0" Grid.Row="3" Margin="5" Padding="5" Click="PickRightLensButton_Click"/>
+                    <Button x:Name="MoveToUVButton" Content="Move to UV All" Grid.Column="0" Grid.Row="4" Margin="5" Padding="5" Click="MoveToUVButton_Click"/>
+                    <Button x:Name="UnloadButton" Content="Unload parts" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="UnloadButton_Click"/>
+                    <!--<Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
                     <Button x:Name="TestCameraCaptureCommand" Content="Test Camera capture" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="TestCameraCaptureCommand_Click"/>
                     <Button x:Name="TestDUtWorkFlow"
                             Content="test dut" 
                             Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" 
-                            Click="TestDUtWorkFlow_Click"/>
+                            Click="TestDUtWorkFlow_Click"/>-->
                 </Grid>
             </TabItem>
 

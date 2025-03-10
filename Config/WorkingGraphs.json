@@ -10,9 +10,11 @@
         "AvoidDispenser",
         "RejectLens",
         "AboveLensGrip",
-        "AboveLensPlace"
+        "AboveLensPlace",
+        "LeftSeeProbe"
       ],
       "edges": [
+
         {
           "from": "Home",
           "to": "ApproachLensGrip",
@@ -26,6 +28,16 @@
         {
           "from": "Home",
           "to": "ApproachLensPlace",
+          "weight": 1
+        },
+        {
+          "from": "Home",
+          "to": "LeftSeeProbe",
+          "weight": 1
+        },
+        {
+          "from": "LeftSeeProbe",
+          "to": "Home",
           "weight": 1
         },
         {
@@ -119,12 +131,23 @@
         "AvoidDispenser",
         "RejectLens",
         "AboveLensGrip",
-        "AboveLensPlace"
+        "AboveLensPlace",
+        "RightSeeProbe"
       ],
       "edges": [
         {
           "from": "Home",
           "to": "ApproachLensGrip",
+          "weight": 1
+        },
+        {
+          "from": "Home",
+          "to": "RightSeeProbe",
+          "weight": 1
+        },
+        {
+          "from": "RightSeeProbe",
+          "to": "Home",
           "weight": 1
         },
         {
@@ -236,6 +259,46 @@
         "SNViewing"
       ],
       "edges": [
+        {
+          "from": "SeeSLED",
+          "to": "SeeGripCollLens",
+          "weight": 1
+        },
+        {
+          "from": "SeeSLED",
+          "to": "SeeGripFocusLens",
+          "weight": 1
+        },
+        {
+          "from": "SeePIC",
+          "to": "SeeGripCollLens",
+          "weight": 1
+        },
+        {
+          "from": "SeePIC",
+          "to": "SeeGripFocusLens",
+          "weight": 1
+        },
+        {
+          "from": "SeeGripCollLens",
+          "to": "SeeCollimateLens",
+          "weight": 1
+        },
+        {
+          "from": "SeeGripFocusLens",
+          "to": "SeeFocusLens",
+          "weight": 1
+        },
+        {
+          "from": "SeeCollimateLens",
+          "to": "SeeGripCollLens",
+          "weight": 1
+        },
+        {
+          "from": "SeeFocusLens",
+          "to": "SeeGripFocusLens",
+          "weight": 1
+        },
         {
           "from": "Home",
           "to": "MidBack",

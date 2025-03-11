@@ -107,29 +107,52 @@
 
                     <!-- Left side - Bottom IO Control -->
                     <StackPanel x:Name="ioBottomPanel" Margin="5" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
-                        <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOBottom"
-                                            HeaderText="Output Pins - IOBottom"
-                                            IsOutput="True"/>
-                        <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOBottom"
-                                           HeaderText="Input Pins - IOBottom"
-                                           IsOutput="False"/>
+                        <!-- Output Pins with ScrollViewer -->
+                        <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,0,0,5">
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOBottom"
+                             HeaderText="Output Pins - IOBottom"
+                             IsOutput="True"/>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Input Pins with ScrollViewer -->
+                        <Border BorderBrush="LightGray" BorderThickness="1">
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOBottom"
+                            HeaderText="Input Pins - IOBottom"
+                            IsOutput="False"/>
+                            </ScrollViewer>
+                        </Border>
                     </StackPanel>
 
                     <!-- Right side - Top IO Control -->
                     <StackPanel x:Name="ioTopPanel" Margin="5" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2">
-                        <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOTop"
-                                            HeaderText="Output Pins - IOTop"
-                                            IsOutput="True"/>
-                        <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOTop"
-                                           HeaderText="Input Pins - IOTop"
-                                           IsOutput="False"/>
+                        <!-- Output Pins with ScrollViewer -->
+                        <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,0,0,5">
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                <eziiolibs:IOPinMonitorControl x:Name="outputPinMonitorIOTop"
+                            HeaderText="Output Pins - IOTop"
+                            IsOutput="True"/>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Input Pins with ScrollViewer -->
+                        <Border BorderBrush="LightGray" BorderThickness="1">
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                <eziiolibs:IOPinMonitorControl x:Name="inputPinMonitorIOTop"
+                           HeaderText="Input Pins - IOTop"
+                           IsOutput="False"/>
+                            </ScrollViewer>
+                        </Border>
                     </StackPanel>
 
                     <!-- Additional controls for I/O tab -->
                     <StackPanel Grid.Column="2" Grid.Row="0" Margin="5">
                         <GroupBox Header="Quick Actions" Margin="0,0,0,10">
-                            <WrapPanel Margin="5">
+                            <WrapPanel Margin="5" x:Name="QuickSlidesPanel">
                                 <!-- Toggle switches will be added here dynamically -->
+                                
                             </WrapPanel>
                         </GroupBox>
                     </StackPanel>

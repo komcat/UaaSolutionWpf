@@ -20,6 +20,7 @@ using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
 using UaaSolutionWpf.Commands;
 using System.IO;
+using System.Diagnostics;
 
 
 namespace UaaSolutionWpf
@@ -49,7 +50,8 @@ namespace UaaSolutionWpf
         private PneumaticSlideManager pneumaticSlideManager;
         // Add this field to the VisionMotionWindow class
         private GlobalJogControl _globalJogControl;
-
+        // Store a reference to the control
+        private MiniPneumaticSlideControl miniSlideControl;
         public VisionMotionWindow()
         {
             InitializeComponent();
@@ -119,6 +121,23 @@ namespace UaaSolutionWpf
             pneumaticSlideManager = new PneumaticSlideManager(deviceManager);
             pneumaticSlideManager.InitSlides();
 
+
+            // In your initialization method
+            miniSlideControl = new MiniPneumaticSlideControl
+            {
+                DeviceManager = deviceManager,
+                Title = "Quick Slides"
+            };
+
+            // Add event handlers if needed
+            miniSlideControl.LogEvent += (sender, message) =>
+            {
+                // Handle log messages
+                Debug.WriteLine($"Slide log: {message}");
+            };
+
+            // Add to your UI
+            QuickSlidesPanel.Children.Add(miniSlideControl);
 
             // Initialize toggle switches for quick access
             InitializeToggleSwitches();

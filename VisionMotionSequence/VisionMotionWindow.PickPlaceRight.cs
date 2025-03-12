@@ -17,6 +17,8 @@ namespace UaaSolutionWpf
         {
             try
             {
+                string gripper = "R_Gripper";
+
                 if (_motionKernel == null || deviceManager == null)
                 {
                     MessageBox.Show("Motion or IO system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -42,12 +44,14 @@ namespace UaaSolutionWpf
                     gantryId = gantryDevice.Id;
                 }
 
-                // Get the right hexapod device ID
+
                 string hexapodId = null;
-                var hexapodDevice = _motionKernel.GetDevices()
-                    .FirstOrDefault(d => d.Type == MotionDeviceType.Hexapod &&
-                                         d.Name.Contains("hex-right") &&
-                                         _motionKernel.IsDeviceConnected(d.Id));
+                MotionDevice hexapodDevice = null;
+                hexapodDevice=GetDeviceByName("hex-right");
+
+                // Get the right hexapod device ID
+
+
 
                 if (hexapodDevice != null)
                 {
@@ -70,15 +74,15 @@ namespace UaaSolutionWpf
                 }
 
                 // 2. Clear right gripper output
-                bool clearSuccess = deviceManager.ClearOutput("IOBottom", "R_Gripper");
+                bool clearSuccess = deviceManager.ClearOutput("IOBottom", gripper);
                 if (clearSuccess)
                 {
-                    _logger.Information("Right gripper cleared");
+                    _logger.Information($"{gripper} gripper cleared");
                     RightGripperStatusText.Text = "Not gripping";
                 }
                 else
                 {
-                    _logger.Warning("Failed to clear right gripper");
+                    _logger.Warning($"Failed to clear {gripper}");
                 }
 
                 // 3. Move gantry to right grip lens position
@@ -114,7 +118,7 @@ namespace UaaSolutionWpf
                 // Small delay to ensure grip is secure
                 await Task.Delay(500);
                 SetStatus("Activating right gripper...");
-                bool gripSuccess = deviceManager.SetOutput("IOBottom", "R_Gripper");
+                bool gripSuccess = deviceManager.SetOutput("IOBottom", gripper);
 
                 if (gripSuccess)
                 {
@@ -127,16 +131,16 @@ namespace UaaSolutionWpf
                     if (gripConfirm == MessageBoxResult.OK)
                     {
 
-                        deviceManager.ClearOutput("IOBottom", "L_Gripper");
+                        deviceManager.ClearOutput("IOBottom", gripper);
                         await Task.Delay(1000);
-                        deviceManager.SetOutput("IOBottom", "L_Gripper");
+                        deviceManager.SetOutput("IOBottom", gripper);
                         await Task.Delay(500);
                     }
                 }
                 else
                 {
-                    SetStatus("Failed to activate right gripper");
-                    _logger.Warning("Failed to activate right gripper");
+                    SetStatus($"Failed to activate right {gripper}");
+                    _logger.Warning($"Failed to activate right {gripper}");
                     return;
                 }
 

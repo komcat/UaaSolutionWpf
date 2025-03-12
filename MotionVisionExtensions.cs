@@ -83,39 +83,8 @@ namespace UaaSolutionWpf
             string deviceId,
             Position position)
         {
-            // First check if we have a controller for this device
-            if (!kernel.HasControllerForDevice(deviceId))
-            {
-                return false;
-            }
-
-            try
-            {
-                // Get the specific device
-                var device = kernel.GetDevices().Find(d => d.Id == deviceId);
-                if (device == null)
-                {
-                    return false;
-                }
-
-                // Create a new temporary named position
-                string tempPositionName = $"TempVisionTarget_{DateTime.Now.Ticks}";
-
-                // Teach this position
-                await kernel.TeachPositionAsync(deviceId, tempPositionName, position);
-
-                // Move to the position
-                bool result = await kernel.MoveToPositionAsync(deviceId, tempPositionName);
-
-                // Clean up by removing the temporary position
-                // Note: This assumes there's a way to remove positions, which may need to be added
-
-                return result;
-            }
-            catch
-            {
-                return false;
-            }
+            // Simply use the existing MoveToPositionDirectAsync method
+            return await kernel.MoveToPositionDirectAsync(deviceId, position);
         }
 
         /// <summary>

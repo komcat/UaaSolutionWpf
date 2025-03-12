@@ -76,7 +76,9 @@
                     <Button x:Name="PickLeftLensButton" Content="Pick/Place Left Lens" Grid.Column="0" Grid.Row="2" Margin="5" Padding="5" Click="PickLeftLensButton_Click"/>
                     <Button x:Name="PickRightLensButton" Content="Pick/Place Right Lens" Grid.Column="0" Grid.Row="3" Margin="5" Padding="5" Click="PickRightLensButton_Click"/>
                     <Button x:Name="MoveToUVButton" Content="Move to UV All" Grid.Column="0" Grid.Row="4" Margin="5" Padding="5" Click="MoveToUVButton_Click"/>
-                    <Button x:Name="UnloadButton" Content="Unload parts" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="UnloadButton_Click"/>
+                    <Button x:Name="ExecuteUVButton" Content="Execute UV curing" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="ExecuteUVButton_Click"/>
+
+                    <Button x:Name="UnloadButton" Content="Unload parts" Grid.Column="0" Grid.Row="6" Margin="5" Padding="5" Click="UnloadButton_Click"/>
                     <!--<Button x:Name="TestMoveCommandButton" Content="Test move command" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="TestMoveCommandButton_Click"/>
                     <Button x:Name="TestCameraCaptureCommand" Content="Test Camera capture" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="TestCameraCaptureCommand_Click"/>
                     <Button x:Name="TestDUtWorkFlow"
@@ -242,10 +244,11 @@
                         <!-- Left Gripper Control (Minimized) -->
                         <Expander Header="Left Gripper Control" IsExpanded="True" Margin="0,0,0,5">
                             <StackPanel Margin="5">
-                                <UniformGrid Columns="2" Rows="2">
+                                <UniformGrid Columns="3" Rows="2">
                                     <Button x:Name="LeftGripperHomeButton" Content="Home" Margin="2" Padding="3" Click="LeftGripperHomeButton_Click"/>
                                     <Button x:Name="LeftGripLensButton" Content="Grip Lens" Margin="2" Padding="3" Click="LeftGripLensButton_Click"/>
-                                    <Button x:Name="LeftReleaseLensButton" Content="Release Lens" Margin="2" Padding="3" Click="LeftReleaseLensButton_Click"/>
+                                    <Button x:Name="LeftApproachPlaceButton" Content="Approach Place" Margin="2" Padding="3" Click="LeftApproachPlaceButton_Click"/>
+                                    <Button x:Name="LeftReleaseLensButton" Content="Place Lens" Margin="2" Padding="3" Click="LeftReleaseLensButton_Click"/>
                                     <Button x:Name="LeftRejectLensButton" Content="Reject Lens" Margin="2" Padding="3" Click="LeftRejectLensButton_Click"/>
                                 </UniformGrid>
 
@@ -289,10 +292,11 @@
                         <!-- Right Gripper Control (Minimized) -->
                         <Expander Header="Right Gripper Control" IsExpanded="True" Margin="0,0,0,5">
                             <StackPanel Margin="5">
-                                <UniformGrid Columns="2" Rows="2">
+                                <UniformGrid Columns="3" Rows="2">
                                     <Button x:Name="RightGripperHomeButton" Content="Home" Margin="2" Padding="3" Click="RightGripperHomeButton_Click"/>
                                     <Button x:Name="RightGripLensButton" Content="Grip Lens" Margin="2" Padding="3" Click="RightGripLensButton_Click"/>
-                                    <Button x:Name="RightReleaseLensButton" Content="Release Lens" Margin="2" Padding="3" Click="RightReleaseLensButton_Click"/>
+                                    <Button x:Name="RightApproachPlaceButton" Content="Approach Place" Margin="2" Padding="3" Click="RightApproachPlaceButton_Click"/>
+                                    <Button x:Name="RightReleaseLensButton" Content="Place Lens" Margin="2" Padding="3" Click="RightReleaseLensButton_Click"/>
                                     <Button x:Name="RightRejectLensButton" Content="Reject Lens" Margin="2" Padding="3" Click="RightRejectLensButton_Click"/>
                                 </UniformGrid>
 

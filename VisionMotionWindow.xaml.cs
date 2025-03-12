@@ -1711,5 +1711,15 @@ namespace UaaSolutionWpf
                 _logger.Error(ex, "Error ensuring device transformations file");
             }
         }
+
+        private async void RightApproachPlaceButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationViaPathAsync(_rightHexId, "ApproachLensPlace");
+        }
+
+        private async void LeftApproachPlaceButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "ApproachLensPlace");
+        }
     }
 }

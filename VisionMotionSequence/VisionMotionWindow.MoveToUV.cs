@@ -5,11 +5,62 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using static SkiaSharp.HarfBuzz.SKShaper;
 
 namespace UaaSolutionWpf
 {
     public partial class VisionMotionWindow
     {
+        private async void ExecuteUVButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Ask if user wants to activate UV
+            var result = MessageBox.Show("Do you want to activate the UV curing process?",
+                                       "UV Activation",
+                                       MessageBoxButton.YesNo,
+                                       MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+
+
+                // Activate UV
+                SetStatus("Activating UV...");
+
+                // Activate both UV pins
+                if (deviceManager != null)
+                {
+                    //create a rising edge to activate UV
+                    deviceManager.ClearOutput("IOBottom", "UV_PLC1");
+                    await Task.Delay(200);
+                    deviceManager.SetOutput("IOBottom", "UV_PLC1");
+                    await Task.Delay(200);
+                    deviceManager.ClearOutput("IOBottom", "UV_PLC1");
+
+                    int curetimeSecond = 180;
+
+                    _logger.Information($"UV activated successfully, typical curing time is {curetimeSecond} seconds");
+
+                    // Wait for the specified duration
+                    TimeSpan timeSpan = TimeSpan.FromSeconds(curetimeSecond);
+                    await Task.Delay(timeSpan);
+
+                    SetStatus("UV curing completed");
+                    _logger.Information("UV curing completed");
+                }
+                else
+                {
+                    SetStatus("Device manager not initialized, cannot activate UV");
+                    _logger.Warning("Device manager not initialized, cannot activate UV");
+                }
+            }
+            else
+            {
+                SetStatus("UV activation cancelled");
+                _logger.Information("UV activation cancelled by user");
+            }
+
+        }
+
         /// <summary>
         /// Moves to the UV position and prepares for UV curing
         /// </summary>
@@ -48,51 +99,11 @@ namespace UaaSolutionWpf
                     SetStatus("Successfully moved to UV position");
                     _logger.Information("Successfully moved to UV position");
 
-                    // Ask if user wants to activate UV
-                    var result = MessageBox.Show("Do you want to activate the UV curing process?",
-                                               "UV Activation",
-                                               MessageBoxButton.YesNo,
-                                               MessageBoxImage.Question);
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        //activate the UV head
-                        await pneumaticSlideManager.GetSlide("UV_Head").ExtendAsync();
-
-                        // Activate UV
-                        SetStatus("Activating UV...");
-
-                        // Activate both UV pins
-                        if (deviceManager != null)
-                        {
-                            //create a rising edge to activate UV
-                            deviceManager.ClearOutput("IOBottom", "UV_PLC1");
-                            await Task.Delay(200);
-                            deviceManager.SetOutput("IOBottom", "UV_PLC1");
-                            await Task.Delay(200);
-                            deviceManager.ClearOutput("IOBottom", "UV_PLC1");
 
 
-                            _logger.Information("UV activated successfully");
+                    //activate the UV head
+                    await pneumaticSlideManager.GetSlide("UV_Head").ExtendAsync();
 
-                            // Wait for the specified duration
-                            TimeSpan timeSpan = TimeSpan.FromSeconds(180);
-                            await Task.Delay(timeSpan);
-
-                            SetStatus("UV curing completed");
-                            _logger.Information("UV curing completed");
-                        }
-                        else
-                        {
-                            SetStatus("Device manager not initialized, cannot activate UV");
-                            _logger.Warning("Device manager not initialized, cannot activate UV");
-                        }
-                    }
-                    else
-                    {
-                        SetStatus("UV activation cancelled");
-                        _logger.Information("UV activation cancelled by user");
-                    }
                 }
                 else
                 {

@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "testConfigurableMachine", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CircleDetectorLib", "..\test_EmguCv\CircleDetectorLib\CircleDetectorLib.csproj", "{423A399F-D4B8-041E-83F6-B303C41C33A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataClient", "..\DataClient\DataClient\DataClient.csproj", "{A20808EB-B881-10D2-0881-7DB7DF802817}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,10 @@ Global
 		{423A399F-D4B8-041E-83F6-B303C41C33A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{423A399F-D4B8-041E-83F6-B303C41C33A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{423A399F-D4B8-041E-83F6-B303C41C33A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20808EB-B881-10D2-0881-7DB7DF802817}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20808EB-B881-10D2-0881-7DB7DF802817}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20808EB-B881-10D2-0881-7DB7DF802817}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20808EB-B881-10D2-0881-7DB7DF802817}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

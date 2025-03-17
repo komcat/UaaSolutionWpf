@@ -345,7 +345,7 @@
             <TabItem>
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Jog Robot" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        <TextBlock Text="Data Server" VerticalAlignment="Center" Margin="5,0,0,0"/>
                     </StackPanel>
                 </TabItem.Header>
                 <Grid Margin="5">

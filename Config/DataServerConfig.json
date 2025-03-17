@@ -1,0 +1,22 @@
+{
+  "Servers": [
+    {
+      "Id": "GPIB-Current",
+      "Name": "Current reading",
+      "Host": "127.0.0.44",
+      "Port": 55555,
+      "Unit": "A",
+      "Description": "Keithley multimeter current readings via GPIB",
+      "AutoConnect": false,
+      "LogData": true
+    }
+    // More servers...
+  ],
+  "Settings": {
+    "DefaultServerId": "GPIB-Current",
+    "MaxLogEntries": 1000,
+    "LogDirectory": "C:\\Data\\Logs",
+    "AutoSaveData": false,
+    "DataSaveInterval": 60
+  }
+}

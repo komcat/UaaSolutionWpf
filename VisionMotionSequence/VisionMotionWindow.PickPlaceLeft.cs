@@ -171,5 +171,12 @@ namespace UaaSolutionWpf
             }
         }
 
+
+
+        private void SetJogToDefaultLeft()
+        {
+
+        }
+
     }
 }

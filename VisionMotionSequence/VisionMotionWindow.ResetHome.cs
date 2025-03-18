@@ -252,6 +252,8 @@ namespace UaaSolutionWpf
         {
             try
             {
+               
+
                 if (_motionKernel == null)
                 {
                     MessageBox.Show("Motion system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -329,6 +331,10 @@ namespace UaaSolutionWpf
                         SetStatus("Failed to move to PIC probe position");
                         _logger.Warning("Failed to move to PIC probe position");
                     }
+
+                    SetStatus("Turning on High SLED current ");
+                    tecController.HighCurrent_Click(sender, e);
+
                 }
                 else
                 {

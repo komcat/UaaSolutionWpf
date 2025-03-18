@@ -22,6 +22,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Motion Control Header -->
@@ -84,9 +85,9 @@
                     <Button x:Name="MovetoProbesButton" Content="Move to Probes SLED/PIC" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="MovetoProbesButton_Click"/>
                     <Button x:Name="PickLeftLensButton" Content="Pick/Place Left Lens" Grid.Column="0" Grid.Row="2" Margin="5" Padding="5" Click="PickLeftLensButton_Click"/>
                     <Button x:Name="PickRightLensButton" Content="Pick/Place Right Lens" Grid.Column="0" Grid.Row="3" Margin="5" Padding="5" Click="PickRightLensButton_Click"/>
-                    <Button x:Name="MoveToUVButton" Content="Move to UV All" Grid.Column="0" Grid.Row="4" Margin="5" Padding="5" Click="MoveToUVButton_Click"/>
-                    <Button x:Name="ExecuteUVButton" Content="Execute UV curing" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="ExecuteUVButton_Click"/>
-                    <Button x:Name="UnloadButton" Content="Unload parts" Grid.Column="0" Grid.Row="6" Margin="5" Padding="5" Click="UnloadButton_Click"/>
+                    <Button x:Name="MoveToUVButton" Content="Move to UV and curing" Grid.Column="0" Grid.Row="4" Margin="5" Padding="5" Click="MoveToUVButton_Click"/>
+                    <Button x:Name="ExecuteUVButton" IsEnabled="false" Content="Execute UV curing" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="ExecuteUVButton_Click"/>
+                    <Button x:Name="UnloadButton" IsEnabled="false" Content="Unload parts" Grid.Column="0" Grid.Row="6" Margin="5" Padding="5" Click="UnloadButton_Click"/>
 
                     <TextBlock x:Name="DryValueText" Grid.Column="1" Grid.Row="4" Margin="5" Padding="5" Text="dry=" FontWeight="Bold" FontSize="24"/>
                     <TextBlock x:Name="UvValueText" Grid.Column="1" Grid.Row="5" Margin="5" Padding="5" Text="af_uv=" FontWeight="Bold" FontSize="24"/>
@@ -579,7 +580,7 @@
 
 
         <!-- Status Bar -->
-        <StatusBar Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3" VerticalAlignment="Bottom">
+        <StatusBar Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" VerticalAlignment="Bottom" FontSize="24">
             <StatusBarItem>
                 <TextBlock x:Name="StatusBarTextBlock" Text="Ready to initialize"/>
             </StatusBarItem>

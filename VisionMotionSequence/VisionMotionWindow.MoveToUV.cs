@@ -25,62 +25,7 @@ namespace UaaSolutionWpf
             {
 
 
-                // Activate UV
-                SetStatus("Activating UV...");
-
-                // Activate both UV pins
-                if (deviceManager != null)
-                {
-                    //create a rising edge to activate UV
-                    deviceManager.ClearOutput("IOBottom", "UV_PLC1");
-                    await Task.Delay(200);
-                    deviceManager.SetOutput("IOBottom", "UV_PLC1");
-                    await Task.Delay(200);
-                    deviceManager.ClearOutput("IOBottom", "UV_PLC1");
-
-                    
-
-                    
-
-
-                    int curetimeSecond = 200;
-                    _logger.Information($"UV activated successfully, typical curing time is {curetimeSecond} seconds");
-
-                    for (int i = 0; i < curetimeSecond; i++)
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                        SetStatus($" - UV curing in progress... {curetimeSecond - i} seconds remaining");
-                    }
-
-
-
-                    SetStatus("UV curing completed");
-                    _logger.Information("UV curing completed");
-
-
-                    //show final value after dry peak
-                    if (ChannelSelectionComboBox.SelectedItem is RealTimeDataChannel selectedChannel)
-                    {
-                        MeasurementValue readVal;
-                        if (realTimeDataManager.TryGetChannelValue(selectedChannel.ChannelName, out readVal))
-                        {
-                            UvValueText.Text = MeasurementValueFormatter.FormatValue(readVal);
-                        }
-                        else
-                        {
-                            UvValueText.Text = "No value";
-                        }
-
-                    }
-                        
-
-
-                }
-                else
-                {
-                    SetStatus("Device manager not initialized, cannot activate UV");
-                    _logger.Warning("Device manager not initialized, cannot activate UV");
-                }
+                await ExecuteUVCuringUAA();
             }
             else
             {
@@ -97,6 +42,9 @@ namespace UaaSolutionWpf
         {
             try
             {
+                tecController.LowCurrent_Click(sender, e);
+
+
                 if (_motionKernel == null)
                 {
                     MessageBox.Show("Motion system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -175,6 +123,7 @@ namespace UaaSolutionWpf
 
                     }
 
+
                 }
                 else
                 {
@@ -193,6 +142,10 @@ namespace UaaSolutionWpf
                 SetStatus("Error during UV position movement");
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+
+            await ExecuteUVCuringUAA();
+            await UnloadingUAA();
+
         }
         public static class MeasurementValueFormatter
         {
@@ -256,6 +209,67 @@ namespace UaaSolutionWpf
             {
                 AutoAlignmentControl.SetStatus($"Error during scan sequence: {ex.Message}");
                 // Additional error handling as needed
+            }
+        }
+
+
+        public async Task ExecuteUVCuringUAA()
+        {
+            // Activate UV
+            SetStatus("Activating UV...");
+
+            // Activate both UV pins
+            if (deviceManager != null)
+            {
+                //create a rising edge to activate UV
+                deviceManager.ClearOutput("IOBottom", "UV_PLC1");
+                await Task.Delay(200);
+                deviceManager.SetOutput("IOBottom", "UV_PLC1");
+                await Task.Delay(200);
+                deviceManager.ClearOutput("IOBottom", "UV_PLC1");
+
+
+
+
+
+
+                int curetimeSecond = 210;
+                _logger.Information($"UV activated successfully, typical curing time is {curetimeSecond} seconds");
+
+                for (int i = 0; i < curetimeSecond; i++)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    SetStatus($" - UV curing in progress... {curetimeSecond - i} seconds remaining");
+                }
+
+
+
+                SetStatus("UV curing completed");
+                _logger.Information("UV curing completed");
+
+
+                //show final value after dry peak
+                if (ChannelSelectionComboBox.SelectedItem is RealTimeDataChannel selectedChannel)
+                {
+                    MeasurementValue readVal;
+                    if (realTimeDataManager.TryGetChannelValue(selectedChannel.ChannelName, out readVal))
+                    {
+                        UvValueText.Text = MeasurementValueFormatter.FormatValue(readVal);
+                    }
+                    else
+                    {
+                        UvValueText.Text = "No value";
+                    }
+
+                }
+
+
+
+            }
+            else
+            {
+                SetStatus("Device manager not initialized, cannot activate UV");
+                _logger.Warning("Device manager not initialized, cannot activate UV");
             }
         }
     }

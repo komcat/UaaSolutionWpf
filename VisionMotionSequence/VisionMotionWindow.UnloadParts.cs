@@ -42,100 +42,107 @@ namespace UaaSolutionWpf
         /// </summary>
         private async void UnloadButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (_motionKernel == null || deviceManager == null)
-                {
-                    MessageBox.Show("Motion or IO system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
+			await UnloadingUAA();
 
-                // Confirmation dialog
-                var result = MessageBox.Show("This will release all grippers and return all devices to home position. Continue?",
-                                           "Confirm Unload",
-                                           MessageBoxButton.YesNo,
-                                           MessageBoxImage.Warning);
-
-                if (result != MessageBoxResult.Yes)
-                {
-                    return;
-                }
-
-                SetStatus("Unloading parts...");
-
-                // Release all grippers
-                bool leftGripperReleased = deviceManager.ClearOutput("IOBottom", "L_Gripper");
-                bool rightGripperReleased = deviceManager.ClearOutput("IOBottom", "R_Gripper");
-
-                if (leftGripperReleased)
-                {
-                    LeftGripperStatusText.Text = "Not gripping";
-                    _logger.Information("Left gripper released");
-                }
-                else
-                {
-                    _logger.Warning("Failed to release left gripper");
-                }
-
-                if (rightGripperReleased)
-                {
-                    RightGripperStatusText.Text = "Not gripping";
-                    _logger.Information("Right gripper released");
-                }
-                else
-                {
-                    _logger.Warning("Failed to release right gripper");
-                }
-
-                //deactivate the UV head
-                await pneumaticSlideManager.GetSlide("UV_Head").RetractAsync();
+		}
 
 
+        private async Task UnloadingUAA()
+        {
+			try
+			{
+				if (_motionKernel == null || deviceManager == null)
+				{
+					MessageBox.Show("Motion or IO system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+					return;
+				}
 
-                MotionDevice leftHexDevice = GetDeviceByName("hex-left");
-                MotionDevice rightHexDevice = GetDeviceByName("hex-right");
+				// Confirmation dialog
+				var result = MessageBox.Show("This will release all grippers and return all devices to home position. Continue?",
+										   "Confirm Unload",
+										   MessageBoxButton.YesNo,
+										   MessageBoxImage.Warning);
 
-                //immediate move direct to approach lens place
-                await _motionKernel.MoveToPositionAsync(leftHexDevice.Id, "ApproachLensPlace");
-                await _motionKernel.MoveToPositionAsync(rightHexDevice.Id, "ApproachLensPlace");
-                await _motionKernel.MoveToDestinationShortestPathAsync(leftHexDevice.Id, "Home");
-                await _motionKernel.MoveToDestinationShortestPathAsync(rightHexDevice.Id, "Home");
+				if (result != MessageBoxResult.Yes)
+				{
+					return;
+				}
+
+				SetStatus("Unloading parts...");
+
+				// Release all grippers
+				bool leftGripperReleased = deviceManager.ClearOutput("IOBottom", "L_Gripper");
+				bool rightGripperReleased = deviceManager.ClearOutput("IOBottom", "R_Gripper");
+
+				if (leftGripperReleased)
+				{
+					LeftGripperStatusText.Text = "Not gripping";
+					_logger.Information("Left gripper released");
+				}
+				else
+				{
+					_logger.Warning("Failed to release left gripper");
+				}
+
+				if (rightGripperReleased)
+				{
+					RightGripperStatusText.Text = "Not gripping";
+					_logger.Information("Right gripper released");
+				}
+				else
+				{
+					_logger.Warning("Failed to release right gripper");
+				}
+
+				//deactivate the UV head
+				await pneumaticSlideManager.GetSlide("UV_Head").RetractAsync();
 
 
 
+				MotionDevice leftHexDevice = GetDeviceByName("hex-left");
+				MotionDevice rightHexDevice = GetDeviceByName("hex-right");
 
-                // Turn off vacuum and UV
-                deviceManager.ClearOutput("IOBottom", "Vacuum_Base");
-                deviceManager.ClearOutput("IOBottom", "UV_PLC1");
-                deviceManager.ClearOutput("IOBottom", "UV_PLC2");
+				//immediate move direct to approach lens place
+				await _motionKernel.MoveToPositionAsync(leftHexDevice.Id, "ApproachLensPlace");
+				await _motionKernel.MoveToPositionAsync(rightHexDevice.Id, "ApproachLensPlace");
+				await _motionKernel.MoveToDestinationShortestPathAsync(leftHexDevice.Id, "Home");
+				await _motionKernel.MoveToDestinationShortestPathAsync(rightHexDevice.Id, "Home");
 
 
-                // Return all devices to home
-                string gantryId = _activeGantryDeviceId;
-                if (string.IsNullOrEmpty(gantryId))
-                {
-                    var gantryDevice = _motionKernel.GetDevices()
-                        .FirstOrDefault(d => d.Type == MotionDeviceType.Gantry && _motionKernel.IsDeviceConnected(d.Id));
 
-                    if (gantryDevice != null)
-                    {
-                        gantryId = gantryDevice.Id;
-                    }
-                }
 
-                if (!string.IsNullOrEmpty(gantryId))
-                {
-                    bool homeSuccess = await _motionKernel.HomeDeviceAsync(gantryId);
+				// Turn off vacuum and UV
+				deviceManager.ClearOutput("IOBottom", "Vacuum_Base");
+				deviceManager.ClearOutput("IOBottom", "UV_PLC1");
+				deviceManager.ClearOutput("IOBottom", "UV_PLC2");
 
-                    if (homeSuccess)
-                    {
-                        _logger.Information("Gantry successfully homed");
-                    }
-                    else
-                    {
-                        _logger.Warning("Failed to home gantry");
-                    }
-                }
+
+				// Return all devices to home
+				string gantryId = _activeGantryDeviceId;
+				if (string.IsNullOrEmpty(gantryId))
+				{
+					var gantryDevice = _motionKernel.GetDevices()
+						.FirstOrDefault(d => d.Type == MotionDeviceType.Gantry && _motionKernel.IsDeviceConnected(d.Id));
+
+					if (gantryDevice != null)
+					{
+						gantryId = gantryDevice.Id;
+					}
+				}
+
+				if (!string.IsNullOrEmpty(gantryId))
+				{
+					bool homeSuccess = await _motionKernel.MoveToDestinationShortestPathAsync(gantryId, "MidCenter");
+
+					if (homeSuccess)
+					{
+						_logger.Information("Gantry successfully homed");
+					}
+					else
+					{
+						_logger.Warning("Failed to home gantry");
+					}
+				}
 
 				//show final value after dry peak
 				if (ChannelSelectionComboBox.SelectedItem is RealTimeDataChannel selectedChannel)
@@ -154,20 +161,20 @@ namespace UaaSolutionWpf
 
 
 				SetStatus("Parts unloaded and system reset");
-                _logger.Information("Parts unloaded and system reset");
+				_logger.Information("Parts unloaded and system reset");
 
-                MessageBox.Show("Unload complete. All parts released and devices returned to home position.",
-                              "Unload Complete",
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Error in UnloadButton_Click");
-                SetStatus("Error during unload operation");
-                MessageBox.Show($"Error during unload: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
+				MessageBox.Show("Unload complete. All parts released and devices returned to home position.",
+							  "Unload Complete",
+							  MessageBoxButton.OK,
+							  MessageBoxImage.Information);
+			}
+			catch (Exception ex)
+			{
+				_logger.Error(ex, "Error in UnloadButton_Click");
+				SetStatus("Error during unload operation");
+				MessageBox.Show($"Error during unload: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
 
-    }
+		}
+	}
 }

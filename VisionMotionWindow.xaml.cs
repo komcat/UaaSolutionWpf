@@ -52,6 +52,8 @@ namespace UaaSolutionWpf
         private GlobalJogControl _globalJogControl;
         // Store a reference to the control
         private MiniPneumaticSlideControl miniSlideControl;
+
+        private TECControllerV2 tecController;
         public VisionMotionWindow()
         {
             InitializeComponent();
@@ -80,7 +82,7 @@ namespace UaaSolutionWpf
 
             //Init the TEC Controller
             // Create the controller
-            var tecController = new TECControllerV2();
+            tecController = new TECControllerV2();
 
             // Set logger first
             tecController.SetLogger(_logger);

@@ -351,7 +351,7 @@ namespace UaaSolutionWpf.Controls
             return true;
         }
         // Modify LowCurrent_Click and HighCurrent_Click to update button states
-        private async void LowCurrent_Click(object sender, RoutedEventArgs e)
+        public async void LowCurrent_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button)
             {
@@ -366,7 +366,7 @@ namespace UaaSolutionWpf.Controls
                 await _gpibService.TecOn();
 
                 // Wait for temperature to stabilize
-                await Task.Delay(2000);
+                await Task.Delay(500);
 
                 // Now set laser current and turn on
                 await _gpibService.SetLaserCurrent(0.150);
@@ -384,7 +384,7 @@ namespace UaaSolutionWpf.Controls
             }
         }
 
-        private async void HighCurrent_Click(object sender, RoutedEventArgs e)
+        public async void HighCurrent_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button)
             {
@@ -399,7 +399,7 @@ namespace UaaSolutionWpf.Controls
                 await _gpibService.TecOn();
 
                 // Wait for temperature to stabilize
-                await Task.Delay(2000);
+                await Task.Delay(500);
 
                 // Now set laser current and turn on
                 await _gpibService.SetLaserCurrent(0.250);

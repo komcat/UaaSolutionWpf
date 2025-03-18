@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using UaaSolutionWpf.Data;
 
 namespace UaaSolutionWpf
 {
@@ -136,7 +137,23 @@ namespace UaaSolutionWpf
                     }
                 }
 
-                SetStatus("Parts unloaded and system reset");
+				//show final value after dry peak
+				if (ChannelSelectionComboBox.SelectedItem is RealTimeDataChannel selectedChannel)
+				{
+					MeasurementValue readVal;
+					if (realTimeDataManager.TryGetChannelValue(selectedChannel.ChannelName, out readVal))
+					{
+						UvValueText2.Text = MeasurementValueFormatter.FormatValue(readVal);
+					}
+					else
+					{
+						UvValueText2.Text = "No value";
+					}
+
+				}
+
+
+				SetStatus("Parts unloaded and system reset");
                 _logger.Information("Parts unloaded and system reset");
 
                 MessageBox.Show("Unload complete. All parts released and devices returned to home position.",

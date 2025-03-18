@@ -163,7 +163,8 @@
                     <TextBlock Grid.Row="2" 
                        Grid.Column="1"
                        Grid.ColumnSpan="2"
-                       Margin="0,5,5,5">
+                       Margin="0,5,5,5"
+                               FontSize="32">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Style.Triggers>
@@ -182,7 +183,8 @@
                     <TextBlock Grid.Row="3" 
                        Grid.Column="1"
                        Grid.ColumnSpan="2"
-                       Margin="0,5,5,0">
+                       Margin="0,5,5,0"
+                               FontSize="32">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Style.Triggers>

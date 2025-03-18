@@ -42,7 +42,7 @@
                     BorderThickness="1" BorderBrush="Black"
                     Click="RightScanButton_Click"/>
 
-            <Button x:Name="StopButton" Content="stop" 
+            <Button x:Name="StopButton" Content="Stop" 
                     Width="70" Height="30" 
                     BorderThickness="1" BorderBrush="Black"
                     Click="StopButton_Click"/>

@@ -29,9 +29,11 @@
     <None Remove="Images\axis.png" />
     <None Remove="Images\Hex-bottom.png" />
     <None Remove="Images\IO.png" />
+    <None Remove="Images\maintenance.jpg" />
     <None Remove="Images\Manual.png" />
     <None Remove="Images\measurement.png" />
     <None Remove="Images\RUN.png" />
+    <None Remove="Images\step.jpg" />
     <None Remove="Images\stop.jpg" />
     <None Remove="Images\teach.png" />
   </ItemGroup>
@@ -80,6 +82,9 @@
     <Resource Include="Images\IO.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Images\maintenance.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Images\Manual.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -88,6 +93,9 @@
     </Resource>
     <Resource Include="Images\RUN.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\step.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Images\stop.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

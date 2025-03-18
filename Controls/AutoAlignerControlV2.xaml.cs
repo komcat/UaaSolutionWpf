@@ -53,6 +53,17 @@ namespace UaaSolutionWpf.Controls
         // State tracking
         private bool _isScanActive = false;
 
+        // New property to allow external access to scan mode
+        public bool IsFineModeSelected
+        {
+            get => FineModeRadio.IsChecked == true;
+            set
+            {
+                FineModeRadio.IsChecked = value;
+                CoarseModeRadio.IsChecked = !value;
+            }
+        }
+
         public AutoAlignerControlV2()
         {
             InitializeComponent();
@@ -96,7 +107,6 @@ namespace UaaSolutionWpf.Controls
 
             // Log initialization
             _logger.Information("AutoAlignerControlV2 initialized with MotionKernel and RealTimeDataManager");
-            //AppendToLog("Auto Aligner initialized.");
         }
 
         /// <summary>
@@ -127,7 +137,6 @@ namespace UaaSolutionWpf.Controls
             if (string.IsNullOrEmpty(_leftHexapodId) && string.IsNullOrEmpty(_rightHexapodId))
             {
                 _logger.Warning("No hexapod devices found");
-                //AppendToLog("Warning: No hexapod devices found in the system.");
             }
             else
             {
@@ -173,21 +182,31 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         private async void LeftScanButton_Click(object sender, RoutedEventArgs e)
         {
+            await StartLeftScan();
+        }
+
+        /// <summary>
+        /// Public method to start scan on left hexapod
+        /// </summary>
+        public async Task<bool> StartLeftScan()
+        {
             if (_isScanActive)
             {
-                //AppendToLog("Cannot start left scan, scan already in progress.");
-                return;
+                _logger.Warning("Cannot start left scan, scan already in progress.");
+                return false;
             }
 
             if (string.IsNullOrEmpty(_leftHexapodId))
             {
-                //AppendToLog("Error: Left hexapod not found.");
-                return;
+                _logger.Error("Left hexapod not found.");
+                return false;
             }
 
             _activeHexapodId = _leftHexapodId;
-            //AppendToLog("Starting scan on left hexapod...");
+            _logger.Information("Starting scan on left hexapod...");
             await StartScan();
+
+            return true;
         }
 
         /// <summary>
@@ -195,21 +214,31 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         private async void RightScanButton_Click(object sender, RoutedEventArgs e)
         {
+            await StartRightScan();
+        }
+
+        /// <summary>
+        /// Public method to start scan on right hexapod
+        /// </summary>
+        public async Task<bool> StartRightScan()
+        {
             if (_isScanActive)
             {
-                //AppendToLog("Cannot start right scan, scan already in progress.");
-                return;
+                _logger.Warning("Cannot start right scan, scan already in progress.");
+                return false;
             }
 
             if (string.IsNullOrEmpty(_rightHexapodId))
             {
-                //AppendToLog("Error: Right hexapod not found.");
-                return;
+                _logger.Error("Right hexapod not found.");
+                return false;
             }
 
             _activeHexapodId = _rightHexapodId;
-            //AppendToLog("Starting scan on right hexapod...");
+            _logger.Information("Starting scan on right hexapod...");
             await StartScan();
+
+            return true;
         }
 
         /// <summary>
@@ -217,15 +246,28 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         private async void StopButton_Click(object sender, RoutedEventArgs e)
         {
+            await StopScan();
+        }
+
+        /// <summary>
+        /// Public method to stop the active scan
+        /// </summary>
+        public async Task StopCurrentScan()
+        {
             if (!_isScanActive)
             {
-                //AppendToLog("No scan in progress to stop.");
+                _logger.Information("No scan in progress to stop.");
                 return;
             }
 
-            //AppendToLog("Stopping scan...");
+            _logger.Information("Stopping scan...");
             await StopScan();
         }
+
+        /// <summary>
+        /// Check if a scan is currently active
+        /// </summary>
+        public bool IsScanActive => _isScanActive;
 
         /// <summary>
         /// Handle scan mode change to coarse
@@ -234,11 +276,19 @@ namespace UaaSolutionWpf.Controls
         {
             if (_isScanActive)
             {
-                //AppendToLog("Cannot change scan mode while scan is active.");
+                // Check if logger is initialized before using it
+                if (_logger != null)
+                    _logger.Warning("Cannot change scan mode while scan is active.");
+
                 return;
             }
 
-            //AppendToLog("Scan mode set to Coarse.");
+            // Check if logger is initialized before using it
+            if (_logger != null)
+                _logger.Information("Scan mode set to Coarse.");
+
+            // Update status text even if logger is not available
+            SetStatus("Scan mode set to Coarse.");
         }
 
         /// <summary>
@@ -248,11 +298,19 @@ namespace UaaSolutionWpf.Controls
         {
             if (_isScanActive)
             {
-                //AppendToLog("Cannot change scan mode while scan is active.");
+                // Check if logger is initialized before using it
+                if (_logger != null)
+                    _logger.Warning("Cannot change scan mode while scan is active.");
+
                 return;
             }
 
-            //AppendToLog("Scan mode set to Fine.");
+            // Check if logger is initialized before using it
+            if (_logger != null)
+                _logger.Information("Scan mode set to Fine.");
+
+            // Update status text even if logger is not available
+            SetStatus("Scan mode set to Fine.");
         }
 
         /// <summary>
@@ -270,13 +328,13 @@ namespace UaaSolutionWpf.Controls
 
                 if (_motionKernel == null || _dataManager == null)
                 {
-                    //AppendToLog("Error: Motion kernel or data manager not initialized.");
+                    _logger.Error("Motion kernel or data manager not initialized.");
                     return;
                 }
 
                 if (!_motionKernel.IsDeviceConnected(_activeHexapodId))
                 {
-                    //AppendToLog($"Error: Selected hexapod (ID: {_activeHexapodId}) is not connected.");
+                    _logger.Error($"Selected hexapod (ID: {_activeHexapodId}) is not connected.");
                     return;
                 }
 
@@ -309,14 +367,39 @@ namespace UaaSolutionWpf.Controls
                 // Start scan in background
                 _isScanActive = true;
 
+                // Create a TaskCompletionSource to track when scan is complete
+                var scanCompletionSource = new TaskCompletionSource<bool>();
+
+                // Handle scan completion to signal the task completion
+                EventHandler<ScanCompletedEventArgs> onComplete = null;
+                EventHandler<ScanErrorEventArgs> onError = null;
+
+                onComplete = (s, e) => {
+                    _scanningAlgorithm.ScanCompleted -= onComplete;
+                    _scanningAlgorithm.ErrorOccurred -= onError;
+                    scanCompletionSource.TrySetResult(true);
+                };
+
+                onError = (s, e) => {
+                    _scanningAlgorithm.ScanCompleted -= onComplete;
+                    _scanningAlgorithm.ErrorOccurred -= onError;
+                    scanCompletionSource.TrySetException(e.Error);
+                };
+
+                _scanningAlgorithm.ScanCompleted += onComplete;
+                _scanningAlgorithm.ErrorOccurred += onError;
+
                 // Run the scan
                 await _scanningAlgorithm.StartScan(_scanCts.Token);
+
+                // Wait for scan to complete
+                await scanCompletionSource.Task;
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error starting scan");
-                //AppendToLog($"Error starting scan: {ex.Message}");
                 await StopScan();
+                throw;
             }
         }
 
@@ -350,12 +433,11 @@ namespace UaaSolutionWpf.Controls
                 // Update UI
                 UpdateUiForScanStopped();
 
-                //AppendToLog("Scan stopped.");
+                _logger.Information("Scan stopped.");
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Error stopping scan");
-                //AppendToLog($"Error stopping scan: {ex.Message}");
             }
             finally
             {
@@ -401,6 +483,21 @@ namespace UaaSolutionWpf.Controls
             });
         }
 
+        /// <summary>
+        /// Set status text
+        /// </summary>
+        public void SetStatus(string message)
+        {
+            if (Dispatcher == null || TextBoxAlignStatus == null)
+                return;
+
+            Dispatcher.Invoke(() =>
+            {
+                if (TextBoxAlignStatus != null)
+                    TextBoxAlignStatus.Text = message;
+            });
+        }
+
         #region Event Handlers
 
         /// <summary>
@@ -408,8 +505,7 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         private void OnScanProgressUpdated(object sender, ScanProgressEventArgs e)
         {
-            //AppendToLog($"Progress: {e.Progress:P0} - {e.Status}");
-            TextBoxAlignStatus.Text = $"Progress: {e.Progress:P0} - {e.Status}";
+            SetStatus($"Progress: {e.Progress:P0} - {e.Status}");
         }
 
         /// <summary>
@@ -427,8 +523,7 @@ namespace UaaSolutionWpf.Controls
         /// </summary>
         private void OnGlobalPeakUpdated(object sender, MotionPeakData peak)
         {
-            //AppendToLog($"New peak found: {peak.Value:F6} at X={peak.Position.X:F6}, Y={peak.Position.Y:F6}, Z={peak.Position.Z:F6}");
-            TextBoxAlignStatus.Text = $"New peak found: {peak.Value:F6} at X={peak.Position.X:F6}, Y={peak.Position.Y:F6}, Z={peak.Position.Z:F6}";
+            SetStatus($"New peak found: {peak.Value:F6} at X={peak.Position.X:F6}, Y={peak.Position.Y:F6}, Z={peak.Position.Z:F6}");
             _logger.Information("New peak found: {PeakValue:F6} at X={X:F6}, Y={Y:F6}, Z={Z:F6}",
                 peak.Value, peak.Position.X, peak.Position.Y, peak.Position.Z);
         }
@@ -444,12 +539,7 @@ namespace UaaSolutionWpf.Controls
             var baseline = results.Baseline;
             var improvement = (peak.Value - baseline.Value) / baseline.Value;
 
-            //AppendToLog($"Scan completed!");
-            //AppendToLog($"Baseline: {baseline.Value:F6}");
-            //AppendToLog($"Peak: {peak.Value:F6}");
-            //AppendToLog($"Improvement: {improvement:P2}");
-            //AppendToLog($"Final position: X={peak.Position.X:F6}, Y={peak.Position.Y:F6}, Z={peak.Position.Z:F6}");
-            TextBoxAlignStatus.Text = $"Scan completed! Baseline: {baseline.Value:F6}, Peak: {peak.Value:F6}";
+            SetStatus($"Scan completed! Baseline: {baseline.Value:F6}, Peak: {peak.Value:F6}");
             _logger.Information("Scan completed. Baseline: {BaselineValue:F6}, Peak: {PeakValue:F6}, Improvement: {Improvement:P2}",
                 baseline.Value, peak.Value, improvement);
             _isScanActive = false;
@@ -462,25 +552,12 @@ namespace UaaSolutionWpf.Controls
         private void OnScanError(object sender, ScanErrorEventArgs e)
         {
             _logger.Error(e.Error, "Scan error occurred");
-            TextBoxAlignStatus.Text = $"Scan error: {e.Error.Message}";
-            //AppendToLog($"Scan error: {e.Error.Message}");
+            SetStatus($"Scan error: {e.Error.Message}");
 
             _isScanActive = false;
             UpdateUiForScanStopped();
         }
 
         #endregion
-
-        /// <summary>
-        /// Add a message to the status text box
-        /// </summary>
-        //private void //AppendToLog(string message)
-        //{
-        //    Dispatcher.Invoke(() =>
-        //    {
-        //        StatusTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
-        //        StatusTextBox.ScrollToEnd();
-        //    });
-        //}
     }
 }

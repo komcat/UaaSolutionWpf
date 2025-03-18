@@ -1325,7 +1325,7 @@ namespace UaaSolutionWpf
                 await MoveGantryToPosition("UV");
                 var result = MessageBox.Show("Do you want to extend the UV Head down?", "UV Head", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-                if (result == MessageBoxResult.Yes)
+                if (result == System.Windows.MessageBoxResult.Yes)
                 {
                     // Extend UV head down
                     await pneumaticSlideManager.GetSlide("UV_Head").ExtendAsync();

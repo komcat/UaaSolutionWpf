@@ -591,8 +591,63 @@ namespace UaaSolutionWpf.Workflow
 
         private async Task ReadSensorDataAsync()
         {
-            // Simulate reading data
-            await Task.Delay(2000);
+            // Total time: 10 seconds
+            int totalTimeMs = 10000;
+            int updateIntervalMs = 100; // Update progress every 100ms
+            int steps = totalTimeMs / updateIntervalMs;
+
+            // Reset progress display
+            if (_statusProgressBar != null)
+            {
+                _statusProgressBar.IsIndeterminate = false;
+                _statusProgressBar.Value = 0;
+                _statusProgressBar.Maximum = 100;
+            }
+
+            // Update status text
+            if (_statusTextBlock != null)
+            {
+                _statusTextBlock.Text = "Reading sensor data...";
+            }
+
+            // Start time for duration calculation
+            DateTime startTime = DateTime.Now;
+
+            // Simulate reading data with progress updates
+            for (int i = 0; i < steps; i++)
+            {
+                // Update progress percentage
+                double percentage = (i / (double)steps) * 100;
+
+                // Update progress bar
+                if (_statusProgressBar != null)
+                {
+                    _statusProgressBar.Value = percentage;
+                }
+
+                // Update duration text
+                if (_timeTextBlock != null)
+                {
+                    TimeSpan elapsed = DateTime.Now - startTime;
+                    _timeTextBlock.Text = $"Duration: {elapsed.TotalSeconds:F1}s / 10.0s";
+                }
+
+                // Wait for the interval
+                await Task.Delay(updateIntervalMs);
+            }
+
+            // Ensure we reach 100%
+            if (_statusProgressBar != null)
+            {
+                _statusProgressBar.Value = 100;
+            }
+
+            // Final duration update
+            if (_timeTextBlock != null)
+            {
+                TimeSpan totalDuration = DateTime.Now - startTime;
+                _timeTextBlock.Text = $"Duration: {totalDuration.TotalSeconds:F1}s (Complete)";
+            }
 
             // Example of actual implementation:
             // var sensorData = await _dataReader.ReadAllSensorsAsync();

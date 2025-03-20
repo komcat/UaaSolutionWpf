@@ -6,12 +6,167 @@ using System.Threading.Tasks;
 using System.Windows;
 using MotionServiceLib;
 using EzIIOLib;
+using Serilog.Core;
+using System.Windows.Controls;
 
 namespace UaaSolutionWpf
 {
     // Implementation for VisionMotionWindow.RunSequence.cs
     public partial class VisionMotionWindow
     {
+
+        private string serialnumberDUT= "";
+
+        private void SerialNumberDialog()
+        {
+            // Create a new window
+            Window dialog = new Window
+            {
+                Title = "Enter Serial Number",
+                Width = 350,
+                Height = 150,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Application.Current.MainWindow,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.ToolWindow
+            };
+
+            // Create the layout
+            Grid grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Auto) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Auto) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Auto) });
+
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            // Create label
+            Label label = new Label
+            {
+                Content = "Serial Number:",
+                Margin = new Thickness(10, 10, 5, 5),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetRow(label, 0);
+            Grid.SetColumn(label, 0);
+
+            // Create text box
+            TextBox textBox = new TextBox
+            {
+                Margin = new Thickness(5, 10, 10, 5),
+                Height = 25,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            Grid.SetRow(textBox, 0);
+            Grid.SetColumn(textBox, 1);
+
+            // Create button stack panel
+            StackPanel buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 10, 10)
+            };
+            Grid.SetRow(buttonPanel, 2);
+            Grid.SetColumn(buttonPanel, 0);
+            Grid.SetColumnSpan(buttonPanel, 2);
+
+            // Create OK button
+            Button okButton = new Button
+            {
+                Content = "OK",
+                Width = 75,
+                Height = 25,
+                Margin = new Thickness(0, 0, 10, 0),
+                IsDefault = true
+            };
+
+            // Create Cancel button
+            Button cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 75,
+                Height = 25,
+                IsCancel = true
+            };
+
+            // Add buttons to panel
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            // Add controls to grid
+            grid.Children.Add(label);
+            grid.Children.Add(textBox);
+            grid.Children.Add(buttonPanel);
+
+            // Set grid as content
+            dialog.Content = grid;
+
+            // Set dialog result
+            bool? result = false;
+            okButton.Click += (s, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(textBox.Text))
+                {
+                    // Store the serial number for later use
+                    string serialNumber = textBox.Text.Trim();
+
+                    // Here you would typically set a property or variable with the serial number
+                    // For example:
+                    // this.SerialNumber = serialNumber;
+                    this.serialnumberDUT = serialNumber;
+
+
+                    result = true;
+                    dialog.Close();
+                }
+                else
+                {
+                    MessageBox.Show("Please enter a valid serial number.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            };
+
+            cancelButton.Click += (s, e) =>
+            {
+                result = false;
+                dialog.Close();
+            };
+
+            // Set focus to the text box
+            dialog.Loaded += (s, e) => textBox.Focus();
+
+            // Show dialog
+            dialog.ShowDialog();
+
+
+        }
+
+        private void InitializeButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                serialnumberDUT="";
+                // Popup dialog box to enter serial number
+                SerialNumberDialog();
+
+                if (serialnumberDUT.Length>=1)
+                {
+                    SerialNumberText.Text = serialnumberDUT;
+                    SetStatus($"Serial Number entered {serialnumberDUT}.");
+                }
+                else
+                {
+                    SetStatus("Serial Number not entered.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error in InitializeButton_Click");
+                SetStatus("Error initializing motion system");
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         //// <summary>
         /// Resets all motion devices (gantry and hexapods) to their home positions using shortest path
         /// </summary>
@@ -237,11 +392,13 @@ namespace UaaSolutionWpf
             if (Dispatcher.CheckAccess())
             {
                 StatusBarTextBlock.Text = status;
+                _logger.Information("<status>:"+status);
             }
             else
             {
                 // Otherwise, invoke on the UI thread
                 Dispatcher.Invoke(() => StatusBarTextBlock.Text = status);
+                _logger.Information("<status>:" + status);
             }
         }
 
@@ -250,6 +407,8 @@ namespace UaaSolutionWpf
         /// </summary>
         private async void MovetoProbesButton_Click(object sender, RoutedEventArgs e)
         {
+
+            MovetoProbesButton.Background = System.Windows.Media.Brushes.Orange;
             try
             {
                
@@ -348,6 +507,8 @@ namespace UaaSolutionWpf
                 SetStatus("Error moving to probe positions");
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+
+            MovetoProbesButton.Background = System.Windows.Media.Brushes.LightGreen;
         }
     }
 }

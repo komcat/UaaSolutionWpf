@@ -1,0 +1,35 @@
+﻿<UserControl x:Class="UaaSolutionWpf.Controls.PlayPauseButtons"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="80" d:DesignWidth="150">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <!-- Play Button -->
+        <Button x:Name="PlayButton" Width="60" Height="60" Margin="5" Click="PlayButton_Click">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse Fill="#4CAF50" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Button.Template>
+            <TextBlock Text="▶" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Button>
+
+        <!-- Pause Button -->
+        <Button x:Name="PauseButton" Width="60" Height="60" Margin="5" Click="PauseButton_Click">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse Fill="#F44336" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                </ControlTemplate>
+            </Button.Template>
+            <TextBlock Text="⏸" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Button>
+    </StackPanel>
+</UserControl>

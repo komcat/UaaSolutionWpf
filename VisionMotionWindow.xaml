@@ -65,7 +65,7 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="300"/>
-                        <ColumnDefinition Width="300"/> 
+                        <ColumnDefinition Width="250"/> 
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -80,8 +80,8 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    
-                    <Button x:Name="RestHomeButton" Content="Reset To Home" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="RestHomeButton_Click"/>
+
+                    <Button x:Name="InitializeButton" Content="Initialize sn" Grid.Column="0" Grid.Row="0" Margin="5" Padding="5" Click="InitializeButton_Click"/>
                     <Button x:Name="MovetoProbesButton" Content="Move to Probes SLED/PIC" Grid.Column="0" Grid.Row="1" Margin="5" Padding="5" Click="MovetoProbesButton_Click"/>
                     <Button x:Name="PickLeftLensButton" Content="Pick/Place Left Lens" Grid.Column="0" Grid.Row="2" Margin="5" Padding="5" Click="PickLeftLensButton_Click"/>
                     <Button x:Name="PickRightLensButton" Content="Pick/Place Right Lens" Grid.Column="0" Grid.Row="3" Margin="5" Padding="5" Click="PickRightLensButton_Click"/>
@@ -89,9 +89,16 @@
                     <Button x:Name="ExecuteUVButton" IsEnabled="false" Content="Execute UV curing" Grid.Column="0" Grid.Row="5" Margin="5" Padding="5" Click="ExecuteUVButton_Click"/>
                     <Button x:Name="UnloadButton" IsEnabled="false" Content="Unload parts" Grid.Column="0" Grid.Row="6" Margin="5" Padding="5" Click="UnloadButton_Click"/>
 
+                    <TextBlock x:Name="SerialNumberText" Grid.Column="1" Grid.Row="3" Margin="5" Padding="5" Text="SN=" FontWeight="Bold" FontSize="24"/>
                     <TextBlock x:Name="DryValueText" Grid.Column="1" Grid.Row="4" Margin="5" Padding="5" Text="dry=" FontWeight="Bold" FontSize="24"/>
                     <TextBlock x:Name="UvValueText" Grid.Column="1" Grid.Row="5" Margin="5" Padding="5" Text="af_uv=" FontWeight="Bold" FontSize="24"/>
                     <TextBlock x:Name="UvValueText2" Grid.Column="1" Grid.Row="6" Margin="5" Padding="5" Text="af_uv2=" FontWeight="Bold" FontSize="24"/>
+
+
+                    <Button x:Name="RestHomeButton" Content="Reset To Home" Grid.Column="1" Grid.Row="0" Margin="5" Padding="5" Click="RestHomeButton_Click"/>
+
+                    <Button x:Name="RejectLeftButton" Content="← Reject left lens ←" Background="PaleGoldenrod" Grid.Column="2" Grid.Row="0" Click="RejectLeftButton_Click"/>
+                    <Button x:Name="RejectRightButton" Content="→ Reject right lens →" Background="PaleGoldenrod" Grid.Column="2" Grid.Row="1" Click="RejectRightButton_Click"/>
                 </Grid>
             </TabItem>
 
@@ -365,6 +372,61 @@
                     <StackPanel Grid.Row="0" Margin="0,0,0,10"/>
 
 
+                </Grid>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Workflow" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Status Area -->
+                    <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="0,0,0,1" Padding="10">
+                        <StackPanel>
+                            <TextBlock x:Name="StatusTextBlock" Text="Initializing workflow..." FontWeight="Bold" />
+                            <ProgressBar x:Name="StatusProgressBar" Height="10" Margin="0,5,0,0" />
+                            <TextBlock x:Name="TimeTextBlock" Text="" Margin="0,5,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Workflow Buttons Area -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10">
+                        <StackPanel x:Name="WorkflowButtonPanel">
+                            <!-- Buttons will be added dynamically -->
+
+                            <!-- Example of what the play/pause buttons would look like -->
+                            <Border BorderBrush="LightGray" BorderThickness="1" Margin="0,10,0,0" Padding="10" Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Width="60" Height="60" Margin="5" Background="ForestGreen">
+                                        <TextBlock Text="▶" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                    <Button Width="60" Height="60" Margin="5" Background="Crimson">
+                                        <TextBlock Text="⏸" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Reset Button -->
+                    <Border Grid.Row="2" BorderBrush="LightGray" BorderThickness="0,1,0,0" Padding="10">
+                        <Button Content="Reset Workflow" Click="ResetWorkflow_Click" Width="120" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <!-- Log Area -->
+                    <Expander Grid.Row="3" Header="Operation Log" IsExpanded="False">
+                        <TextBox x:Name="LogTextBox" IsReadOnly="True" Height="100" TextWrapping="Wrap" 
+                     VerticalScrollBarVisibility="Auto" />
+                    </Expander>
                 </Grid>
             </TabItem>
         </TabControl>

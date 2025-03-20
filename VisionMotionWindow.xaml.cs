@@ -112,17 +112,20 @@ namespace UaaSolutionWpf
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // Initialize UI state
-            StatusBarTextBlock.Text = "Ready to initialize motion system";
-
+            SetStatus("Start initialization...");
+            await Task.Delay(3000); 
             // Ensure device transformations file exists
             EnsureDeviceTransformationsFile();
+            SetStatus("Check device axis transformation file.");
+
 
             // Initialize IO monitors
             InitializeIOMonitors();
+            SetStatus("initialized IO monitors.");
 
             pneumaticSlideManager = new PneumaticSlideManager(deviceManager);
             pneumaticSlideManager.InitSlides();
-
+            SetStatus("initialized pneumatic slide manager.");
 
             // In your initialization method
             miniSlideControl = new MiniPneumaticSlideControl
@@ -140,49 +143,62 @@ namespace UaaSolutionWpf
 
             // Add to your UI
             QuickSlidesPanel.Children.Add(miniSlideControl);
+            SetStatus("initialized mini slide control.");
+
 
             // Initialize toggle switches for quick access
             InitializeToggleSwitches();
+            SetStatus("initialized toggle switches.");
 
             // Initialize stats update timer
             InitializeStatsUpdateTimer();
+            SetStatus("initialized stats update timer.");
 
             //how to click InitializeMotionSystem_Click??
             // Programmatically invoke the InitializeMotionSystem_Click method
             InitializeMotionSystem_Click(this, new RoutedEventArgs());
-
-
             await Task.Delay(3000);
-
+            SetStatus("initialized motion system.");
 
 
 
             ConnectCamera_Click(this, new RoutedEventArgs());
             await Task.Delay(2000);
-
+            SetStatus("initialized camera.");
 
 
 
 
             StartLiveView_Click(this, new RoutedEventArgs());
             await Task.Delay(1000);
+            SetStatus("started live view.");
+
 
             // Initialize the static crosshair
             InitializeCrosshair();
+            SetStatus("initialized crosshair.");
+
 
             InitializeSliderEvents();
             LoadRealTimeDataChannels();
-
+            SetStatus("initialized real time data channels.");
             // initialize the AutoAlignmentControl
             AutoAlignmentControl.Initialize(_motionKernel, realTimeDataManager, _logger);
             AutoAlignmentControl.SetDataChannel("Keithley Current");
+            SetStatus("initialized auto alignment control.");
 
-
-
+            await Task.Delay(1000);
             SetPivotPoint_Left();
             await Task.Delay(1000);
             SetPivotPoint_Right();
-            await Task.Delay(1000);
+            SetStatus("initialized pivot points.");
+
+
+            InitializeWorkflow();
+            SetStatus("initialized workflow.");
+
+
+            SetStatus("Initialization complete. System is ready");
         }
 
 

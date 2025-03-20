@@ -92,7 +92,6 @@ namespace UaaSolutionWpf
                 if (!gantrySuccess)
                 {
                     SetStatus("Failed to move gantry to right lens pickup position");
-                    _logger.Warning("Failed to move gantry to right lens pickup position");
                     return;
                 }
 
@@ -113,67 +112,58 @@ namespace UaaSolutionWpf
                         _logger.Information("Successfully moved hexapod to right grip location");
                     }
                 }
+                SetStatus("Confirm to grip");
+				var gripConfirm = MessageBox.Show("Confirm to grip", "Confirm", MessageBoxButton.OKCancel, MessageBoxImage.Information);
 
-                // 5. Perform grip
-                // Small delay to ensure grip is secure
-                await Task.Delay(500);
-                SetStatus("Activating right gripper...");
-                bool gripSuccess = deviceManager.SetOutput("IOBottom", gripper);
+				if (gripConfirm == MessageBoxResult.OK)
+				{
+					SetStatus("Right lens gripped successfully");
+					RightGripperStatusText.Text = "Gripping";
+					_logger.Information("Right lens gripped successfully");
+					// 5. Perform grip
+					// Small delay to ensure grip is secure
+					await Task.Delay(500);
+					SetStatus("Activating right gripper...");
+					bool gripSuccess = deviceManager.SetOutput("IOBottom", gripper);
+					await Task.Delay(500);
+					deviceManager.ClearOutput("IOBottom", gripper);
+					await Task.Delay(500);
+					deviceManager.SetOutput("IOBottom", gripper);
+					await Task.Delay(500);
+					// 6. Move hexapod to place location (if available)
+					if (!string.IsNullOrEmpty(hexapodId))
+					{
+						SetStatus("Moving hexapod to right place location...");
+						bool hexapodSuccess = await _motionKernel.MoveToDestinationShortestPathAsync(hexapodId, "LensPlace");
 
-                if (gripSuccess)
-                {
-                    SetStatus("Right lens gripped successfully");
-                    RightGripperStatusText.Text = "Gripping";
-                    _logger.Information("Right lens gripped successfully");
+						if (!hexapodSuccess)
+						{
+							_logger.Warning("Failed to move hexapod to right place location");
+						}
+						else
+						{
+							_logger.Information("Successfully moved hexapod to right place location");
+						}
+					}
 
-                    var gripConfirm = MessageBox.Show("Confirm to grip", "Confirm", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+					// 7. Move gantry to place location
+					SetStatus("Moving gantry to right lens placement position...");
+					bool placeSuccess = await _motionKernel.MoveToDestinationShortestPathAsync(gantryId, "SeeFocusLens");
 
-                    if (gripConfirm == MessageBoxResult.OK)
-                    {
+					if (!placeSuccess)
+					{
+						SetStatus("Failed to move gantry to right lens placement position");
+						_logger.Warning("Failed to move gantry to right lens placement position");
+						return;
+					}
 
-                        deviceManager.ClearOutput("IOBottom", gripper);
-                        await Task.Delay(1000);
-                        deviceManager.SetOutput("IOBottom", gripper);
-                        await Task.Delay(500);
-                    }
-                }
-                else
-                {
-                    SetStatus($"Failed to activate right {gripper}");
-                    _logger.Warning($"Failed to activate right {gripper}");
-                    return;
-                }
-
-                // 6. Move hexapod to place location (if available)
-                if (!string.IsNullOrEmpty(hexapodId))
-                {
-                    SetStatus("Moving hexapod to right place location...");
-                    bool hexapodSuccess = await _motionKernel.MoveToDestinationShortestPathAsync(hexapodId, "LensPlace");
-
-                    if (!hexapodSuccess)
-                    {
-                        _logger.Warning("Failed to move hexapod to right place location");
-                    }
-                    else
-                    {
-                        _logger.Information("Successfully moved hexapod to right place location");
-                    }
-                }
-
-                // 7. Move gantry to place location
-                SetStatus("Moving gantry to right lens placement position...");
-                bool placeSuccess = await _motionKernel.MoveToDestinationShortestPathAsync(gantryId, "SeeFocusLens");
-
-                if (!placeSuccess)
-                {
-                    SetStatus("Failed to move gantry to right lens placement position");
-                    _logger.Warning("Failed to move gantry to right lens placement position");
-                    return;
-                }
-
-                _logger.Information("Successfully moved gantry to right lens placement position");
-
-                
+					_logger.Information("Successfully moved gantry to right lens placement position");
+				}
+				else
+				{
+					SetStatus("Left lens pick/place sequence cancelled");
+				}
+                                
             }
             catch (Exception ex)
             {

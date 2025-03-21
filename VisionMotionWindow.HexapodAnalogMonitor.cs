@@ -51,6 +51,12 @@ namespace UaaSolutionWpf
         // Make sure to stop monitoring when the window is closing
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            _cameraManager.StopLiveView();
+            _cameraManager.Dispose();
+
+            tecController?.Dispose();
+            keithleyCurrentControl?.Dispose();
+
             // Stop monitoring
             if (LeftHexapodMonitor.Controller != null)
                 LeftHexapodMonitor.Controller.StopAnalogMonitoring();

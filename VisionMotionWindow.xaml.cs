@@ -113,7 +113,7 @@ namespace UaaSolutionWpf
         {
             // Initialize UI state
             SetStatus("Start initialization...");
-            await Task.Delay(3000); 
+            await Task.Delay(3000);
             // Ensure device transformations file exists
             EnsureDeviceTransformationsFile();
             SetStatus("Check device axis transformation file.");
@@ -157,6 +157,8 @@ namespace UaaSolutionWpf
             //how to click InitializeMotionSystem_Click??
             // Programmatically invoke the InitializeMotionSystem_Click method
             InitializeMotionSystem_Click(this, new RoutedEventArgs());
+
+
             await Task.Delay(3000);
             SetStatus("initialized motion system.");
 
@@ -198,68 +200,86 @@ namespace UaaSolutionWpf
             SetStatus("initialized workflow.");
 
 
+            InitializeHexapodAnalogInput();
+
+
             SetStatus("Initialization complete. System is ready");
+
+
+
         }
 
-
-        private async void SetPivotPoint_Left()
+        #region Hexapod Analog Input
+        private void InitializeHexapodAnalogInput()
         {
-            // Get the left hexapod device
-            string devicename = "hex-left";
-            var hexdevice = GetDeviceByName(devicename);
-
-            if (hexdevice != null)
+            MotionDevice lefthex = GetDeviceByName("hex-left");
+            // Assign controllers to the pre-defined controls
+            var leftHexapod = GetHexapodController(lefthex.Id); // ID of your left hexapod
+            if (leftHexapod != null)
             {
-                // Set pivot point to (0, 0, 0)
-                bool success = await _motionKernel.SetHexapodPivotPointAsync(hexdevice.Id, -12.95, 0, 109.75);
-
-                if (success)
-                {
-                    Log.Information($"{devicename} Pivot point set successfully!", "Success");
-                }
-                else
-                {
-                    MessageBox.Show("Failed to set pivot point.", "Error");
-                }
-                await Task.Delay(1000);
-                await _motionKernel.GetHexapodPivotPointAsync(hexdevice.Id);
-            }
-            else
-            {
-                MessageBox.Show("Left hexapod device not found.", "Error");
+                // Assign the controller to the monitor user control
+                LeftHexapodMonitor.Controller = leftHexapod;
             }
 
-            
+            MotionDevice righthex = GetDeviceByName("hex-right");
 
+            var rightHexapod = GetHexapodController(righthex.Id); // ID of your right hexapod
+            if (rightHexapod != null)
+            {
+                // Assign the controller to the monitor user control
+                RightHexapodMonitor.Controller = rightHexapod;
+            }
+            // In your initialization code
+            LeftHexapodMonitor.AnalogDataUpdated += OnHexapodAnalogDataUpdated;
+            RightHexapodMonitor.AnalogDataUpdated += OnHexapodAnalogDataUpdated;
         }
-        private async void SetPivotPoint_Right()
+
+        private void OnHexapodAnalogDataUpdated(object sender, AnalogChannelUpdateEventArgs e)
         {
-            // Get the left hexapod device
-            string devicename = "hex-right";
-            var hexdevice = GetDeviceByName(devicename);
+            // Determine which hexapod sent the update
+            string hexapodName = "unknown";
 
-            if (hexdevice != null)
+            if (sender == LeftHexapodMonitor)
             {
-                // Set pivot point to (0, 0, 0)
-                bool success = await _motionKernel.SetHexapodPivotPointAsync(hexdevice.Id, -12.95, 0, 109.75);
+                hexapodName = "hex-left";
 
-                if (success)
+                // Extract values for each channel and update individually
+                if (e.ChannelValues.TryGetValue(5, out double ch5Value))
                 {
-                    Log.Information($"{devicename} Pivot point set successfully!", "Success");
-                }
-                else
-                {
-                    MessageBox.Show("Failed to set pivot point.", "Error");
+                    realTimeDataManager.UpdateChannelValue("hex-left-ch5", ch5Value);
                 }
 
-                await Task.Delay(1000);
-                await _motionKernel.GetHexapodPivotPointAsync(hexdevice.Id);
+                if (e.ChannelValues.TryGetValue(6, out double ch6Value))
+                {
+                    realTimeDataManager.UpdateChannelValue("hex-left-ch6", ch6Value);
+                }
             }
-            else
+            else if (sender == RightHexapodMonitor)
             {
-                MessageBox.Show("Left hexapod device not found.", "Error");
+                hexapodName = "hex-right";
+
+                // Extract values for each channel and update individually
+                if (e.ChannelValues.TryGetValue(5, out double ch5Value))
+                {
+                    realTimeDataManager.UpdateChannelValue("hex-right-ch5", ch5Value);
+                }
+
+                if (e.ChannelValues.TryGetValue(6, out double ch6Value))
+                {
+                    realTimeDataManager.UpdateChannelValue("hex-right-ch6", ch6Value);
+                }
             }
+
+            // Optionally log the update
+            //Console.WriteLine($"Updated analog values for {hexapodName}: Channel 5={e.ChannelValues.GetValueOrDefault(5)}, Channel 6={e.ChannelValues.GetValueOrDefault(6)}");
         }
+
+        #endregion
+
+        // Shared event handler
+
+
+        #region realtime data channels
         private void Data_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName.StartsWith("Measurement_"))
@@ -377,6 +397,9 @@ namespace UaaSolutionWpf
             // Apply the color to the progress bar's foreground
             progressBar.Foreground = new SolidColorBrush(progressColor);
         }
+
+        #endregion
+
         private async void InitializeKeithleyControl()
         {
             try
@@ -513,6 +536,64 @@ namespace UaaSolutionWpf
 
                 MessageBox.Show($"Error stopping devices: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        private async void SetPivotPoint_Left()
+        {
+            // Get the left hexapod device
+            string devicename = "hex-left";
+            var hexdevice = GetDeviceByName(devicename);
+
+            if (hexdevice != null)
+            {
+                // Set pivot point to (0, 0, 0)
+                bool success = await _motionKernel.SetHexapodPivotPointAsync(hexdevice.Id, -12.95, 0, 109.75);
+
+                if (success)
+                {
+                    Log.Information($"{devicename} Pivot point set successfully!", "Success");
+                }
+                else
+                {
+                    MessageBox.Show("Failed to set pivot point.", "Error");
+                }
+                await Task.Delay(1000);
+                await _motionKernel.GetHexapodPivotPointAsync(hexdevice.Id);
+            }
+            else
+            {
+                MessageBox.Show("Left hexapod device not found.", "Error");
+            }
+
+
+
+        }
+        private async void SetPivotPoint_Right()
+        {
+            // Get the left hexapod device
+            string devicename = "hex-right";
+            var hexdevice = GetDeviceByName(devicename);
+
+            if (hexdevice != null)
+            {
+                // Set pivot point to (0, 0, 0)
+                bool success = await _motionKernel.SetHexapodPivotPointAsync(hexdevice.Id, -12.95, 0, 109.75);
+
+                if (success)
+                {
+                    Log.Information($"{devicename} Pivot point set successfully!", "Success");
+                }
+                else
+                {
+                    MessageBox.Show("Failed to set pivot point.", "Error");
+                }
+
+                await Task.Delay(1000);
+                await _motionKernel.GetHexapodPivotPointAsync(hexdevice.Id);
+            }
+            else
+            {
+                MessageBox.Show("Left hexapod device not found.", "Error");
             }
         }
 

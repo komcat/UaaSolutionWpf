@@ -57,18 +57,32 @@
       "Target": 0
     },
     {
-      "ChannelName": "PICH5",
+      "ChannelName": "hex-left-ch5",
       "Id": 8,
       "Value": 0,
       "Unit": "V",
-      "Target": 0
+      "Target": 5
     },
     {
-      "ChannelName": "PICH6",
+      "ChannelName": "hex-left-ch6",
       "Id": 9,
       "Value": 0,
       "Unit": "V",
-      "Target": 0
+      "Target": 5
+    },
+    {
+      "ChannelName": "hex-right-ch5",
+      "Id": 10,
+      "Value": 0,
+      "Unit": "V",
+      "Target": 5
+    },
+    {
+      "ChannelName": "hex-right-ch6",
+      "Id": 11,
+      "Value": 0,
+      "Unit": "V",
+      "Target": 5
     }
   ],
   "GlobalSettings": {

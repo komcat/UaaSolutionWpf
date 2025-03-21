@@ -7,10 +7,11 @@
         xmlns:tcm="clr-namespace:testConfigurableMachine;assembly=testConfigurableMachine"
         xmlns:controls="clr-namespace:UaaSolutionWpf.Controls"
         xmlns:eziiolibs="clr-namespace:EzIIOLibControl.Controls;assembly=EzIIOLibControl"
+        xmlns:motionlibControls="clr-namespace:MotionServiceLib.Controls;assembly=MotionServiceLib"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
         Title="Vision Motion Control System" Height="855" Width="1600"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid Margin="0,0,0,8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="800" />
@@ -375,6 +376,7 @@
                 </Grid>
             </TabItem>
 
+            <!--workflow-->
             <TabItem>
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
@@ -427,6 +429,29 @@
                         <TextBox x:Name="LogTextBox" IsReadOnly="True" Height="100" TextWrapping="Wrap" 
                      VerticalScrollBarVisibility="Auto" />
                     </Expander>
+                </Grid>
+            </TabItem>
+
+            <!--analog input-->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Analog Input" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="AnalogHexapodPanel">
+                        <!--list analoghexapodmonitor here-->
+                        <motionlibControls:HexapodAnalogMonitorControl x:Name="LeftHexapodMonitor" 
+                                         Margin="0,0,0,10"/>
+                        <motionlibControls:HexapodAnalogMonitorControl x:Name="RightHexapodMonitor" 
+                                         Margin="0,0,0,10"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>

@@ -22,7 +22,7 @@
       "Target": 0.0007
     },
     {
-      "ChannelName": "Keithley Current (tcp)",
+      "ChannelName": "TCP_GPIB-Current",
       "Id": 3,
       "Value": 0,
       "Unit": "A",

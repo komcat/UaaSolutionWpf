@@ -454,6 +454,49 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
+            
+            <!--data client receiver-->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Images/data.png" Width="60" Height="60" Margin="1"/>                        
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header with buttons -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
+                        <Button x:Name="ConnectAllServersButton" Content="Connect All" 
+                    Padding="10,5,10,5" Margin="0,0,10,0" Click="ConnectAllServersButton_Click"/>
+                        <Button x:Name="DisconnectAllServersButton" Content="Disconnect All" 
+                    Padding="10,5,10,5" Margin="0,0,10,0" Click="DisconnectAllServersButton_Click"/>
+                        <Button x:Name="AddServerButton" Content="Add Server" 
+                    Padding="10,5,10,5" Margin="0,0,10,0" Click="AddServerButton_Click"/>
+                        <Button x:Name="RefreshServersButton" Content="Refresh" 
+                    Padding="10,5,10,5" Click="RefreshServersButton_Click"/>
+                    </StackPanel>
+
+                    <!-- Server list -->
+                    <ScrollViewer Grid.Row="1" x:Name="ServerListScrollViewer" 
+                      VerticalScrollBarVisibility="Auto" Margin="10,0,10,10">
+                        <StackPanel x:Name="ServerListPanel"/>
+                    </ScrollViewer>
+
+                    <!-- Log header -->
+                    <TextBlock Grid.Row="2" Text="Data Log" FontWeight="Bold" Margin="10,5,10,5"/>
+
+                    <!-- Log text box -->
+                    <TextBox Grid.Row="3" x:Name="DataLogTextBox" IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" Margin="10,0,10,10"/>
+                </Grid>
+            </TabItem>
         </TabControl>
 
         <!-- Initialize Button Panel -->

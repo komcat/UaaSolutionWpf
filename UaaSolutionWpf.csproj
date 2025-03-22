@@ -27,6 +27,7 @@
   <ItemGroup>
     <None Remove="globalAxis.png" />
     <None Remove="Images\axis.png" />
+    <None Remove="Images\data.png" />
     <None Remove="Images\Hex-bottom.png" />
     <None Remove="Images\IO.png" />
     <None Remove="Images\maintenance.jpg" />
@@ -75,6 +76,9 @@
     </Resource>
     <Resource Include="Images\axis.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\data.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Images\Hex-bottom.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -135,6 +139,9 @@
     <None Update="Config\channelconfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Config\DataServerConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Config\DeviceTransformations.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -192,6 +199,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DataClient\DataClient\DataClient.csproj" />
     <ProjectReference Include="..\EzIIOLibControl\EzIIOLibControl.csproj" />
     <ProjectReference Include="..\EzIIOLib\EzIIOLib.csproj" />
     <ProjectReference Include="..\GPIBKeithleyCurrentMeasurement\GPIBKeithleyCurrentMeasurement.csproj" />

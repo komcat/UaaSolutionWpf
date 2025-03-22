@@ -202,6 +202,20 @@ namespace UaaSolutionWpf
 
             InitializeHexapodAnalogInput();
 
+            SetStatus("Data clients intiailize start");
+            // First set up the UI tab to create the _serverListPanel
+            SetupDataClientTab();
+
+            // Then initialize the data client which will use the UI elements
+            InitializeDataClient();
+
+            // Wait for initialization to complete
+            await Task.Delay(1000);
+
+            // Register channels
+            RegisterDataClientChannels();
+
+            SetStatus("Data Client initialized.");
 
             SetStatus("Initialization complete. System is ready");
 

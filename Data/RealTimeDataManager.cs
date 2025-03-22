@@ -146,6 +146,81 @@ namespace UaaSolutionWpf.Data
                 _configLock.ExitReadLock();
             }
         }
+
+        /// <summary>
+        /// Checks if a channel is registered with this name
+        /// </summary>
+        /// <param name="channelName">The name of the channel to check</param>
+        /// <returns>True if the channel exists, false otherwise</returns>
+        public bool IsChannelRegistered(string channelName)
+        {
+            if (string.IsNullOrEmpty(channelName))
+            {
+                return false;
+            }
+
+            _configLock.EnterReadLock();
+            try
+            {
+                return _channelConfigs.ContainsKey(channelName);
+            }
+            finally
+            {
+                _configLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Adds a new channel to the configuration
+        /// </summary>
+        /// <param name="channelName">Unique identifier for the channel</param>
+        /// <param name="displayName">Human-readable name for the channel</param>
+        /// <param name="targetValue">Target value for the channel</param>
+        /// <param name="unit">Unit of measurement for the channel</param>
+        /// <returns>True if added successfully, false if the channel already exists</returns>
+        public bool AddChannel(string channelName, string displayName, double targetValue, string unit)
+        {
+            if (string.IsNullOrEmpty(channelName))
+            {
+                _logger.Warning("Attempted to add channel with null or empty name");
+                return false;
+            }
+
+            // Create the channel configuration
+            var channelConfig = new ChannelConfig
+            {
+                ChannelName = channelName,
+                // Generate a new ID as the max ID + 1, or 0 if no channels exist
+                Id = _channelConfigs.Values.Count > 0 ? _channelConfigs.Values.Max(c => c.Id) + 1 : 0,
+                Value = 0,
+                Target = targetValue,
+                Unit = unit
+            };
+
+            // Use write lock to safely update configuration
+            _configLock.EnterWriteLock();
+            try
+            {
+                // Only add if the channel doesn't already exist
+                if (_channelConfigs.TryAdd(channelName, channelConfig))
+                {
+                    _logger.Information("Added new channel: {ChannelName} with target {Target} {Unit}",
+                        channelName, targetValue, unit);
+                    return true;
+                }
+                else
+                {
+                    _logger.Warning("Channel {ChannelName} already exists, not added", channelName);
+                    return false;
+                }
+            }
+            finally
+            {
+                _configLock.ExitWriteLock();
+            }
+        }
+
+
         private void LoadConfiguration(string configPath)
         {
             try

@@ -515,6 +515,8 @@ namespace UaaSolutionWpf
 
                 bool success = await _motionKernel.StopAllDevicesAsync();
 
+                // Also call the regular stop method
+                await _motionKernel.StopAllDevicesAsync();
                 // Update UI state
                 if (success)
                 {

@@ -2,6 +2,7 @@
 using Serilog;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -141,26 +142,26 @@ namespace UaaSolutionWpf
                 camera.Open();
 
                 // Configure auto exposure
-                if (camera.Parameters.Contains(PLCamera.ExposureAuto))
-                {
-                    camera.Parameters[PLCamera.ExposureAuto].SetValue(PLCamera.ExposureAuto.Continuous);
-                    _logger.Information("Set Exposure Auto to Continuous");
-                }
-                else
-                {
-                    _logger.Warning("Camera does not support ExposureAuto parameter");
-                }
+                //if (camera.Parameters.Contains(PLCamera.ExposureAuto))
+                //{
+                //    camera.Parameters[PLCamera.ExposureAuto].SetValue(PLCamera.ExposureAuto.Continuous);
+                //    _logger.Information("Set Exposure Auto to Continuous");
+                //}
+                //else
+                //{
+                //    _logger.Warning("Camera does not support ExposureAuto parameter");
+                //}
 
-                // Configure auto gain
-                if (camera.Parameters.Contains(PLCamera.GainAuto))
-                {
-                    camera.Parameters[PLCamera.GainAuto].SetValue(PLCamera.GainAuto.Continuous);
-                    _logger.Information("Set Gain Auto to Continuous");
-                }
-                else
-                {
-                    _logger.Warning("Camera does not support GainAuto parameter");
-                }
+                //// Configure auto gain
+                //if (camera.Parameters.Contains(PLCamera.GainAuto))
+                //{
+                //    camera.Parameters[PLCamera.GainAuto].SetValue(PLCamera.GainAuto.Continuous);
+                //    _logger.Information("Set Gain Auto to Continuous");
+                //}
+                //else
+                //{
+                //    _logger.Warning("Camera does not support GainAuto parameter");
+                //}
 
                 // Configure other camera parameters
                 ConfigureCamera();
@@ -188,7 +189,7 @@ namespace UaaSolutionWpf
                     // Set acquisition frame rate if supported
                     if (camera.Parameters.Contains(PLCamera.AcquisitionFrameRate))
                     {
-                        camera.Parameters[PLCamera.AcquisitionFrameRate].SetValue(MaxFrameRate);
+                        camera.Parameters[PLCamera.AcquisitionFrameRate].SetValue(5);
                     }
 
                     // Set Region of Interest if needed
@@ -260,6 +261,80 @@ namespace UaaSolutionWpf
             {
                 _logger.Error(ex, "Error stopping live view");
                 throw;
+            }
+        }
+
+
+        public WriteableBitmap GetCurrentFrame(int timeout = 2000)
+        {
+            _logger.Information("Attempting to get current frame from camera");
+
+            if (camera == null || !camera.IsOpen)
+            {
+                _logger.Warning("Cannot get frame: Camera is not initialized or opened");
+                return null;
+            }
+
+            try
+            {
+                // Check if we're already in live view mode
+                bool isInLiveView = camera.StreamGrabber.IsGrabbing && isProcessing;
+
+                if (isInLiveView)
+                {
+                    // If we're in live view, just return the current image
+                    lock (imageLock)
+                    {
+                        if (currentImage != null)
+                        {
+                            _logger.Information("Returning current live view image");
+                            return currentImage.Clone();
+                        }
+                    }
+
+                    // If somehow we don't have a current image yet, wait for one
+                    using (var frameReceived = new ManualResetEventSlim(false))
+                    {
+                        WriteableBitmap capturedFrame = null;
+
+                        EventHandler<ImageUpdatedEventArgs> updateHandler = null;
+                        updateHandler = (sender, e) =>
+                        {
+                            capturedFrame = e.Image.Clone();
+                            frameReceived.Set();
+                        };
+
+                        try
+                        {
+                            ImageUpdated += updateHandler;
+
+                            if (frameReceived.Wait(timeout))
+                            {
+                                _logger.Information("Successfully captured frame from live view");
+                                return capturedFrame;
+                            }
+                            else
+                            {
+                                _logger.Warning("Timeout waiting for live view frame");
+                                return null;
+                            }
+                        }
+                        finally
+                        {
+                            ImageUpdated -= updateHandler;
+                        }
+                    }
+                }
+                else
+                {
+                    // If not in live view, fall back to Snap method
+                    return Snap(timeout);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error getting current frame");
+                return null;
             }
         }
 
@@ -557,6 +632,79 @@ namespace UaaSolutionWpf
 
 
         }
+
+
+        /// <summary>
+        /// Saves the current camera image to a file
+        /// </summary>
+        /// <param name="filePath">Full path where to save the image</param>
+        /// <param name="fileFormat">Image format (png, jpeg, bmp, etc.)</param>
+        /// <param name="takeNewSnapshot">If true, captures a new image; if false, uses the current image</param>
+        /// <returns>True if the save was successful, false otherwise</returns>
+        public bool SaveImageToFile(string filePath, string fileFormat = "png", bool takeNewSnapshot = true)
+        {
+            try
+            {
+                _logger.Information("Attempting to save camera image to file: {FilePath}", filePath);
+
+                // Use the hybrid method to get a frame
+                WriteableBitmap imageToSave = GetCurrentFrame(5000);
+
+                if (imageToSave == null)
+                {
+                    _logger.Error("Failed to capture image for saving");
+                    return false;
+                }
+
+                // Create encoder based on specified format
+                BitmapEncoder encoder;
+                switch (fileFormat.ToLower())
+                {
+                    case "png":
+                        encoder = new PngBitmapEncoder();
+                        break;
+                    case "jpeg":
+                    case "jpg":
+                        encoder = new JpegBitmapEncoder { QualityLevel = 90 }; // High quality JPEG
+                        break;
+                    case "bmp":
+                        encoder = new BmpBitmapEncoder();
+                        break;
+                    case "tiff":
+                    case "tif":
+                        encoder = new TiffBitmapEncoder();
+                        break;
+                    default:
+                        encoder = new PngBitmapEncoder();
+                        break;
+                }
+
+                // Create directory if it doesn't exist
+                string directory = Path.GetDirectoryName(filePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                    _logger.Information("Created directory: {Directory}", directory);
+                }
+
+                // Convert WritableBitmap to BitmapFrame and save to file
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    BitmapFrame frame = BitmapFrame.Create(imageToSave);
+                    encoder.Frames.Add(frame);
+                    encoder.Save(fileStream);
+                }
+
+                _logger.Information("Successfully saved image to {FilePath}", filePath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error saving image to file: {FilePath}", filePath);
+                return false;
+            }
+        }
+
         /// <summary>
         /// Captures a single image from the camera and displays it in the specified Image control
         /// </summary>

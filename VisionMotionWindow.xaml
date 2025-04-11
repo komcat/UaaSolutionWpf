@@ -11,7 +11,7 @@
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
         Title="Vision Motion Control System" Height="855" Width="1600"
-        Loaded="Window_Loaded" Closing="Window_Closing">
+        Loaded="Window_Loaded" Closing="Window_Closing" Closed="Window_Closed">
     <Grid Margin="0,0,0,8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="800" />
@@ -497,6 +497,20 @@
                  FontFamily="Consolas" Margin="10,0,10,10"/>
                 </Grid>
             </TabItem>
+
+            <!--Experimental/Engineering/Test-->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Engineer Test" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </TabItem.Header>
+
+                <UniformGrid Rows="10" Columns="2" Margin="5">
+                    <Button x:Name="TestLensInspectButtion" Grid.Row="0" Grid.Column="0" Content="Inspect Lens loaded" Click="TestLensInspectButtion_Click"/>
+                </UniformGrid>
+
+            </TabItem>
         </TabControl>
 
         <!-- Initialize Button Panel -->
@@ -547,10 +561,11 @@
                         <!-- Vision-Motion Integration Controls -->
                         <StackPanel Grid.Row="1" Orientation="Horizontal">
                             <!-- Update the EnableClickToMoveCheckBox element to include the Click event handler -->
-                            <CheckBox x:Name="EnableClickToMoveCheckBox" Content="Enable Click-to-Move" 
+                            <CheckBox x:Name="EnableClickToMoveCheckBox" Content="Click-to-Move" 
                                       Margin="0,0,10,0" VerticalAlignment="Center" IsEnabled="true"
                                       Click="EnableClickToMoveCheckBox_CheckedChanged" Checked="EnableClickToMoveCheckBox_Checked"/>
-                            <TextBlock Text="Click on the image to move gantry to that position" VerticalAlignment="Center" Foreground="Gray"/>
+                            <TextBlock Text="checked, click to move camera to click locaition." VerticalAlignment="Center" Foreground="Gray"/>
+                            <Button x:Name="CaptureImageButton" Content="Take image" Click="CaptureImageButton_Click"/>
                         </StackPanel>
                     </Grid>
 

@@ -1836,5 +1836,56 @@ namespace UaaSolutionWpf
         {
             await _motionKernel.MoveToDestinationViaPathAsync(_leftHexId, "ApproachLensPlace");
         }
+
+        private void CaptureImageButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Create Captures directory if it doesn't exist
+                string capturesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Captures");
+                if (!Directory.Exists(capturesDirectory))
+                {
+                    Directory.CreateDirectory(capturesDirectory);
+                    _logger.Information("Created Captures directory at {Directory}", capturesDirectory);
+                }
+
+                // Generate a filename with timestamp
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string filename = $"Image_{timestamp}.png";
+                string fullPath = Path.Combine(capturesDirectory, filename);
+
+                // Save the image
+                bool success = _cameraManager.SaveImageToFile(fullPath, "png", true);
+
+                if (success)
+                {
+                    _logger.Information("Image saved to {FilePath}", fullPath);
+                    // Optional: Update UI to indicate success
+                    SetStatus("Image captured successfully");
+
+                }
+                else
+                {
+                    _logger.Error("Failed to save image to {FilePath}", fullPath);
+                    // Optional: Update UI to indicate failure
+                    SetStatus("Failed to capture image");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error capturing image");
+                // Optional: Update UI to indicate error
+                SetStatus("Error capturing image");
+
+            }
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            _cameraManager.StopLiveView();
+            _cameraManager.Dispose();
+        }
+
+
     }
 }

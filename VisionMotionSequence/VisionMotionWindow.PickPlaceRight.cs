@@ -15,6 +15,12 @@ namespace UaaSolutionWpf
         /// </summary>
         private async void PickRightLensButton_Click(object sender, RoutedEventArgs e)
         {
+            // Deselect all devices
+            _globalJogControl.DeselectAllDevices();
+
+            // Select a device with ID "hex-left"
+            _globalJogControl.SelectDevice("hex-right");
+
             try
             {
                 string gripper = "R_Gripper";

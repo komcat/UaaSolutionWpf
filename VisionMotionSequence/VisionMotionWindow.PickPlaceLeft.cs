@@ -17,7 +17,13 @@ namespace UaaSolutionWpf
 		{
 			try
 			{
-				if (_motionKernel == null || deviceManager == null)
+                // Deselect all devices
+                _globalJogControl.DeselectAllDevices();
+
+                // Select a device with ID "hex-left"
+                _globalJogControl.SelectDevice("hex-left");
+
+                if (_motionKernel == null || deviceManager == null)
 				{
 					MessageBox.Show("Motion or IO system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 					return;

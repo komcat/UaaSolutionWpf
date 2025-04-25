@@ -44,7 +44,6 @@ namespace UaaSolutionWpf
             {
                 tecController.LowCurrent_Click(sender, e);
 
-
                 if (_motionKernel == null)
                 {
                     MessageBox.Show("Motion system not initialized", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -76,7 +75,6 @@ namespace UaaSolutionWpf
                     SetStatus("Successfully moved to UV position");
                     _logger.Information("Successfully moved to UV position");
 
-
                     SetStatus("Extending UV Head");
                     //activate the UV head
                     await pneumaticSlideManager.GetSlide("UV_Head").ExtendAsync();
@@ -86,13 +84,17 @@ namespace UaaSolutionWpf
                     for (int i = 0; i < delaySec; i++)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(1));
-
                     }
 
+                    // Create a task to handle the message box with timeout
+                    bool performAlignment = await ShowMessageBoxWithTimeoutAsync(
+                        "Do you want to perform alignment?",
+                        "Alignment",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question,
+                        5000); // 5000 milliseconds = 5 seconds
 
-                    var doAlignment = MessageBox.Show("Do you want to perform alignment?", "Alignment", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                    if (doAlignment == MessageBoxResult.Yes)
+                    if (performAlignment)
                     {
                         // Start the alignment process
                         SetStatus("start Left/Right lens scanning inprogress..");
@@ -118,23 +120,15 @@ namespace UaaSolutionWpf
                         else
                         {
                             DryValueText.Text = "No value";
-                            _logger.Warning("No value found for Dry peak"); 
+                            _logger.Warning("No value found for Dry peak");
                         }
-
                     }
-
-
                 }
                 else
                 {
                     SetStatus("Failed to move to UV position");
                     _logger.Warning("Failed to move to UV position");
                 }
-
-
-
-
-
             }
             catch (Exception ex)
             {
@@ -145,7 +139,63 @@ namespace UaaSolutionWpf
 
             await ExecuteUVCuringUAA();
             await UnloadingUAA();
+        }
 
+        // Helper method to show a message box with timeout
+        private async Task<bool> ShowMessageBoxWithTimeoutAsync(string message, string title,
+            MessageBoxButton buttons, MessageBoxImage icon, int timeoutMilliseconds)
+        {
+            // Create a TaskCompletionSource to handle the result
+            var tcs = new TaskCompletionSource<bool>();
+
+            // Create a timer for the timeout
+            var timer = new System.Threading.Timer(_ =>
+            {
+                // When the timer elapses, close the message box and assume Yes
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Try to find the active MessageBox window and close it
+                    foreach (Window window in Application.Current.Windows)
+                    {
+                        if (window.Title == title)
+                        {
+                            window.Close();
+                            break;
+                        }
+                    }
+
+                    // Set the result to true (Yes)
+                    tcs.TrySetResult(true);
+                    _logger.Information("Alignment message box timed out - proceeding with alignment");
+                });
+            }, null, timeoutMilliseconds, Timeout.Infinite);
+
+            // Show the message box on the UI thread
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    // Show the message box
+                    var result = MessageBox.Show(message, title, buttons, icon);
+
+                    // Cancel the timer since user responded
+                    timer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                    // Set the result based on the user's choice
+                    tcs.TrySetResult(result == MessageBoxResult.Yes);
+
+                    _logger.Information($"User selected {result} for alignment message box");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Error showing message box with timeout");
+                    // Default to true in case of error
+                    tcs.TrySetResult(true);
+                }
+            });
+
+            // Return the result
+            return await tcs.Task;
         }
         public static class MeasurementValueFormatter
         {

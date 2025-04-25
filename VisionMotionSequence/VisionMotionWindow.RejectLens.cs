@@ -66,7 +66,7 @@ namespace UaaSolutionWpf
                 await _motionKernel.MoveToDestinationShortestPathAsync(hexapodId, "RejectLens");
                 // 3. Open the gripper
                 SetStatus("Opening gripper...");
-                bool gripSuccess = deviceManager.SetOutput("IOBottom", "L_Gripper");
+                bool gripSuccess = deviceManager.ClearOutput("IOBottom", "L_Gripper");
                 await Task.Delay(TimeSpan.FromSeconds(3));
                 //await OpenGripper(gripper);
                 // 4. Move to the home position
@@ -136,7 +136,7 @@ namespace UaaSolutionWpf
                 await _motionKernel.MoveToDestinationShortestPathAsync(hexapodId, "RejectLens");
                 // 3. Open the gripper
                 SetStatus("Opening gripper...");
-                bool gripSuccess = deviceManager.SetOutput("IOBottom", "L_Gripper");
+                bool gripSuccess = deviceManager.ClearOutput("IOBottom", "L_Gripper");
                 await Task.Delay(TimeSpan.FromSeconds(3));
                 //await OpenGripper(gripper);
                 // 4. Move to the home position

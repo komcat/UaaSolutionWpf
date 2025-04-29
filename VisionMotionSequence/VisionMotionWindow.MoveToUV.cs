@@ -87,25 +87,25 @@ namespace UaaSolutionWpf
                     }
 
                     // Create a task to handle the message box with timeout
-                    bool performAlignment = await ShowMessageBoxWithTimeoutAsync(
-                        "Do you want to perform alignment?",
-                        "Alignment",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question,
-                        5000); // 5000 milliseconds = 5 seconds
+                    //bool performAlignment = await ShowMessageBoxWithTimeoutAsync(
+                    //    "Do you want to perform alignment?",
+                    //    "Alignment",
+                    //    MessageBoxButton.YesNo,
+                    //    MessageBoxImage.Question,
+                    //    5000); // 5000 milliseconds = 5 seconds
 
-                    if (performAlignment)
+                    //if (performAlignment)
                     {
                         // Start the alignment process
                         SetStatus("start Left/Right lens scanning inprogress..");
                         _logger.Information("start Left/Right lens scanning inprogress..");
                         await RunSequentialScan();
                     }
-                    else
-                    {
-                        SetStatus("Alignment skipped");
-                        _logger.Information("Alignment skipped by user");
-                    }
+                    //else
+                    //{
+                    //    SetStatus("Alignment skipped");
+                    //    _logger.Information("Alignment skipped by user");
+                    //}
 
                     //show final value after UV peak
                     if (ChannelSelectionComboBox.SelectedItem is RealTimeDataChannel selectedChannel)
